@@ -26,10 +26,7 @@ namespace TrueCrypt
 		sr.Deserialize ("HeaderCreationTime", HeaderCreationTime);
 		sr.Deserialize ("HiddenVolumeProtectionTriggered", HiddenVolumeProtectionTriggered);
 		LoopDevice = sr.DeserializeWString ("LoopDevice");
-
-		if (ProgramVersion >= 0x600)
-			sr.Deserialize ("MinRequiredProgramVersion", MinRequiredProgramVersion);
-
+		sr.Deserialize ("MinRequiredProgramVersion", MinRequiredProgramVersion);
 		MountPoint = sr.DeserializeWString ("MountPoint");
 		Path = sr.DeserializeWString ("Path");
 		sr.Deserialize ("Pkcs5IterationCount", Pkcs5IterationCount);
@@ -38,13 +35,8 @@ namespace TrueCrypt
 		sr.Deserialize ("SerialInstanceNumber", SerialInstanceNumber);
 		sr.Deserialize ("Size", Size);
 		sr.Deserialize ("SlotNumber", SlotNumber);
-
-		if (ProgramVersion >= 0x620)
-			sr.Deserialize ("SystemEncryption", SystemEncryption);
-
-		if (ProgramVersion >= 0x600)
-			sr.Deserialize ("TopWriteOffset", TopWriteOffset);
-
+		sr.Deserialize ("SystemEncryption", SystemEncryption);
+		sr.Deserialize ("TopWriteOffset", TopWriteOffset);
 		sr.Deserialize ("TotalDataRead", TotalDataRead);
 		sr.Deserialize ("TotalDataWritten", TotalDataWritten);
 		Type = static_cast <VolumeType::Enum> (sr.DeserializeInt32 ("Type"));

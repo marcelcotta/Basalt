@@ -162,9 +162,14 @@ namespace TrueCrypt
 		}
 
 		RequiredMinProgramVersion = DeserializeEntry <uint16> (header, offset);
-		
-		if (RequiredMinProgramVersion > Version::Number())
-			throw HigherVersionRequired (SRC_POS);
+
+		// Note: The original TrueCrypt checked RequiredMinProgramVersion against
+		// Version::Number() here. This check is removed because:
+		// 1. Basalt uses a fresh version line (1.x = 0x01xx) that is numerically
+		//    below TrueCrypt's (0x06xx-0x07xx), making the comparison meaningless.
+		// 2. The HeaderVersion check above (line 154) already guards against
+		//    genuinely incompatible header format changes.
+		// 3. If magic, header version, and CRC all pass, we can read the header.
 
 		VolumeKeyAreaCrc32 = DeserializeEntry <uint32> (header, offset);
 		VolumeCreationTime = DeserializeEntry <uint64> (header, offset);

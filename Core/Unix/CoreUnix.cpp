@@ -268,7 +268,7 @@ namespace TrueCrypt
 			{
 				continue;
 			}
-			
+
 			if (!volumePath.IsEmpty() && wstring (mountedVol->Path).compare (volumePath) != 0)
 				continue;
 

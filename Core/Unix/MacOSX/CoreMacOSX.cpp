@@ -156,7 +156,7 @@ namespace TrueCrypt
 			args.push_back ("-readonly");
 
 		string xml;
-		
+
 		while (true)
 		{
 			try
@@ -171,7 +171,7 @@ namespace TrueCrypt
 					args.remove ("-noautofsck");
 					continue;
 				}
-				
+
 				throw;
 			}
 		}
