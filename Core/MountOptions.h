@@ -21,7 +21,6 @@ namespace TrueCrypt
 	{
 		MountOptions ()
 			:
-			CachePassword (false),
 			NoFilesystem (false),
 			NoHardwareCrypto (false),
 			NoKernelCrypto (false),
@@ -42,7 +41,6 @@ namespace TrueCrypt
 
 		TC_SERIALIZABLE (MountOptions);
 
-		bool CachePassword;
 		wstring FilesystemOptions;
 		wstring FilesystemType;
 		shared_ptr <KeyfileList> Keyfiles;

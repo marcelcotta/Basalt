@@ -39,8 +39,8 @@ namespace TrueCrypt
 		sr.Serialize ("SystemNumber", SystemNumber);
 		
 		sr.Serialize ("Partitions", (uint32) Partitions.size());
-		foreach_ref (const HostDevice &partition, Partitions)
-			partition.Serialize (stream);
+		for (const auto &partition : Partitions)
+			partition->Serialize (stream);
 	}
 
 	TC_SERIALIZER_FACTORY_ADD_CLASS (HostDevice);

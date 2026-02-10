@@ -42,7 +42,7 @@ namespace TrueCrypt
 		for (int devIndex = 0; devIndex < 256; devIndex++)
 		{
 			string loopDev;
-			foreach (const string &loopPath, loopPaths)
+			for (const auto &loopPath : loopPaths)
 			{
 				loopDev = loopPath + StringConverter::ToSingle (devIndex);
 				if (FilesystemPath (loopDev).IsBlockDevice())
@@ -304,7 +304,7 @@ namespace TrueCrypt
 
 		// Load device mapper kernel module
 		list <string> execArgs;
-		foreach (const string &dmModule, StringConverter::Split ("dm_mod dm-mod dm"))
+		for (const auto &dmModule : StringConverter::Split ("dm_mod dm-mod dm"))
 		{
 			execArgs.clear();
 			execArgs.push_back (dmModule);
@@ -338,8 +338,9 @@ namespace TrueCrypt
 			size_t secondaryKeyOffset = volume->GetEncryptionMode()->GetKey().Size();
 			size_t cipherCount = volume->GetEncryptionAlgorithm()->GetCiphers().size();
 
-			foreach_reverse_ref (const Cipher &cipher, volume->GetEncryptionAlgorithm()->GetCiphers())
+			for (auto it = volume->GetEncryptionAlgorithm()->GetCiphers().rbegin(); it != volume->GetEncryptionAlgorithm()->GetCiphers().rend(); ++it)
 			{
+				const auto &cipher = *it;
 				stringstream dmCreateArgs;
 				dmCreateArgs << "0 " << volume->GetSize() / ENCRYPTION_DATA_UNIT_SIZE << " crypt ";
 
@@ -472,6 +473,6 @@ namespace TrueCrypt
 		}
 	}
 
-	auto_ptr <CoreBase> Core (new CoreServiceProxy <CoreLinux>);
-	auto_ptr <CoreBase> CoreDirect (new CoreLinux);
+	shared_ptr <CoreBase> Core (new CoreServiceProxy <CoreLinux>);
+	shared_ptr <CoreBase> CoreDirect (new CoreLinux);
 }

@@ -10,7 +10,6 @@
 #define TC_HEADER_Core_Windows_CoreServiceProxy
 
 #include "CoreService.h"
-#include "Volume/VolumePasswordCache.h"
 
 namespace TrueCrypt
 {
@@ -60,70 +59,36 @@ namespace TrueCrypt
 				return CoreService::RequestGetHostDevices (pathListOnly);
 		}
 #endif
-		virtual bool IsPasswordCacheEmpty () const { return VolumePasswordCache::IsEmpty(); }
 
 		virtual shared_ptr <VolumeInfo> MountVolume (MountOptions &options)
 		{
 			shared_ptr <VolumeInfo> mountedVolume;
 
-			if (!VolumePasswordCache::IsEmpty()
-				&& (!options.Password || options.Password->IsEmpty())
-				&& (!options.Keyfiles || options.Keyfiles->empty()))
+			MountOptions newOptions = options;
+
+			newOptions.Password = Keyfile::ApplyListToPassword (options.Keyfiles, options.Password);
+			if (newOptions.Keyfiles)
+				newOptions.Keyfiles->clear();
+
+			newOptions.ProtectionPassword = Keyfile::ApplyListToPassword (options.ProtectionKeyfiles, options.ProtectionPassword);
+			if (newOptions.ProtectionKeyfiles)
+				newOptions.ProtectionKeyfiles->clear();
+
+			try
 			{
-				finally_do_arg (MountOptions*, &options, { if (finally_arg->Password) finally_arg->Password.reset(); });
-
-				PasswordIncorrect passwordException;
-				foreach (shared_ptr <VolumePassword> password, VolumePasswordCache::GetPasswords())
-				{
-					try
-					{
-						options.Password = password;
-						mountedVolume = CoreService::RequestMountVolume (options);
-						break;
-					}
-					catch (PasswordIncorrect &e)
-					{
-						passwordException = e;
-					}
-				}
-
-				if (!mountedVolume)
-					passwordException.Throw();
+				mountedVolume = CoreService::RequestMountVolume (newOptions);
 			}
-			else
+			catch (ProtectionPasswordIncorrect &e)
 			{
-				MountOptions newOptions = options;
-				
-				newOptions.Password = Keyfile::ApplyListToPassword (options.Keyfiles, options.Password);
-				if (newOptions.Keyfiles)
-					newOptions.Keyfiles->clear();
-
-				newOptions.ProtectionPassword = Keyfile::ApplyListToPassword (options.ProtectionKeyfiles, options.ProtectionPassword);
-				if (newOptions.ProtectionKeyfiles)
-					newOptions.ProtectionKeyfiles->clear();
-
-				try
-				{
-					mountedVolume = CoreService::RequestMountVolume (newOptions);
-				}
-				catch (ProtectionPasswordIncorrect &e)
-				{
-					if (options.ProtectionKeyfiles && !options.ProtectionKeyfiles->empty())
-						throw ProtectionPasswordKeyfilesIncorrect (e.what());
-					throw;
-				}
-				catch (PasswordIncorrect &e)
-				{
-					if (options.Keyfiles && !options.Keyfiles->empty())
-						throw PasswordKeyfilesIncorrect (e.what());
-					throw;
-				}
-
-				if (options.CachePassword
-					&& ((options.Password && !options.Password->IsEmpty()) || (options.Keyfiles && !options.Keyfiles->empty())))
-				{
-					VolumePasswordCache::Store (*Keyfile::ApplyListToPassword (options.Keyfiles, options.Password));
-				}
+				if (options.ProtectionKeyfiles && !options.ProtectionKeyfiles->empty())
+					throw ProtectionPasswordKeyfilesIncorrect (e.what());
+				throw;
+			}
+			catch (PasswordIncorrect &e)
+			{
+				if (options.Keyfiles && !options.Keyfiles->empty())
+					throw PasswordKeyfilesIncorrect (e.what());
+				throw;
 			}
 
 			VolumeEventArgs eventArgs (mountedVolume);
@@ -140,11 +105,6 @@ namespace TrueCrypt
 		virtual void SetFileOwner (const FilesystemPath &path, const UserId &owner) const
 		{
 			CoreService::RequestSetFileOwner (path, owner);
-		}
-
-		virtual void WipePasswordCache () const
-		{
-			VolumePasswordCache::Clear();
 		}
 	};
 }

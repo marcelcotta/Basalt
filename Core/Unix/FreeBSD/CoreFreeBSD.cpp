@@ -79,7 +79,7 @@ namespace TrueCrypt
 #ifdef TC_MACOSX
 		const string busType = "rdisk";
 #else
-		foreach (const string &busType, StringConverter::Split ("ad da"))
+		for (const auto &busType : StringConverter::Split ("ad da"))
 #endif
 		{
 			for (int devNumber = 0; devNumber < 64; devNumber++)
@@ -111,7 +111,7 @@ namespace TrueCrypt
 #ifdef TC_MACOSX
 						const string partLetter = "";
 #else
-						foreach (const string &partLetter, StringConverter::Split (",a,b,c,d,e,f,g,h", ",", true))
+						for (const auto &partLetter : StringConverter::Split (",a,b,c,d,e,f,g,h", ",", true))
 #endif
 						{
 							stringstream partPath;
@@ -196,7 +196,7 @@ namespace TrueCrypt
 	}
 
 #ifdef TC_FREEBSD
-	auto_ptr <CoreBase> Core (new CoreServiceProxy <CoreFreeBSD>);
-	auto_ptr <CoreBase> CoreDirect (new CoreFreeBSD);
+	shared_ptr <CoreBase> Core (new CoreServiceProxy <CoreFreeBSD>);
+	shared_ptr <CoreBase> CoreDirect (new CoreFreeBSD);
 #endif
 }

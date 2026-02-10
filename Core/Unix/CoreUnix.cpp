@@ -16,7 +16,6 @@
 #include <unistd.h>
 #include "Platform/FileStream.h"
 #include "Driver/Fuse/FuseService.h"
-#include "Volume/VolumePasswordCache.h"
 
 namespace TrueCrypt
 {
@@ -74,7 +73,7 @@ namespace TrueCrypt
 		args.push_back ("--");
 		args.push_back (mountPoint);
 
-		Process::Execute ("umount", args);
+		Process::Execute ("/sbin/umount", args);
 	}
 
 	shared_ptr <VolumeInfo> CoreUnix::DismountVolume (shared_ptr <VolumeInfo> mountedVolume, bool ignoreOpenFiles, bool syncVolumeInfo)
@@ -120,7 +119,7 @@ namespace TrueCrypt
 		{
 			try
 			{
-				Process::Execute ("umount", args);
+				Process::Execute ("/sbin/umount", args);
 				break;
 			}
 			catch (ExecutedProcessFailed&)
@@ -251,16 +250,16 @@ namespace TrueCrypt
 	{
 		VolumeInfoList volumes;
 
-		foreach_ref (const MountedFilesystem &mf, GetMountedFilesystems ())
+		for (const auto &mf : GetMountedFilesystems ())
 		{
-			if (string (mf.MountPoint).find (GetFuseMountDirPrefix()) == string::npos)
+			if (string (mf->MountPoint).find (GetFuseMountDirPrefix()) == string::npos)
 				continue;
 
 			shared_ptr <VolumeInfo> mountedVol;
 			try
 			{
 				shared_ptr <File> controlFile (new File);
-				controlFile->Open (string (mf.MountPoint) + FuseService::GetControlPath());
+				controlFile->Open (string (mf->MountPoint) + FuseService::GetControlPath());
 
 				shared_ptr <Stream> controlFileStream (new FileStream (controlFile));
 				mountedVol = Serializable::DeserializeNew <VolumeInfo> (controlFileStream);
@@ -273,7 +272,7 @@ namespace TrueCrypt
 			if (!volumePath.IsEmpty() && wstring (mountedVol->Path).compare (volumePath) != 0)
 				continue;
 
-			mountedVol->AuxMountPoint = mf.MountPoint;
+			mountedVol->AuxMountPoint = mf->MountPoint;
 
 			if (!mountedVol->VirtualDevice.IsEmpty())
 			{
@@ -373,7 +372,7 @@ namespace TrueCrypt
 		args.push_back (devicePath);
 		args.push_back (mountPoint);
 
-		Process::Execute ("mount", args);
+		Process::Execute ("/sbin/mount", args);
 	}
 
 	VolumeSlotNumber CoreUnix::MountPointToSlotNumber (const DirectoryPath &mountPoint) const
@@ -390,9 +389,49 @@ namespace TrueCrypt
 		return GetFirstFreeSlotNumber();
 	}
 
+	// Security: Reject mount points that overlap with system directories (CVE-2025-23021).
+	// Mounting a volume over a system path could allow arbitrary code execution.
+	static bool IsSystemMountPoint (const string &path)
+	{
+		static const char *systemPaths[] = {
+			"/bin", "/sbin", "/usr", "/usr/bin", "/usr/sbin", "/usr/lib",
+			"/usr/local/bin", "/usr/local/sbin", "/usr/local/lib",
+			"/etc", "/var", "/tmp", "/private", "/private/etc", "/private/var",
+			"/System", "/Library", "/Applications",
+			"/dev", "/proc", "/sys", "/boot", "/root",
+			"/opt", "/opt/local/bin", "/opt/local/sbin",
+			NULL
+		};
+
+		// Normalize: remove trailing slash (but keep "/" itself)
+		string normalized = path;
+		while (normalized.size() > 1 && normalized.back() == '/')
+			normalized.pop_back();
+
+		for (const char **sp = systemPaths; *sp != NULL; ++sp)
+		{
+			if (normalized == *sp)
+				return true;
+		}
+
+		// Also reject the root filesystem
+		if (normalized == "/")
+			return true;
+
+		return false;
+	}
+
 	shared_ptr <VolumeInfo> CoreUnix::MountVolume (MountOptions &options)
 	{
 		CoalesceSlotNumberAndMountPoint (options);
+
+		// Validate mount point is not a system directory
+		if (options.MountPoint && !options.MountPoint->IsEmpty())
+		{
+			string mp = *options.MountPoint;
+			if (IsSystemMountPoint (mp))
+				throw ParameterIncorrect (SRC_POS);  // mount point is a system directory
+		}
 
 		if (IsVolumeMounted (*options.Path))
 			throw VolumeAlreadyMounted (SRC_POS);
@@ -465,9 +504,9 @@ namespace TrueCrypt
 
 			bool inUse = false;
 
-			foreach_ref (const MountedFilesystem &mf, mountedFilesystems)
+			for (const auto &mf : mountedFilesystems)
 			{
-				if (mf.MountPoint == path.str())
+				if (mf->MountPoint == path.str())
 				{
 					inUse = true;
 					break;

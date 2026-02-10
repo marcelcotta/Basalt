@@ -60,7 +60,7 @@ namespace TrueCrypt
 	{
 		HostDeviceList devices;
 
-		foreach_ref (const FilePath &devPath, Directory::GetFilePaths ("/dev/rdsk", false))
+		for (const auto &devPath : Directory::GetFilePaths ("/dev/rdsk", false))
 		{
 			string drivePath = devPath;
 			if (drivePath.rfind ("p0") == drivePath.size() - 2)
@@ -169,6 +169,6 @@ namespace TrueCrypt
 		}
 	}
 
-	auto_ptr <CoreBase> Core (new CoreServiceProxy <CoreSolaris>);
-	auto_ptr <CoreBase> CoreDirect (new CoreSolaris);
+	shared_ptr <CoreBase> Core (new CoreServiceProxy <CoreSolaris>);
+	shared_ptr <CoreBase> CoreDirect (new CoreSolaris);
 }

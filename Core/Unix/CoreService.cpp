@@ -23,9 +23,9 @@
 namespace TrueCrypt
 {
 	template <class T>
-	auto_ptr <T> CoreService::GetResponse ()
+	unique_ptr <T> CoreService::GetResponse ()
 	{
-		auto_ptr <Serializable> deserializedObject (Serializable::DeserializeNew (ServiceOutputStream));
+		unique_ptr <Serializable> deserializedObject (Serializable::DeserializeNew (ServiceOutputStream));
 		
 		Exception *deserializedException = dynamic_cast <Exception*> (deserializedObject.get());
 		if (deserializedException)
@@ -34,7 +34,7 @@ namespace TrueCrypt
 		if (dynamic_cast <T *> (deserializedObject.get()) == nullptr)
 			throw ParameterIncorrect (SRC_POS);
 
-		return auto_ptr <T> (dynamic_cast <T *> (deserializedObject.release()));
+		return unique_ptr <T> (dynamic_cast <T *> (deserializedObject.release()));
 	}
 
 	void CoreService::ProcessElevatedRequests ()
@@ -183,10 +183,7 @@ namespace TrueCrypt
 					MountVolumeRequest *mountRequest = dynamic_cast <MountVolumeRequest*> (request.get());
 					if (mountRequest)
 					{
-						MountVolumeResponse (
-							Core->MountVolume (*mountRequest->Options)
-						).Serialize (outputStream);
-
+						MountVolumeResponse (Core->MountVolume (*mountRequest->Options)).Serialize (outputStream);
 						continue;
 					}
 
@@ -273,7 +270,7 @@ namespace TrueCrypt
 	}
 
 	template <class T>
-	auto_ptr <T> CoreService::SendRequest (CoreServiceRequest &request)
+	unique_ptr <T> CoreService::SendRequest (CoreServiceRequest &request)
 	{
 		static Mutex mutex;
 		ScopeLock lock (mutex);
@@ -289,7 +286,7 @@ namespace TrueCrypt
 				try
 				{
 					request.Serialize (ServiceInputStream);
-					auto_ptr <T> response (GetResponse <T>());
+					unique_ptr <T> response (GetResponse <T>());
 					ElevatedServiceAvailable = true;
 					return response;
 				}
@@ -338,8 +335,8 @@ namespace TrueCrypt
 
 	void CoreService::StartElevated (const CoreServiceRequest &request)
 	{
-		auto_ptr <Pipe> inPipe (new Pipe());
-		auto_ptr <Pipe> outPipe (new Pipe());
+		unique_ptr <Pipe> inPipe (new Pipe());
+		unique_ptr <Pipe> outPipe (new Pipe());
 		Pipe errPipe;
 
 		int forkedPid = fork();
@@ -425,7 +422,7 @@ namespace TrueCrypt
 			do
 			{
 				ssize_t bytesRead = 0;
-				foreach (int fd, poller.WaitForData (timeout))
+				for (const auto &fd : poller.WaitForData (timeout))
 				{
 					bytesRead = read (fd, &buffer[0], buffer.capacity());
 					if (bytesRead > 0 && fd == errPipe.GetReadFD())
@@ -479,7 +476,7 @@ namespace TrueCrypt
 
 		if (!errOutput.empty())
 		{
-			auto_ptr <Serializable> deserializedObject;
+			unique_ptr <Serializable> deserializedObject;
 			Exception *deserializedException = nullptr;
 
 			try
@@ -519,8 +516,8 @@ namespace TrueCrypt
 		byte sync[] = { 0, 0x11, 0x22 };
 		ServiceInputStream->Write (ConstBufferPtr (sync, array_capacity (sync)));
 
-		AdminInputPipe = inPipe;
-		AdminOutputPipe = outPipe;
+		AdminInputPipe = std::move(inPipe);
+		AdminOutputPipe = std::move(outPipe);
 	}
 
 	void CoreService::Stop ()
@@ -531,11 +528,11 @@ namespace TrueCrypt
 	
 	shared_ptr <GetStringFunctor> CoreService::AdminPasswordCallback;
 
-	auto_ptr <Pipe> CoreService::AdminInputPipe;
-	auto_ptr <Pipe> CoreService::AdminOutputPipe;
+	unique_ptr <Pipe> CoreService::AdminInputPipe;
+	unique_ptr <Pipe> CoreService::AdminOutputPipe;
 
-	auto_ptr <Pipe> CoreService::InputPipe;
-	auto_ptr <Pipe> CoreService::OutputPipe;
+	unique_ptr <Pipe> CoreService::InputPipe;
+	unique_ptr <Pipe> CoreService::OutputPipe;
 	shared_ptr <Stream> CoreService::ServiceInputStream;
 	shared_ptr <Stream> CoreService::ServiceOutputStream;
 

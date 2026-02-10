@@ -14,6 +14,7 @@ OBJS += HostDevice.o
 OBJS += MountOptions.o
 OBJS += RandomNumberGenerator.o
 OBJS += VolumeCreator.o
+OBJS += VolumeOperations.o
 OBJS += Unix/CoreService.o
 OBJS += Unix/CoreServiceRequest.o
 OBJS += Unix/CoreServiceResponse.o

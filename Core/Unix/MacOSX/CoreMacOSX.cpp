@@ -42,7 +42,7 @@ namespace TrueCrypt
 
 			try
 			{
-				Process::Execute ("hdiutil", args);
+				Process::Execute ("/usr/bin/hdiutil", args);
 			}
 			catch (ExecutedProcessFailed &e)
 			{
@@ -79,7 +79,7 @@ namespace TrueCrypt
 		{
 			try
 			{
-				Process::Execute ("umount", args);
+				Process::Execute ("/sbin/umount", args);
 				break;
 			}
 			catch (ExecutedProcessFailed&)
@@ -103,7 +103,7 @@ namespace TrueCrypt
 	{
 		list <string> args;
 		args.push_back ("/Applications/Utilities/Disk Utility.app");
-		Process::Execute ("open", args);
+		Process::Execute ("/usr/bin/open", args);
 	}
 
 	void CoreMacOSX::MountAuxVolumeImage (const DirectoryPath &auxMountPoint, const MountOptions &options) const
@@ -112,7 +112,8 @@ namespace TrueCrypt
 		char fuseVersionString[MAXHOSTNAMELEN + 1] = { 0 };
 		size_t fuseVersionStringLength = MAXHOSTNAMELEN;
 
-		if (sysctlbyname ("macfuse.version.number", fuseVersionString, &fuseVersionStringLength, NULL, 0) != 0)
+		if (sysctlbyname ("vfs.generic.macfuse.version.number", fuseVersionString, &fuseVersionStringLength, NULL, 0) != 0
+			&& sysctlbyname ("macfuse.version.number", fuseVersionString, &fuseVersionStringLength, NULL, 0) != 0)
 			throw HigherFuseVersionRequired (SRC_POS);
 
 		vector <string> fuseVersion = StringConverter::Split (string (fuseVersionString), ".");
@@ -160,7 +161,7 @@ namespace TrueCrypt
 		{
 			try
 			{
-				xml = Process::Execute ("hdiutil", args);
+				xml = Process::Execute ("/usr/bin/hdiutil", args);
 				break;
 			}
 			catch (ExecutedProcessFailed &e)
@@ -203,13 +204,13 @@ namespace TrueCrypt
 				args.push_back (volImage);
 				args.push_back ("-force");
 
-				Process::Execute ("hdiutil", args);
+				Process::Execute ("/usr/bin/hdiutil", args);
 			}
 			catch (ExecutedProcessFailed&) { }
 			throw;
 		}
 	}
 
-	auto_ptr <CoreBase> Core (new CoreServiceProxy <CoreMacOSX>);
-	auto_ptr <CoreBase> CoreDirect (new CoreMacOSX);
+	shared_ptr <CoreBase> Core (new CoreServiceProxy <CoreMacOSX>);
+	shared_ptr <CoreBase> CoreDirect (new CoreMacOSX);
 }

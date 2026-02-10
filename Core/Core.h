@@ -13,8 +13,8 @@
 
 namespace TrueCrypt
 {
-	extern auto_ptr <CoreBase> Core;
-	extern auto_ptr <CoreBase> CoreDirect;
+	extern shared_ptr <CoreBase> Core;
+	extern shared_ptr <CoreBase> CoreDirect;
 }
 
 #endif // TC_HEADER_Core_Core

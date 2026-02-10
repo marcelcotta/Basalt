@@ -23,7 +23,7 @@ namespace TrueCrypt
 	{
 	}
 
-	void CoreBase::ChangePassword (shared_ptr <Volume> openVolume, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf) const
+	void CoreBase::ChangePassword (shared_ptr <Volume> openVolume, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf, int wipePassCount) const
 	{
 		if ((!newPassword || newPassword->Size() < 1) && (!newKeyfiles || newKeyfiles->empty()))
 			throw PasswordEmpty (SRC_POS);
@@ -38,6 +38,11 @@ namespace TrueCrypt
 			throw EncryptedSystemRequired (SRC_POS);
 		}
 
+		// Use default SecureWipePassCount (256 in release) unless caller overrides.
+		// KDF upgrades (same password, same master key) use wipePassCount=1 since
+		// there is no old key material to securely erase.
+		int actualWipePassCount = (wipePassCount > 0) ? wipePassCount : SecureWipePassCount;
+
 		RandomNumberGenerator::SetHash (newPkcs5Kdf->GetHash());
 
 		SecureBuffer newSalt (openVolume->GetSaltSize());
@@ -48,9 +53,9 @@ namespace TrueCrypt
 		bool backupHeader = false;
 		while (true)
 		{
-			for (int i = 1; i <= SecureWipePassCount; i++)
+			for (int i = 1; i <= actualWipePassCount; i++)
 			{
-				if (i == SecureWipePassCount)
+				if (i == actualWipePassCount)
 					RandomNumberGenerator::GetData (newSalt);
 				else
 					RandomNumberGenerator::GetDataFast (newSalt);
@@ -67,11 +72,11 @@ namespace TrueCrypt
 			backupHeader = true;
 		}
 	}
-		
-	void CoreBase::ChangePassword (shared_ptr <VolumePath> volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf) const
+
+	void CoreBase::ChangePassword (shared_ptr <VolumePath> volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf, int wipePassCount) const
 	{
 		shared_ptr <Volume> volume = OpenVolume (volumePath, preserveTimestamps, password, keyfiles);
-		ChangePassword (volume, newPassword, newKeyfiles, newPkcs5Kdf);
+		ChangePassword (volume, newPassword, newKeyfiles, newPkcs5Kdf, wipePassCount);
 	}
 
 	void CoreBase::CoalesceSlotNumberAndMountPoint (MountOptions &options) const
@@ -111,8 +116,8 @@ namespace TrueCrypt
 
 		set <VolumeSlotNumber> usedSlotNumbers;
 
-		foreach_ref (const VolumeInfo &volume, GetMountedVolumes())
-			usedSlotNumbers.insert (volume.SlotNumber);
+		for (const auto &volume : GetMountedVolumes())
+			usedSlotNumbers.insert (volume->SlotNumber);
 
 		for (VolumeSlotNumber slotNumber = startFrom; slotNumber <= GetLastSlotNumber(); ++slotNumber)
 		{
@@ -214,7 +219,7 @@ namespace TrueCrypt
 
 	shared_ptr <VolumeInfo> CoreBase::GetMountedVolume (VolumeSlotNumber slot) const
 	{
-		foreach (shared_ptr <VolumeInfo> volume, GetMountedVolumes())
+		for (const auto &volume : GetMountedVolumes())
 		{
 			if (volume->SlotNumber == slot)
 				return volume;
@@ -228,9 +233,9 @@ namespace TrueCrypt
 		if (!IsMountPointAvailable (SlotNumberToMountPoint (slotNumber)))
 			return false;
 
-		foreach_ref (const VolumeInfo &volume, GetMountedVolumes())
+		for (const auto &volume : GetMountedVolumes())
 		{
-			if (volume.SlotNumber == slotNumber)
+			if (volume->SlotNumber == slotNumber)
 				return false;
 		}
 
@@ -239,7 +244,7 @@ namespace TrueCrypt
 
 	bool CoreBase::IsVolumeMounted (const VolumePath &volumePath) const
 	{
-		return GetMountedVolume (volumePath);
+		return GetMountedVolume (volumePath) != nullptr;
 	}
 
 	shared_ptr <Volume> CoreBase::OpenVolume (shared_ptr <VolumePath> volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, VolumeProtection::Enum protection, shared_ptr <VolumePassword> protectionPassword, shared_ptr <KeyfileList> protectionKeyfiles, bool sharedAccessAllowed, VolumeType::Enum volumeType, bool useBackupHeaders, bool partitionInSystemEncryptionScope) const

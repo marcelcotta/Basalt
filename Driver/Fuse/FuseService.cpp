@@ -6,7 +6,7 @@
  packages.
 */
 
-#define FUSE_USE_VERSION  25
+#define FUSE_USE_VERSION  26
 #include <errno.h>
 #include <fcntl.h>
 #include <fuse.h>
@@ -47,7 +47,7 @@ namespace TrueCrypt
 		return 0;
 	}
 
-	static void *fuse_service_init ()
+	static void *fuse_service_init (struct fuse_conn_info *conn)
 	{
 		try
 		{
@@ -217,7 +217,7 @@ namespace TrueCrypt
 						FuseService::ReadVolumeSectors (BufferPtr ((byte *) buf, size), offset);
 					}
 				}
-				catch (MissingVolumeData)
+				catch (MissingVolumeData&)
 				{
 					return 0;
 				}
@@ -346,7 +346,7 @@ namespace TrueCrypt
 		{
 			throw;
 		}
-		catch (std::bad_alloc)
+		catch (std::bad_alloc&)
 		{
 			return -ENOMEM;
 		}
@@ -435,6 +435,12 @@ namespace TrueCrypt
 			args.push_back ("-o");
 			args.push_back ("allow_other");
 		}
+
+		// SECURITY: Prevent setuid/setgid binaries and device nodes on mounted volumes.
+		// nosuid: blocks execution of setuid/setgid programs from the volume
+		// nodev:  prevents device node creation on the volume
+		args.push_back ("-o");
+		args.push_back ("nosuid,nodev");
 		
 		ExecFunctor execFunctor (openVolume, slotNumber);
 		Process::Execute ("fuse", args, -1, &execFunctor);
@@ -579,7 +585,7 @@ namespace TrueCrypt
 
 		SignalHandlerPipe->GetWriteFD();
 
-		_exit (fuse_main (argc, argv, &fuse_service_oper));
+		_exit (fuse_main (argc, argv, &fuse_service_oper, NULL));
 	}
 
 	VolumeInfo FuseService::OpenVolumeInfo;
@@ -588,5 +594,5 @@ namespace TrueCrypt
 	VolumeSlotNumber FuseService::SlotNumber;
 	uid_t FuseService::UserId;
 	gid_t FuseService::GroupId;
-	auto_ptr <Pipe> FuseService::SignalHandlerPipe;
+	unique_ptr <Pipe> FuseService::SignalHandlerPipe;
 }

@@ -28,8 +28,8 @@ namespace TrueCrypt
 	public:
 		virtual ~CoreBase ();
 
-		virtual void ChangePassword (shared_ptr <Volume> openVolume, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf = shared_ptr <Pkcs5Kdf> ()) const;
-		virtual void ChangePassword (shared_ptr <VolumePath> volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf = shared_ptr <Pkcs5Kdf> ()) const;
+		virtual void ChangePassword (shared_ptr <Volume> openVolume, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf = shared_ptr <Pkcs5Kdf> (), int wipePassCount = -1) const;
+		virtual void ChangePassword (shared_ptr <VolumePath> volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf = shared_ptr <Pkcs5Kdf> (), int wipePassCount = -1) const;
 		virtual void CheckFilesystem (shared_ptr <VolumeInfo> mountedVolume, bool repair = false) const = 0; 
 		virtual void CoalesceSlotNumberAndMountPoint (MountOptions &options) const;
 		virtual void CreateKeyfile (const FilePath &keyfilePath) const;
@@ -58,7 +58,6 @@ namespace TrueCrypt
 		virtual bool IsMountPointAvailable (const DirectoryPath &mountPoint) const = 0;
 		virtual bool IsOSVersion (int major, int minor) const = 0;
 		virtual bool IsOSVersionLower (int major, int minor) const = 0;
-		virtual bool IsPasswordCacheEmpty () const = 0;
 		virtual bool IsSlotNumberAvailable (VolumeSlotNumber slotNumber) const;
 		virtual bool IsSlotNumberValid (VolumeSlotNumber slotNumber) const { return slotNumber >= GetFirstSlotNumber() && slotNumber <= GetLastSlotNumber(); }
 		virtual bool IsVolumeMounted (const VolumePath &volumePath) const;
@@ -71,7 +70,6 @@ namespace TrueCrypt
 		virtual void SetApplicationExecutablePath (const FilePath &path) { ApplicationExecutablePath = path; }
 		virtual void SetFileOwner (const FilesystemPath &path, const UserId &owner) const = 0;
 		virtual DirectoryPath SlotNumberToMountPoint (VolumeSlotNumber slotNumber) const = 0;
-		virtual void WipePasswordCache () const = 0;
 
 		Event VolumeDismountedEvent;
 		Event VolumeMountedEvent;

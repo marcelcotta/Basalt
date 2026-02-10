@@ -276,6 +276,8 @@ namespace TrueCrypt
 			// Header key
 			HeaderKey.Allocate (VolumeHeader::GetLargestSerializedKeySize());
 			PasswordKey = Keyfile::ApplyListToPassword (options->Keyfiles, options->Password);
+			if (!options->VolumeHeaderKdf)
+				throw ParameterIncorrect (SRC_POS);  // KDF not set — hash algorithm not found
 			options->VolumeHeaderKdf->DeriveKey (HeaderKey, *PasswordKey, salt);
 			headerOptions.HeaderKey = HeaderKey;
 
