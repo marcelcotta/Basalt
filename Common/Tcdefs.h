@@ -12,17 +12,17 @@
 #ifndef TCDEFS_H
 #define TCDEFS_H
 
-#define TC_APP_NAME						"TrueCrypt"
+#define TC_APP_NAME						"Basalt"
 
-// Version displayed to user 
-#define VERSION_STRING					"7.1a"
+// Version displayed to user
+#define VERSION_STRING					"1.0"
 
 // Version number to compare against driver
-#define VERSION_NUM						0x071a
+#define VERSION_NUM						0x0100
 
 // Release date
-#define TC_STR_RELEASE_DATE				"February 7, 2012"
-#define TC_RELEASE_DATE_YEAR			2012
+#define TC_STR_RELEASE_DATE				"February 10, 2025"
+#define TC_RELEASE_DATE_YEAR			2025
 #define TC_RELEASE_DATE_MONTH			2
 
 #define BYTES_PER_KB                    1024LL
