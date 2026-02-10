@@ -130,6 +130,30 @@ namespace TrueCrypt
 		Whirlpool (const Whirlpool &);
 		Whirlpool &operator= (const Whirlpool &);
 	};
+
+	// Argon2id (uses Blake2b-512 internally for RNG pool mixing;
+	// this hash class exists for KDF type-matching via typeid and
+	// appears in UI hash pickers via GetAvailableAlgorithms)
+	class Argon2idHash : public Hash
+	{
+	public:
+		Argon2idHash ();
+		virtual ~Argon2idHash () { }
+
+		virtual void GetDigest (const BufferPtr &buffer);
+		virtual size_t GetBlockSize () const { return 128; }
+		virtual size_t GetDigestSize () const { return 512 / 8; }
+		virtual wstring GetName () const { return L"Argon2id"; }
+		virtual shared_ptr <Hash> GetNew () const { return shared_ptr <Hash> (new Argon2idHash); }
+		virtual void Init ();
+		virtual void ProcessData (const ConstBufferPtr &data);
+
+	protected:
+
+	private:
+		Argon2idHash (const Argon2idHash &);
+		Argon2idHash &operator= (const Argon2idHash &);
+	};
 }
 
 #endif // TC_HEADER_Encryption_Hash

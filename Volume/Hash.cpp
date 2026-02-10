@@ -12,6 +12,7 @@
 #include "Crypto/Sha1.h"
 #include "Crypto/Sha2.h"
 #include "Crypto/Whirlpool.h"
+#include "Crypto/Argon2/blake2.h"
 
 namespace TrueCrypt
 {
@@ -22,6 +23,7 @@ namespace TrueCrypt
 		l.push_back (shared_ptr <Hash> (new Ripemd160 ()));
 		l.push_back (shared_ptr <Hash> (new Sha512 ()));
 		l.push_back (shared_ptr <Hash> (new Whirlpool ()));
+		l.push_back (shared_ptr <Hash> (new Argon2idHash ()));
 		l.push_back (shared_ptr <Hash> (new Sha1 ()));
 
 		return l;
@@ -134,5 +136,29 @@ namespace TrueCrypt
 	{
 		if_debug (ValidateDataParameters (data));
 		WHIRLPOOL_add (data.Get(), (int) data.Size() * 8, (WHIRLPOOL_CTX *) Context.Ptr());
+	}
+
+	// Argon2id (Blake2b-512 wrapper for KDF type-matching and RNG pool mixing)
+	Argon2idHash::Argon2idHash ()
+	{
+		Context.Allocate (sizeof (blake2b_state));
+		Init();
+	}
+
+	void Argon2idHash::GetDigest (const BufferPtr &buffer)
+	{
+		if_debug (ValidateDigestParameters (buffer));
+		blake2b_final ((blake2b_state *) Context.Ptr(), buffer.Get(), buffer.Size());
+	}
+
+	void Argon2idHash::Init ()
+	{
+		blake2b_init ((blake2b_state *) Context.Ptr(), GetDigestSize());
+	}
+
+	void Argon2idHash::ProcessData (const ConstBufferPtr &data)
+	{
+		if_debug (ValidateDataParameters (data));
+		blake2b_update ((blake2b_state *) Context.Ptr(), data.Get(), data.Size());
 	}
 }
