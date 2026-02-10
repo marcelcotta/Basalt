@@ -24,7 +24,6 @@ OBJS += VolumeHeader.o
 OBJS += VolumeInfo.o
 OBJS += VolumeLayout.o
 OBJS += VolumePassword.o
-OBJS += VolumePasswordCache.o
 
 ifeq "$(CPU_ARCH)" "x86"
 	OBJS += ../Crypto/Aes_x86.o
@@ -37,6 +36,12 @@ else ifeq "$(CPU_ARCH)" "x64"
 	OBJS += ../Crypto/Aes_hw_cpu.o
 else
 	OBJS += ../Crypto/Aescrypt.o
+	# ARM64 hardware AES via NEON intrinsics (not assembly, works with NOASM=1)
+	# Use TARGET_ARCH if set (for cross-compilation), else detect via uname -m
+	REAL_ARCH := $(or $(TARGET_ARCH),$(shell uname -m))
+	ifneq (,$(filter arm64 aarch64,$(REAL_ARCH)))
+		OBJS += ../Crypto/Aes_hw_cpu_arm.o
+	endif
 endif
 
 OBJS += ../Crypto/Aeskey.o
@@ -51,10 +56,17 @@ OBJS += ../Crypto/Sha2.o
 OBJS += ../Crypto/Twofish.o
 OBJS += ../Crypto/Whirlpool.o
 
+OBJS += ../Crypto/Argon2/argon2.o
+OBJS += ../Crypto/Argon2/core.o
+OBJS += ../Crypto/Argon2/blake2b.o
+OBJS += ../Crypto/Argon2/ref.o
+OBJS += ../Crypto/Argon2/thread.o
+
 OBJS += ../Common/Crc.o
 OBJS += ../Common/Endian.o
 OBJS += ../Common/GfMul.o
 OBJS += ../Common/Pkcs5.o
+OBJS += ../Common/Argon2Kdf.o
 OBJS += ../Common/SecurityToken.o
 
 VolumeLibrary: Volume.a

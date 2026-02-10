@@ -21,6 +21,7 @@ namespace TrueCrypt
 		static void TestAll (bool enableCpuEncryptionSupport);
 
 	protected:
+		static void TestArgon2id ();
 		static void TestCiphers ();
 		static void TestLegacyModes ();
 		static void TestPkcs5 ();

@@ -8,6 +8,7 @@
 
 #include "Cipher.h"
 #include "Common/Crc.h"
+#include "Common/Argon2Kdf.h"
 #include "Crc32.h"
 #include "EncryptionAlgorithm.h"
 #include "EncryptionMode.h"
@@ -37,6 +38,7 @@ namespace TrueCrypt
 		TestXts();
 		TestLegacyModes();
 		TestPkcs5();
+		TestArgon2id();
 	}
 
 	void EncryptionTest::TestLegacyModes ()
@@ -55,9 +57,10 @@ namespace TrueCrypt
 
 		EncryptionModeList encModes = EncryptionMode::GetAvailableModes ();
 
-		foreach_ref (EncryptionAlgorithm &ea, EncryptionAlgorithm::GetAvailableAlgorithms())
+		for (auto &_ea_ptr : EncryptionAlgorithm::GetAvailableAlgorithms())
 		{
-			foreach (shared_ptr <EncryptionMode> mode, encModes)
+			EncryptionAlgorithm &ea = *_ea_ptr;
+			for (auto mode : encModes)
 			{
 				if (typeid (*mode) == typeid (EncryptionModeXTS))
 					continue;
@@ -502,8 +505,9 @@ namespace TrueCrypt
 			unitNo = writeOffset / ENCRYPTION_DATA_UNIT_SIZE;
 
 			// Test all EAs that support this mode of operation
-			foreach_ref (EncryptionAlgorithm &ea, EncryptionAlgorithm::GetAvailableAlgorithms())
+			for (auto &_ea_ptr : EncryptionAlgorithm::GetAvailableAlgorithms())
 			{
+				EncryptionAlgorithm &ea = *_ea_ptr;
 				shared_ptr <EncryptionMode> mode (new EncryptionModeXTS);
 
 				if (!ea.IsModeSupported (mode))
@@ -767,8 +771,9 @@ namespace TrueCrypt
 		nbrUnits = sizeof (buf) / ENCRYPTION_DATA_UNIT_SIZE;
 
 		// Test all EAs that support this mode of operation
-		foreach_ref (EncryptionAlgorithm &ea, EncryptionAlgorithm::GetAvailableAlgorithms())
+		for (auto &_ea_ptr : EncryptionAlgorithm::GetAvailableAlgorithms())
 		{
+			EncryptionAlgorithm &ea = *_ea_ptr;
 			shared_ptr <EncryptionMode> mode (new EncryptionModeXTS);
 
 			if (!ea.IsModeSupported (mode))
@@ -885,6 +890,31 @@ namespace TrueCrypt
 		Pkcs5HmacWhirlpool pkcs5HmacWhirlpool;
 		pkcs5HmacWhirlpool.DeriveKey (derivedKey, password, salt, 5);
 		if (memcmp (derivedKey.Ptr(), "\x50\x7c\x36\x6f", 4) != 0)
+			throw TestFailed (SRC_POS);
+	}
+
+	void EncryptionTest::TestArgon2id ()
+	{
+		// Argon2id test with reduced parameters (m=32 KiB, t=3, p=4) for speed.
+		// Test vector generated from PHC reference implementation.
+		static const byte expectedHash[] = {
+			0x37, 0x4f, 0xa1, 0x1c, 0x1d, 0xef, 0x2e, 0x88,
+			0xb6, 0x28, 0xcb, 0xa2, 0xeb, 0x79, 0xbf, 0x27,
+			0xf1, 0x0e, 0x88, 0xcc, 0xbb, 0x9e, 0x16, 0x0b,
+			0x88, 0x4d, 0x3e, 0x7a, 0x71, 0xf0, 0x04, 0x64
+		};
+
+		byte hash[32];
+		int rc = derive_key_argon2id_test (
+			(char *) "password", 8,
+			(char *) "somesalt01234567", 16,
+			3, 32, 4,  /* t_cost=3, m_cost=32 KiB, p=4 */
+			(char *) hash, 32);
+
+		if (rc != 0)
+			throw TestFailed (SRC_POS);
+
+		if (memcmp (hash, expectedHash, 32) != 0)
 			throw TestFailed (SRC_POS);
 	}
 }
