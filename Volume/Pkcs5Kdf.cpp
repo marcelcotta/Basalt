@@ -51,21 +51,21 @@ namespace TrueCrypt
 	{
 		Pkcs5KdfList l;
 
-		// Legacy KDFs first (fast match for existing TrueCrypt volumes)
+		// Legacy KDFs first (fast match for existing TrueCrypt 7.1a volumes)
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160_Legacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha512_Legacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacWhirlpool_Legacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1_Legacy ()));
 
-		// Modern KDFs (high iteration counts for new volumes)
+		// Argon2id before modern PBKDF2: memory-hard but multi-threaded,
+		// completes in ~1-2s on Apple Silicon vs ~3-4s per modern PBKDF2
+		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2id ()));
+
+		// Modern PBKDF2 (high iteration counts, single-threaded, ~3-4s each)
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160 ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha512 ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacWhirlpool ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1 ()));
-
-		// Memory-hard KDF last (expensive to try during mount brute-force,
-		// but PBKDF2 volumes are matched above before reaching this point)
-		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2id ()));
 
 		return l;
 	}
