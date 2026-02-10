@@ -37,7 +37,7 @@ namespace TrueCrypt
 		{
 			VolumeLayoutList l;
 
-			foreach (shared_ptr <VolumeLayout> vl, layouts)
+			for (const auto &vl : layouts)
 			{
 				if (vl->GetType() == type)
 					l.push_back (vl);

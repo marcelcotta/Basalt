@@ -83,7 +83,11 @@ typedef uint64_t uint64;
 
 typedef uint64 TC_LARGEST_COMPILER_UINT;
 
+// Don't redefine BOOL when compiling Objective-C/C++ — ObjC defines
+// typedef bool BOOL in <objc/objc.h> and our #define would conflict.
+#if !defined(__OBJC__)
 #define BOOL int
+#endif
 #ifndef FALSE
 #define FALSE 0
 #define TRUE 1
@@ -217,15 +221,22 @@ typedef int BOOL;
 #ifdef _WIN32
 #define burn(mem,size) do { volatile char *burnm = (volatile char *)(mem); int burnc = size; RtlSecureZeroMemory (mem, size); while (burnc--) *burnm++ = 0; } while (0)
 #else
-#define burn(mem,size) do { volatile char *burnm = (volatile char *)(mem); int burnc = size; while (burnc--) *burnm++ = 0; } while (0)
+/* Use memset_s() - C11 Annex K, guaranteed not to be optimized away.
+   Available on macOS 10.9+, and most C11-compliant platforms. */
+#ifndef __STDC_WANT_LIB_EXT1__
+#define __STDC_WANT_LIB_EXT1__ 1
+#endif
+#include <string.h>
+#define burn(mem,size) memset_s((mem), (size), 0, (size))
 #endif
 
-// The size of the memory area to wipe is in bytes amd it must be a multiple of 8.
-#ifndef TC_NO_COMPILER_INT64
-#	define FAST_ERASE64(mem,size) do { volatile uint64 *burnm = (volatile uint64 *)(mem); int burnc = size >> 3; while (burnc--) *burnm++ = 0; } while (0)
-#else
-#	define FAST_ERASE64(mem,size) do { volatile unsigned __int32 *burnm = (volatile unsigned __int32 *)(mem); int burnc = size >> 2; while (burnc--) *burnm++ = 0; } while (0)
-#endif
+// The size of the memory area to wipe is in bytes and it must be a multiple of 8.
+// SECURITY: FAST_ERASE64 now delegates to burn() which uses memset_s().
+// The previous volatile-pointer loop was not guaranteed by the C/C++ standards
+// to survive compiler optimization for stack-allocated buffers about to go out
+// of scope. memset_s() (C11 Annex K) is the only standards-compliant way to
+// ensure the wipe is not optimized away.
+#define FAST_ERASE64(mem,size) burn((mem),(size))
 
 #ifdef TC_WINDOWS_BOOT
 #	ifndef max
@@ -255,11 +266,16 @@ void EraseMemory (void *memory, int size);
 #define TC_APPLINK "http://www.truecrypt.org/applink?version=" VERSION_STRING
 #define TC_APPLINK_SECURE "https://www.truecrypt.org/applink?version=" VERSION_STRING
 
+// Avoid conflict with macOS <mach/error.h> which #defines ERR_SUCCESS
+#ifdef ERR_SUCCESS
+#undef ERR_SUCCESS
+#endif
+
 enum
 {
-	/* WARNING: ADD ANY NEW CODES AT THE END (DO NOT INSERT THEM BETWEEN EXISTING). DO *NOT* DELETE ANY 
+	/* WARNING: ADD ANY NEW CODES AT THE END (DO NOT INSERT THEM BETWEEN EXISTING). DO *NOT* DELETE ANY
 	EXISTING CODES! Changing these values or their meanings may cause incompatibility with other versions
-	(for example, if a new version of the TrueCrypt installer receives an error code from an installed 
+	(for example, if a new version of the TrueCrypt installer receives an error code from an installed
 	driver whose version is lower, it will report and interpret the error incorrectly). */
 
 	ERR_SUCCESS								= 0,

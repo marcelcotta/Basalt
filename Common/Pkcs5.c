@@ -118,8 +118,10 @@ void derive_u_sha512 (char *pwd, int pwd_len, char *salt, int salt_len, int iter
 	int c, i;
 
 	/* iteration 1 */
-	memset (counter, 0, 4);
-	counter[3] = (char) b;
+	counter[0] = (char) (b >> 24);
+	counter[1] = (char) (b >> 16);
+	counter[2] = (char) (b >> 8);
+	counter[3] = (char) (b);
 	memcpy (init, salt, salt_len);	/* salt */
 	memcpy (&init[salt_len], counter, 4);	/* big-endian block number */
 	hmac_sha512 (pwd, pwd_len, init, salt_len + 4, j, SHA512_DIGESTSIZE);
@@ -261,8 +263,10 @@ void derive_u_sha1 (char *pwd, int pwd_len, char *salt, int salt_len, int iterat
 	int c, i;
 
 	/* iteration 1 */
-	memset (counter, 0, 4);
-	counter[3] = (char) b;
+	counter[0] = (char) (b >> 24);
+	counter[1] = (char) (b >> 16);
+	counter[2] = (char) (b >> 8);
+	counter[3] = (char) (b);
 	memcpy (init, salt, salt_len);	/* salt */
 	memcpy (&init[salt_len], counter, 4);	/* big-endian block number */
 	hmac_sha1 (pwd, pwd_len, init, salt_len + 4, j, SHA1_DIGESTSIZE);
@@ -395,8 +399,10 @@ void derive_u_ripemd160 (char *pwd, int pwd_len, char *salt, int salt_len, int i
 	int c, i;
 
 	/* iteration 1 */
-	memset (counter, 0, 4);
-	counter[3] = (char) b;
+	counter[0] = (char) (b >> 24);
+	counter[1] = (char) (b >> 16);
+	counter[2] = (char) (b >> 8);
+	counter[3] = (char) (b);
 	memcpy (init, salt, salt_len);	/* salt */
 	memcpy (&init[salt_len], counter, 4);	/* big-endian block number */
 	hmac_ripemd160 (pwd, pwd_len, init, salt_len + 4, j);
@@ -535,8 +541,10 @@ void derive_u_whirlpool (char *pwd, int pwd_len, char *salt, int salt_len, int i
 	int c, i;
 
 	/* iteration 1 */
-	memset (counter, 0, 4);
-	counter[3] = (char) b;
+	counter[0] = (char) (b >> 24);
+	counter[1] = (char) (b >> 16);
+	counter[2] = (char) (b >> 8);
+	counter[3] = (char) (b);
 	memcpy (init, salt, salt_len);	/* salt */
 	memcpy (&init[salt_len], counter, 4);	/* big-endian block number */
 	hmac_whirlpool (pwd, pwd_len, init, salt_len + 4, j, WHIRLPOOL_DIGESTSIZE);

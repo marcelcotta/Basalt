@@ -37,6 +37,7 @@ namespace TrueCrypt
 		void EncryptBuffer (byte *data, uint64 length, uint64 startDataUnitNo) const;
 		void EncryptBufferXTS (const Cipher &cipher, const Cipher &secondaryCipher, byte *buffer, uint64 length, uint64 startDataUnitNo, unsigned int startCipherBlockNo) const;
 		void SetSecondaryCipherKeys ();
+		void ValidateXtsKeys ();
 
 		SecureBuffer SecondaryKey;
 		CipherList SecondaryCiphers;

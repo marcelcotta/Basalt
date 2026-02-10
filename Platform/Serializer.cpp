@@ -7,7 +7,6 @@
 */
 
 #include "Exception.h"
-#include "ForEach.h"
 #include "Memory.h"
 #include "Serializer.h"
 
@@ -122,8 +121,17 @@ namespace TrueCrypt
 	{
 		uint64 size = Deserialize <uint64> ();
 
+		if (size == 0)
+			return string();
+
+		if (size > 0x1000000) // 16MB sanity check
+			throw ParameterIncorrect (SRC_POS);
+
 		vector <char> data ((size_t) size);
 		DataStream->ReadCompleteBuffer (BufferPtr ((byte *) &data[0], (size_t) size));
+
+		// Ensure null termination
+		data.back() = '\0';
 
 		return string (&data[0]);
 	}
@@ -150,8 +158,17 @@ namespace TrueCrypt
 	{
 		uint64 size = Deserialize <uint64> ();
 
+		if (size == 0)
+			return wstring();
+
+		if (size > 0x1000000 || size % sizeof(wchar_t) != 0) // 16MB sanity check
+			throw ParameterIncorrect (SRC_POS);
+
 		vector <wchar_t> data ((size_t) size / sizeof (wchar_t));
 		DataStream->ReadCompleteBuffer (BufferPtr ((byte *) &data[0], (size_t) size));
+
+		// Ensure null termination
+		data.back() = L'\0';
 
 		return wstring (&data[0]);
 	}
@@ -250,7 +267,7 @@ namespace TrueCrypt
 		uint64 listSize = stringList.size();
 		Serialize (listSize);
 
-		foreach (const string &item, stringList)
+		for (const auto &item : stringList)
 			SerializeString (item);
 	}
 
@@ -261,7 +278,7 @@ namespace TrueCrypt
 		uint64 listSize = stringList.size();
 		Serialize (listSize);
 
-		foreach (const wstring &item, stringList)
+		for (const auto &item : stringList)
 			SerializeWString (item);
 	}
 

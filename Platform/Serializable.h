@@ -11,7 +11,6 @@
 
 #include <stdexcept>
 #include "PlatformBase.h"
-#include "ForEach.h"
 #include "Serializer.h"
 #include "SerializerFactory.h"
 
@@ -63,8 +62,8 @@ namespace TrueCrypt
 			SerializeHeader (sr, string ("list<") + SerializerFactory::GetName (typeid (T)) + ">");
 
 			sr.Serialize ("ListSize", (uint64) dataList.size());
-			foreach_ref (const T &item, dataList)
-				item.Serialize (stream);
+			for (const auto &item : dataList)
+				item->Serialize (stream);
 		}
 
 		static void SerializeHeader (Serializer &serializer, const string &name);

@@ -6,6 +6,7 @@
  packages.
 */
 
+#include "Common/Tcdefs.h"
 #ifdef __GNUC__
 #	include <cxxabi.h>
 #endif
@@ -13,7 +14,6 @@
 #include <typeinfo>
 #include "Buffer.h"
 #include "Exception.h"
-#include "ForEach.h"
 #include "StringConverter.h"
 #include "SystemException.h"
 
@@ -21,18 +21,14 @@ namespace TrueCrypt
 {
 	void StringConverter::Erase (string &str)
 	{
-		for (size_t i = 0; i < str.size(); ++i)
-		{
-			str[i] = ' ';
-		}
+		if (!str.empty())
+			burn (&str[0], str.size());
 	}
 
 	void StringConverter::Erase (wstring &str)
 	{
-		for (size_t i = 0; i < str.size(); ++i)
-		{
-			str[i] = ' ';
-		}
+		if (!str.empty())
+			burn (&str[0], str.size() * sizeof (wchar_t));
 	}
 
 	wstring StringConverter::FromNumber (double number)
@@ -123,7 +119,7 @@ namespace TrueCrypt
 			return str;
 
 		wstring escaped (L"'");
-		foreach (wchar_t c, str)
+		for (const auto &c : str)
 		{
 			if (c == L'\'')
 				escaped += L'\'';
@@ -156,7 +152,7 @@ namespace TrueCrypt
 		{
 			string element;
 			elements.push_back (element);
-			foreach (char c, str)
+			for (const auto &c : str)
 			{
 				if (separators.find (c) != string::npos)
 				{
@@ -197,7 +193,7 @@ namespace TrueCrypt
 	string StringConverter::ToLower (const string &str)
 	{
 		string s;
-		foreach (char c, str)
+		for (const auto &c : str)
 			s += tolower (c, locale());
 		return s;
 	}
@@ -289,7 +285,7 @@ namespace TrueCrypt
 	string StringConverter::ToUpper (const string &str)
 	{
 		string s;
-		foreach (char c, str)
+		for (const auto &c : str)
 			s += toupper (c, locale());
 		return s;
 	}
@@ -348,15 +344,16 @@ namespace TrueCrypt
 		if (end < 1)
 			return str;
 
-		foreach (char c, str)
+		for (const auto &c : str)
 		{
 			if (c > ' ')
 				break;
 			++start;
 		}
 
-		foreach_reverse (char c, str)
+		for (auto _it = str.rbegin(); _it != str.rend(); ++_it)
 		{
+			const auto &c = *_it;
 			if (c > ' ')
 				break;
 			--end;

@@ -26,7 +26,7 @@ namespace TrueCrypt
 
 		operator const byte * () const { return DataPtr; }
 
-		bool IsDataEqual (const ConstBufferPtr &other) const { return Memory::Compare (DataPtr, DataSize, other.DataPtr, other.DataSize) == 0; }
+		bool IsDataEqual (const ConstBufferPtr &other) const { return DataSize == other.DataSize && Memory::ConstantTimeCompare (DataPtr, other.DataPtr, DataSize); }
 		const byte *Get () const { return DataPtr; }
 		ConstBufferPtr GetRange (size_t offset, size_t size) const;
 		void Set (const byte *data, size_t size) { DataPtr = data; DataSize = size; }

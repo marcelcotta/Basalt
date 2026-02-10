@@ -80,10 +80,10 @@ namespace TrueCrypt
 	{
 		size_t largestKeySize = 0;
 
-		foreach_ref (const EncryptionAlgorithm &ea, algorithms)
+		for (const auto &ea : algorithms)
 		{
-			if (ea.GetKeySize() > largestKeySize)
-				largestKeySize = ea.GetKeySize();
+			if (ea->GetKeySize() > largestKeySize)
+				largestKeySize = ea->GetKeySize();
 		}
 
 		return largestKeySize;
@@ -96,8 +96,8 @@ namespace TrueCrypt
 
 		size_t keySize = 0;
 
-		foreach_ref (const Cipher &c, Ciphers)
-			keySize += c.GetKeySize();
+		for (const auto &c : Ciphers)
+			keySize += c->GetKeySize();
 
 		return keySize;
 	}
@@ -106,9 +106,9 @@ namespace TrueCrypt
 	{
 		size_t blockSize = 0;
 
-		foreach_ref (const Cipher &c, Ciphers)
-			if (c.GetBlockSize() > blockSize)
-				blockSize = c.GetBlockSize();
+		for (const auto &c : Ciphers)
+			if (c->GetBlockSize() > blockSize)
+				blockSize = c->GetBlockSize();
 
 		return blockSize;
 	}
@@ -117,9 +117,9 @@ namespace TrueCrypt
 	{
 		size_t blockSize = 0;
 
-		foreach_ref (const Cipher &c, Ciphers)
-			if (blockSize == 0 || c.GetBlockSize() < blockSize)
-				blockSize = c.GetBlockSize();
+		for (const auto &c : Ciphers)
+			if (blockSize == 0 || c->GetBlockSize() < blockSize)
+				blockSize = c->GetBlockSize();
 
 		return blockSize;
 	}
@@ -139,12 +139,13 @@ namespace TrueCrypt
 
 		wstring name;
 
-		foreach_reverse_ref (const Cipher &c, Ciphers)
+		for (auto _it = Ciphers.rbegin(); _it != Ciphers.rend(); ++_it)
 		{
+			const auto &c = *_it;
 			if (name.empty())
-				name = c.GetName();
+				name = c->GetName();
 			else
-				name += wstring (L"-") + c.GetName();
+				name += wstring (L"-") + c->GetName();
 		}
 
 		return name;
@@ -154,9 +155,9 @@ namespace TrueCrypt
 	{
 		bool supported = false;
 
-		foreach_ref (const EncryptionMode &em, SupportedModes)
+		for (const auto &em : SupportedModes)
 		{
-			if (typeid (mode) == typeid (em))
+			if (typeid (mode) == typeid (*em))
 			{
 				supported = true;
 				break;
@@ -190,10 +191,10 @@ namespace TrueCrypt
 			throw ParameterIncorrect (SRC_POS);
 
 		size_t keyOffset = 0;
-		foreach_ref (Cipher &c, Ciphers)
+		for (auto &c : Ciphers)
 		{
-			c.SetKey (key.GetRange (keyOffset, c.GetKeySize()));
-			keyOffset += c.GetKeySize();
+			c->SetKey (key.GetRange (keyOffset, c->GetKeySize()));
+			keyOffset += c->GetKeySize();
 		}
 	}
 

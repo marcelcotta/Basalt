@@ -92,7 +92,7 @@ namespace TrueCrypt
 
 		typedef pair <CK_SLOT_ID, Pkcs11Session> SessionMapPair;
 
-		foreach (SessionMapPair p, Sessions)
+		for (const auto &p : Sessions)
 		{
 			try
 			{
@@ -118,7 +118,7 @@ namespace TrueCrypt
 
 		LoginUserIfRequired (slotId);
 
-		foreach (const SecurityTokenKeyfile &keyfile, GetAvailableKeyfiles (&slotId))
+		for (const auto &keyfile : GetAvailableKeyfiles (&slotId))
 		{
 			if (keyfile.IdUtf8 == name)
 				throw SecurityTokenKeyfileAlreadyExists();
@@ -181,7 +181,7 @@ namespace TrueCrypt
 		bool unrecognizedTokenPresent = false;
 		vector <SecurityTokenKeyfile> keyfiles;
 
-		foreach (const CK_SLOT_ID &slotId, GetTokenSlots())
+		for (const auto &slotId : GetTokenSlots())
 		{
 			SecurityTokenInfo token;
 
@@ -208,7 +208,7 @@ namespace TrueCrypt
 				throw;
 			}
 
-			foreach (const CK_OBJECT_HANDLE &dataHandle, GetObjects (slotId, CKO_DATA))
+			for (const auto &dataHandle : GetObjects (slotId, CKO_DATA))
 			{
 				SecurityTokenKeyfile keyfile;
 				keyfile.Handle = dataHandle;
@@ -253,7 +253,7 @@ namespace TrueCrypt
 		bool unrecognizedTokenPresent = false;
 		list <SecurityTokenInfo> tokens;
 
-		foreach (const CK_SLOT_ID &slotId, GetTokenSlots())
+		for (const auto &slotId : GetTokenSlots())
 		{
 			try
 			{
@@ -506,7 +506,7 @@ namespace TrueCrypt
 		}
 	}
 
-	void SecurityToken::InitLibrary (const string &pkcs11LibraryPath, auto_ptr <GetPinFunctor> pinCallback, auto_ptr <SendExceptionFunctor> warningCallback)
+	void SecurityToken::InitLibrary (const string &pkcs11LibraryPath, unique_ptr <GetPinFunctor> pinCallback, unique_ptr <SendExceptionFunctor> warningCallback)
 	{
 		if (Initialized)
 			CloseLibrary();
@@ -536,8 +536,8 @@ namespace TrueCrypt
 		if (status != CKR_OK)
 			throw Pkcs11Exception (status);
 
-		PinCallback = pinCallback;
-		WarningCallback = warningCallback;
+		PinCallback = std::move(pinCallback);
+		WarningCallback = std::move(warningCallback);
 
 		Initialized = true;
 	}
@@ -716,8 +716,8 @@ namespace TrueCrypt
 	}
 #endif // TC_HEADER_Common_Exception
 
-	auto_ptr <GetPinFunctor> SecurityToken::PinCallback;
-	auto_ptr <SendExceptionFunctor> SecurityToken::WarningCallback;
+	unique_ptr <GetPinFunctor> SecurityToken::PinCallback;
+	unique_ptr <SendExceptionFunctor> SecurityToken::WarningCallback;
 
 	bool SecurityToken::Initialized;
 	CK_FUNCTION_LIST_PTR SecurityToken::Pkcs11Functions;

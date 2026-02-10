@@ -8,6 +8,9 @@
 
 #include "Buffer.h"
 #include "Exception.h"
+#ifndef TC_WINDOWS
+#include <sys/mman.h>
+#endif
 
 namespace TrueCrypt
 {
@@ -105,6 +108,12 @@ namespace TrueCrypt
 	void SecureBuffer::Allocate (size_t size)
 	{
 		Buffer::Allocate (size);
+#ifndef TC_WINDOWS
+		// Lock memory to prevent swapping sensitive data to disk.
+		// Failure is non-fatal (RLIMIT_MEMLOCK may be low) but logged implicitly.
+		if (DataPtr != nullptr)
+			mlock (DataPtr, DataSize);
+#endif
 	}
 
 	void SecureBuffer::Free ()
@@ -113,6 +122,9 @@ namespace TrueCrypt
 			throw NotInitialized (SRC_POS);
 
 		Erase ();
+#ifndef TC_WINDOWS
+		munlock (DataPtr, DataSize);
+#endif
 		Buffer::Free ();
 	}
 

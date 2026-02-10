@@ -30,8 +30,20 @@ namespace TrueCrypt
 			return 1;
 		else if (size1 < size2)
 			return -1;
-		
+
 		return memcmp (memory1, memory2, size1);
+	}
+
+	bool Memory::ConstantTimeCompare (const void *memory1, const void *memory2, size_t size)
+	{
+		const volatile unsigned char *p1 = static_cast<const volatile unsigned char *> (memory1);
+		const volatile unsigned char *p2 = static_cast<const volatile unsigned char *> (memory2);
+		volatile unsigned char diff = 0;
+
+		for (size_t i = 0; i < size; ++i)
+			diff |= p1[i] ^ p2[i];
+
+		return diff == 0;
 	}
 
 	void Memory::Copy (void *memoryDestination, const void *memorySource, size_t size)

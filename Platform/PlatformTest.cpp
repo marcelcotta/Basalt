@@ -10,7 +10,6 @@
 #include "Exception.h"
 #include "FileStream.h"
 #include "Finally.h"
-#include "ForEach.h"
 #include "MemoryStream.h"
 #include "Mutex.h"
 #include "Serializable.h"
@@ -52,13 +51,16 @@ namespace TrueCrypt
 			throw TestFailed (SRC_POS);
 
 		StringConverter::Erase (convStr);
-		if (convStr != "            ")
-			throw TestFailed (SRC_POS);
+		// After secure erase, all bytes must be zero (burn writes zeros, not spaces)
+		for (size_t i = 0; i < convStr.size(); ++i)
+			if (convStr[i] != '\0')
+				throw TestFailed (SRC_POS);
 
 		wstring wEraseTest = L"erase test";
 		StringConverter::Erase (wEraseTest);
-		if (wEraseTest != L"          ")
-			throw TestFailed (SRC_POS);
+		for (size_t i = 0; i < wEraseTest.size(); ++i)
+			if (wEraseTest[i] != L'\0')
+				throw TestFailed (SRC_POS);
 
 		list <string> stringList;
 		stringList.push_back (str + "1");
@@ -117,7 +119,7 @@ namespace TrueCrypt
 			throw TestFailed (SRC_POS);
 
 		int i = 1;
-		foreach (string item, ser.DeserializeStringList ("stringList"))
+		for (const auto &item : ser.DeserializeStringList ("stringList"))
 		{
 			stringstream s;
 			s << str << i++;
@@ -126,7 +128,7 @@ namespace TrueCrypt
 		}
 
 		i = 1;
-		foreach (wstring item, ser.DeserializeWStringList ("wstringList"))
+		for (const auto &item : ser.DeserializeWStringList ("wstringList"))
 		{
 			wstringstream s;
 			s << wstr << i++;
@@ -150,11 +152,11 @@ namespace TrueCrypt
 		list < shared_ptr <ExecutedProcessFailed> > dexList;
 		Serializable::DeserializeList (stream, dexList);
 		i = 1;
-		foreach_ref (const ExecutedProcessFailed &ex, dexList)
+		for (const auto &ex : dexList)
 		{
 			stringstream s;
 			s << "error output" << i++;
-			if (ex.GetErrorOutput() != s.str())
+			if (ex->GetErrorOutput() != s.str())
 				throw TestFailed (SRC_POS);
 		}
 	}
@@ -322,8 +324,9 @@ namespace TrueCrypt
 
 		list <wstring> testList;
 		wstringstream wstream (L"test");
-		foreach_reverse_ref (uint64 n, numList)
+		for (auto _it = numList.rbegin(); _it != numList.rend(); ++_it)
 		{
+			const uint64 &n = **_it;
 			wstream.str (L"");
 			wstream << L"str" << n;
 			testList.push_back (wstream.str());
@@ -333,7 +336,7 @@ namespace TrueCrypt
 		sstream << "dummy";
 		sstream.str ("");
 		sstream << "str18446744073709551614,str2" << " str" << StringConverter::Trim (StringConverter::ToSingle (L"\t 3 \r\n"));
-		foreach (const string &s, StringConverter::Split (sstream.str(), ", "))
+		for (const auto &s : StringConverter::Split (sstream.str(), ", "))
 		{
 			if (testList.front() != StringConverter::ToWide (s))
 				throw TestFailed (SRC_POS);

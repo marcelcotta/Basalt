@@ -14,7 +14,6 @@
 #include "Process.h"
 #include "Platform/Exception.h"
 #include "Platform/FileStream.h"
-#include "Platform/ForEach.h"
 #include "Platform/MemoryStream.h"
 #include "Platform/SystemException.h"
 #include "Platform/StringConverter.h"
@@ -32,7 +31,7 @@ namespace TrueCrypt
 #if 0
 		stringstream dbg;
 		dbg << "exec " << processName;
-		foreach (const string &at, arguments)
+		for (const auto &at : arguments)
 			dbg << " " << at;
 		trace_msg (dbg.str());
 #endif
@@ -52,9 +51,9 @@ namespace TrueCrypt
 					if (!execFunctor)
 						args[argIndex++] = const_cast <char*> (processName.c_str());
 
-					foreach (const string &arg, arguments)
+					for (list <string>::const_iterator it = arguments.begin(); it != arguments.end(); ++it)
 					{
-						args[argIndex++] = const_cast <char*> (arg.c_str());
+						args[argIndex++] = const_cast <char*> (it->c_str());
 					}
 					args[argIndex] = nullptr;
 
@@ -135,7 +134,7 @@ namespace TrueCrypt
 			try
 			{
 				ssize_t bytesRead = 0;
-				foreach (int fd, poller.WaitForData (pollTimeout))
+				for (const auto &fd : poller.WaitForData (pollTimeout))
 				{
 					bytesRead = read (fd, &buffer[0], buffer.capacity());
 					if (bytesRead > 0)
@@ -166,7 +165,7 @@ namespace TrueCrypt
 
 		if (!exOutput.empty())
 		{
-			auto_ptr <Serializable> deserializedObject;
+			unique_ptr <Serializable> deserializedObject;
 			Exception *deserializedException = nullptr;
 
 			try

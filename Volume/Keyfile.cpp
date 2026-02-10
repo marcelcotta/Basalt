@@ -94,22 +94,22 @@ done:
 		HiddenFileWasPresentInKeyfilePath = false;
 
 		// Enumerate directories
-		foreach (shared_ptr <Keyfile> keyfile, *keyfiles)
+		for (const auto &keyfile : *keyfiles)
 		{
 			if (FilesystemPath (*keyfile).IsDirectory())
 			{
 				size_t keyfileCount = 0;
-				foreach_ref (const FilePath &path, Directory::GetFilePaths (*keyfile))
+				for (const auto &path : Directory::GetFilePaths (*keyfile))
 				{
 #ifdef TC_UNIX
 					// Skip hidden files
-					if (wstring (path.ToBaseName()).find (L'.') == 0)
+					if (wstring (path->ToBaseName()).find (L'.') == 0)
 					{
 						HiddenFileWasPresentInKeyfilePath = true;
 						continue;
 					}
 #endif
-					keyfilesExp.push_back (make_shared <Keyfile> (path));
+					keyfilesExp.push_back (make_shared <Keyfile> (*path));
 					++keyfileCount;
 				}
 
@@ -137,9 +137,9 @@ done:
 			keyfilePool.CopyFrom (ConstBufferPtr (password->DataPtr(), password->Size()));
 
 			// Apply all keyfiles
-			foreach_ref (const Keyfile &k, keyfilesExp)
+			for (const auto &k : keyfilesExp)
 			{
-				k.Apply (keyfilePool);
+				k->Apply (keyfilePool);
 			}
 
 			newPassword->Set (keyfilePool);
@@ -156,7 +156,7 @@ done:
 		if (!sr.DeserializeBool (name + "Null"))
 		{
 			keyfiles.reset (new KeyfileList);
-			foreach (const wstring &k, sr.DeserializeWStringList (name))
+			for (const auto &k : sr.DeserializeWStringList (name))
 				keyfiles->push_back (make_shared <Keyfile> (k));
 		}
 		return keyfiles;
@@ -170,8 +170,8 @@ done:
 		{
 			list <wstring> sl;
 
-			foreach_ref (const Keyfile &k, *keyfiles)
-				sl.push_back (FilesystemPath (k));
+			for (const auto &k : *keyfiles)
+				sl.push_back (FilesystemPath (*k));
 
 			sr.Serialize (name, sl);
 		}

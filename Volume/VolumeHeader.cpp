@@ -87,16 +87,16 @@ namespace TrueCrypt
 		SecureBuffer header (EncryptedHeaderDataSize);
 		SecureBuffer headerKey (GetLargestSerializedKeySize());
 
-		foreach (shared_ptr <Pkcs5Kdf> pkcs5, keyDerivationFunctions)
+		for (const auto &pkcs5 : keyDerivationFunctions)
 		{
 			pkcs5->DeriveKey (headerKey, password, salt);
 
-			foreach (shared_ptr <EncryptionMode> mode, encryptionModes)
+			for (auto mode : encryptionModes)
 			{
 				if (typeid (*mode) != typeid (EncryptionModeXTS))
 					mode->SetKey (headerKey.GetRange (0, mode->GetKeySize()));
 
-				foreach (shared_ptr <EncryptionAlgorithm> ea, encryptionAlgorithms)
+				for (auto ea : encryptionAlgorithms)
 				{
 					if (!ea->IsModeSupported (mode))
 						continue;
@@ -104,7 +104,7 @@ namespace TrueCrypt
 					if (typeid (*mode) == typeid (EncryptionModeXTS))
 					{
 						ea->SetKey (headerKey.GetRange (0, ea->GetKeySize()));
-						
+
 						mode = mode->GetNew();
 						mode->SetKey (headerKey.GetRange (ea->GetKeySize(), ea->GetKeySize()));
 					}
@@ -136,10 +136,13 @@ namespace TrueCrypt
 		if (header.Size() != EncryptedHeaderDataSize)
 			throw ParameterIncorrect (SRC_POS);
 
-		if (header[0] != 'T' ||
-			header[1] != 'R' ||
-			header[2] != 'U' ||
-			header[3] != 'E')
+		// Accept TrueCrypt ("TRUE"), VeraCrypt ("VERA"), and Basalt ("BSLT") volumes
+		bool validMagic =
+			(header[0] == 'T' && header[1] == 'R' && header[2] == 'U' && header[3] == 'E') ||
+			(header[0] == 'V' && header[1] == 'E' && header[2] == 'R' && header[3] == 'A') ||
+			(header[0] == 'B' && header[1] == 'S' && header[2] == 'L' && header[3] == 'T');
+
+		if (!validMagic)
 			return false;
 
 		size_t offset = 4;
@@ -285,10 +288,10 @@ namespace TrueCrypt
 
 		header.Zero();
 
-		header[0] = 'T';
-		header[1] = 'R';
-		header[2] = 'U';
-		header[3] = 'E';
+		header[0] = 'B';
+		header[1] = 'S';
+		header[2] = 'L';
+		header[3] = 'T';
 		size_t offset = 4;
 
 		header.GetRange (DataAreaKeyOffset, DataAreaKey.Size()).CopyFrom (DataAreaKey);

@@ -422,8 +422,8 @@ namespace TrueCrypt
 		if (config.SystemPartition.IsGPT)
 			throw ParameterIncorrect (SRC_POS);	// It is assumed that CheckRequirements() had been called
 
-		// Find the first active partition on the system drive 
-		foreach (const Partition &partition, config.Partitions)
+		// Find the first active partition on the system drive
+		for (const auto &partition : config.Partitions)
 		{
 			if (partition.Info.BootIndicator)
 			{
@@ -436,7 +436,7 @@ namespace TrueCrypt
 						Partition bootPartition = partition;
 						Partition partitionBehindBoot;
 
-						foreach (const Partition &partition, config.Partitions)
+						for (const auto &partition : config.Partitions)
 						{
 							if (partition.Info.StartingOffset.QuadPart > bootPartition.Info.StartingOffset.QuadPart
 								&& partition.Info.StartingOffset.QuadPart < minOffsetFound)
@@ -474,7 +474,7 @@ namespace TrueCrypt
 		{
 			int64 minOffsetFound = config.DrivePartition.Info.PartitionLength.QuadPart;
 
-			foreach (const Partition &partition, config.Partitions)
+			for (const auto &partition : config.Partitions)
 			{
 				if (partition.Info.StartingOffset.QuadPart > config.SystemPartition.Info.StartingOffset.QuadPart
 					&& partition.Info.StartingOffset.QuadPart < minOffsetFound)
@@ -862,7 +862,7 @@ namespace TrueCrypt
 			config.SystemLoaderPresent = false;
 
 			PartitionList partitions = GetDrivePartitions (driveNumber);
-			foreach (const Partition &part, partitions)
+			for (const auto &part : partitions)
 			{
 				if (!part.MountPoint.empty()
 					&& (_access ((part.MountPoint + "\\bootmgr").c_str(), 0) == 0 || _access ((part.MountPoint + "\\ntldr").c_str(), 0) == 0))
@@ -909,7 +909,7 @@ namespace TrueCrypt
 				config.InitialUnallocatedSpace = 0x7fffFFFFffffFFFFull;
 				config.TotalUnallocatedSpace = config.DrivePartition.Info.PartitionLength.QuadPart;
 
-				foreach (const Partition &part, config.Partitions)
+				for (const auto &part : config.Partitions)
 				{
 					if (part.Info.StartingOffset.QuadPart < config.InitialUnallocatedSpace)
 						config.InitialUnallocatedSpace = part.Info.StartingOffset.QuadPart;
@@ -1890,7 +1890,7 @@ namespace TrueCrypt
 		if (!config.SystemPartition.IsGPT)
 		{
 			// Determine whether there is an Active partition on the system drive
-			foreach (const Partition &partition, config.Partitions)
+			for (const auto &partition : config.Partitions)
 			{
 				if (partition.Info.BootIndicator)
 				{
@@ -2071,7 +2071,7 @@ namespace TrueCrypt
 			headerOffset = encStatus.HiddenSystemPartitionStart + TC_HIDDEN_VOLUME_HEADER_OFFSET;
 
 			// Find hidden system partition
-			foreach (const Partition &partition, config.Partitions)
+			for (const auto &partition : config.Partitions)
 			{
 				if (partition.Info.StartingOffset.QuadPart == encStatus.HiddenSystemPartitionStart)
 				{

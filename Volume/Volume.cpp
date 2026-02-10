@@ -119,7 +119,7 @@ namespace TrueCrypt
 				hostDeviceSectorSize = volumeFile->GetDeviceSectorSize();
 
 			// Test volume layouts
-			foreach (shared_ptr <VolumeLayout> layout, VolumeLayout::GetAvailableLayouts (volumeType))
+			for (auto layout : VolumeLayout::GetAvailableLayouts (volumeType))
 			{
 				if (skipLayoutV1Normal && typeid (*layout) == typeid (VolumeLayoutV1Normal))
 				{

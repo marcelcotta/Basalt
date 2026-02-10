@@ -21,7 +21,7 @@ namespace TrueCrypt
 		ScopeLock lock (HandlersMutex);
 
 		EventHandlerList newConnectedHandlers;
-		foreach (shared_ptr <EventConnectorBase> h, ConnectedHandlers)
+		for (const auto &h : ConnectedHandlers)
 		{
 			if (h->GetHandler() != handler)
 				newConnectedHandlers.push_back (h);
@@ -39,9 +39,9 @@ namespace TrueCrypt
 	void Event::Raise (EventArgs &args)
 	{
 		ScopeLock lock (HandlersMutex);
-		foreach_ref (EventConnectorBase &handler, ConnectedHandlers)
+		for (auto &handler : ConnectedHandlers)
 		{
-			handler (args);
+			(*handler) (args);
 		}
 	}
 }

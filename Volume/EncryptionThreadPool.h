@@ -40,7 +40,7 @@ namespace TrueCrypt
 			};
 
 			struct WorkItem *FirstFragment;
-			auto_ptr <Exception> ItemException;
+			unique_ptr <Exception> ItemException;
 			SyncEvent ItemCompletedEvent;
 			SharedVal <size_t> OutstandingFragmentCount;
 			SharedVal <State::Enum> State;

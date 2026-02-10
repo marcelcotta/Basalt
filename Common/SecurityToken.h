@@ -184,7 +184,7 @@ namespace TrueCrypt
 		static void GetKeyfileData (const SecurityTokenKeyfile &keyfile, vector <byte> &keyfileData);
 		static list <SecurityTokenInfo> GetAvailableTokens ();
 		static SecurityTokenInfo GetTokenInfo (CK_SLOT_ID slotId);
-		static void InitLibrary (const string &pkcs11LibraryPath, auto_ptr <GetPinFunctor> pinCallback, auto_ptr <SendExceptionFunctor> warningCallback);
+		static void InitLibrary (const string &pkcs11LibraryPath, unique_ptr <GetPinFunctor> pinCallback, unique_ptr <SendExceptionFunctor> warningCallback);
 		static bool IsInitialized () { return Initialized; }
 		static bool IsKeyfilePathValid (const wstring &securityTokenKeyfilePath);
 	
@@ -201,7 +201,7 @@ namespace TrueCrypt
 		static void CheckLibraryStatus ();
 
 		static bool Initialized;
-		static auto_ptr <GetPinFunctor> PinCallback;
+		static unique_ptr <GetPinFunctor> PinCallback;
 		static CK_FUNCTION_LIST_PTR Pkcs11Functions;
 #ifdef TC_WINDOWS
 		static HMODULE Pkcs11LibraryHandle;
@@ -209,7 +209,7 @@ namespace TrueCrypt
 		static void *Pkcs11LibraryHandle;
 #endif
 		static map <CK_SLOT_ID, Pkcs11Session> Sessions;
-		static auto_ptr <SendExceptionFunctor> WarningCallback;
+		static unique_ptr <SendExceptionFunctor> WarningCallback;
 	};
 }
 

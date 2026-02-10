@@ -70,6 +70,7 @@ namespace TrueCrypt
 	public:
 		static void *Allocate (size_t size);
 		static int Compare (const void *memory1, size_t size1, const void *memory2, size_t size2);
+		static bool ConstantTimeCompare (const void *memory1, const void *memory2, size_t size);
 		static void Copy (void *memoryDestination, const void *memorySource, size_t size);
 		static void Erase (void *memory, size_t size);
 		static void Free (void *memory);

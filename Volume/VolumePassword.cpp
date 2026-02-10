@@ -6,6 +6,7 @@
  packages.
 */
 
+#include "Common/Tcdefs.h"
 #include "VolumePassword.h"
 #include "Platform/SerializerFactory.h"
 #include "Platform/StringConverter.h"
@@ -142,7 +143,8 @@ namespace TrueCrypt
 		}
 		
 		Set (passwordBuf, charCount);
-		
+		burn (passwordBuf, sizeof (passwordBuf));
+
 		if (unportable)
 			Unportable = true;
 	}

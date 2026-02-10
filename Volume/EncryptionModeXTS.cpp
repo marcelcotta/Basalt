@@ -8,6 +8,7 @@
 
 #include "EncryptionModeXTS.h"
 #include "Common/Crypto.h"
+#include "Platform/Memory.h"
 
 namespace TrueCrypt
 {
@@ -177,9 +178,9 @@ namespace TrueCrypt
 			throw NotInitialized (SRC_POS);
 		
 		size_t keySize = 0;
-		foreach_ref (const Cipher &cipher, SecondaryCiphers)
+		for (const auto &cipher : SecondaryCiphers)
 		{
-			keySize += cipher.GetKeySize();
+			keySize += cipher->GetKeySize();
 		}
 
 		return keySize;
@@ -342,9 +343,9 @@ namespace TrueCrypt
 
 		SecondaryCiphers.clear();
 
-		foreach_ref (const Cipher &cipher, ciphers)
+		for (const auto &cipher : ciphers)
 		{
-			SecondaryCiphers.push_back (cipher.GetNew());
+			SecondaryCiphers.push_back (cipher->GetNew());
 		}
 
 		if (SecondaryKey.Size() > 0)
@@ -358,15 +359,41 @@ namespace TrueCrypt
 
 		if (!SecondaryCiphers.empty())
 			SetSecondaryCipherKeys();
+
+		// Verify XTS primary key != secondary key (NIST SP 800-38E requirement).
+		// Equal keys degenerate XTS mode security.
+		ValidateXtsKeys();
+	}
+
+	void EncryptionModeXTS::ValidateXtsKeys ()
+	{
+		if (Ciphers.empty() || SecondaryKey.Size() == 0)
+			return;
+
+		// Compare each cipher's primary key with its corresponding secondary (tweak) key
+		size_t keyOffset = 0;
+		auto iSecondaryCipher = SecondaryCiphers.begin();
+		for (auto iCipher = Ciphers.begin(); iCipher != Ciphers.end(); ++iCipher, ++iSecondaryCipher)
+		{
+			size_t keySize = (*iCipher)->GetKeySize();
+			if (Memory::ConstantTimeCompare (
+				(*iCipher)->GetKey().Ptr(),
+				SecondaryKey.GetRange (keyOffset, keySize).Get(),
+				keySize))
+			{
+				throw ParameterIncorrect (SRC_POS);  // XTS primary key == secondary key
+			}
+			keyOffset += keySize;
+		}
 	}
 	
 	void EncryptionModeXTS::SetSecondaryCipherKeys ()
 	{
 		size_t keyOffset = 0;
-		foreach_ref (Cipher &cipher, SecondaryCiphers)
+		for (auto &cipher : SecondaryCiphers)
 		{
-			cipher.SetKey (SecondaryKey.GetRange (keyOffset, cipher.GetKeySize()));
-			keyOffset += cipher.GetKeySize();
+			cipher->SetKey (SecondaryKey.GetRange (keyOffset, cipher->GetKeySize()));
+			keyOffset += cipher->GetKeySize();
 		}
 
 		KeySet = true;

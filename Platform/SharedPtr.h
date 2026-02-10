@@ -12,12 +12,14 @@
 #include <stdexcept>
 #include "SharedVal.h"
 
+#if __cplusplus < 201103L
+
 #ifdef nullptr
 
 namespace TrueCrypt
 {
 	template <class T>
-	class SharedPtr 
+	class SharedPtr
 	{
 	public:
 		explicit SharedPtr ()
@@ -107,7 +109,7 @@ namespace TrueCrypt
 		{
 			Pointer = source.Pointer;
 			UseCount = source.UseCount;
-			
+
 			if (UseCount)
 				UseCount->Increment();
 		}
@@ -156,6 +158,8 @@ namespace TrueCrypt
 }
 
 #endif // nullptr
+
+#endif // __cplusplus < 201103L
 
 #define make_shared_auto(typeName,instanceName) shared_ptr <typeName> instanceName (new typeName ())
 
