@@ -10,17 +10,16 @@
 # DEBUG:		Disable optimizations and enable debugging checks
 # DEBUGGER:		Enable debugging information for use by debuggers
 # NOASM:		Exclude modules requiring assembler
-# NOGUI:		Disable graphical user interface (build console-only application)
 # NOSTRIP:		Do not strip release binary
 # NOTEST:		Do not test release binary
-# RESOURCEDIR:	Run-time resource directory
 # VERBOSE:		Enable verbose messages
-# WXSTATIC:		Use static wxWidgets library
+# TARGET_ARCH:	Override target architecture for cross-compilation (arm64 or x86_64)
+
 
 #------ Targets ------
-# all
-# clean
-# wxbuild:		Configure and build wxWidgets - source code must be located at $(WX_ROOT)
+# libTrueCryptCore	Build the core static library (no UI dependency)
+# cli			Build standalone command-line tool
+# clean			Remove build artifacts
 
 
 #------ Build configuration ------
@@ -37,19 +36,16 @@ export RANLIB ?= ranlib
 
 export CFLAGS := -Wall
 export CXXFLAGS := -Wall -Wno-unused-parameter
-C_CXX_FLAGS := -MMD -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES -I$(BASE_DIR) -I$(BASE_DIR)/Crypto
+C_CXX_FLAGS := -MMD -D__STDC_WANT_LIB_EXT1__=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES -I$(BASE_DIR) -I$(BASE_DIR)/Crypto
 export ASFLAGS := -Ox -D __GNUC__
 export LFLAGS :=
+ifneq "$(shell uname -s)" "Darwin"
 export LIBS := -ldl
+else
+export LIBS :=
+endif
 
 export PKG_CONFIG_PATH ?= /usr/local/lib/pkgconfig
-
-export WX_CONFIG ?= wx-config
-export WX_CONFIG_ARGS := --unicode
-WX_CONFIGURE_FLAGS :=
-export WXCONFIG_CFLAGS :=
-export WXCONFIG_CXXFLAGS :=
-WX_ROOT ?= ..
 
 
 export TC_BUILD_CONFIG := Release
@@ -60,27 +56,12 @@ ifeq "$(origin DEBUG)" "command line"
 	endif
 endif
 
-ifeq "$(origin NOGUI)" "command line"
-	export TC_NO_GUI := 1
-	C_CXX_FLAGS += -DTC_NO_GUI
-	WX_CONFIGURE_FLAGS += --disable-gui
-endif
-
 ifdef PKCS11_INC
 	C_CXX_FLAGS += -I$(PKCS11_INC)
 endif
 
-ifeq "$(origin RESOURCEDIR)" "command line"
-	C_CXX_FLAGS += -DTC_RESOURCE_DIR="$(RESOURCEDIR)"
-endif
-
 ifneq "$(origin VERBOSE)" "command line"
 	MAKEFLAGS += -s
-endif
-
-ifeq "$(origin WXSTATIC)" "command line"
-	WX_CONFIG = $(WX_BUILD_DIR)/wx-config
-	WX_CONFIG_ARGS += --static
 endif
 
 
@@ -89,8 +70,6 @@ endif
 ifeq "$(TC_BUILD_CONFIG)" "Release"
 
 	C_CXX_FLAGS += -O2 -fno-strict-aliasing  # Do not enable strict aliasing
-	export WX_BUILD_DIR ?= $(BASE_DIR)/wxrelease
-	WX_CONFIGURE_FLAGS += --disable-debug_flag --disable-debug_gdb --disable-debug_info
 
 else
 
@@ -98,8 +77,6 @@ else
 
 	C_CXX_FLAGS += -DDEBUG
 	CXXFLAGS += -fno-default-inline -Wno-unused-function -Wno-unused-variable
-	export WX_BUILD_DIR ?= $(BASE_DIR)/wxdebug
-	WX_CONFIGURE_FLAGS += --enable-debug_flag --disable-debug_gdb --disable-debug_info
 
 endif
 
@@ -107,10 +84,7 @@ endif
 #------ Debugger configuration ------
 
 ifeq "$(origin DEBUGGER)" "command line"
-
-	C_CXX_FLAGS += -ggdb  
-	WX_CONFIGURE_FLAGS += --enable-debug_gdb --enable-debug_info
-
+	C_CXX_FLAGS += -ggdb
 endif
 
 
@@ -120,6 +94,7 @@ export PLATFORM := "Unknown"
 export PLATFORM_UNSUPPORTED := 0
 
 export CPU_ARCH ?= unknown
+export TARGET_ARCH ?=
 
 ARCH = $(shell uname -p)
 ifeq "$(ARCH)" "unknown"
@@ -132,6 +107,8 @@ ifneq (,$(filter i386 i486 i586 i686 x86,$(ARCH)))
 else ifneq (,$(filter x86_64 x86-64 amd64 x64,$(ARCH)))
 	CPU_ARCH = x64
 	ASM_OBJ_FORMAT = elf64
+else ifneq (,$(filter arm64 aarch64,$(ARCH)))
+	CPU_ARCH = arm64
 endif
 
 ifeq "$(origin NOASM)" "command line"
@@ -159,9 +136,6 @@ ifeq "$(shell uname -s)" "Linux"
 		ifneq "$(shell ld --help 2>&1 | grep sysv | wc -l)" "0"
 			LFLAGS += -Wl,--hash-style=sysv
 		endif
-
-		WXCONFIG_CFLAGS += -fdata-sections -ffunction-sections
-		WXCONFIG_CXXFLAGS += -fdata-sections -ffunction-sections
 	endif
 
 endif
@@ -174,19 +148,13 @@ ifeq "$(shell uname -s)" "Darwin"
 	PLATFORM := MacOSX
 	APPNAME := TrueCrypt
 
-	TC_OSX_SDK ?= /Developer/SDKs/MacOSX10.4u.sdk
-	CC := gcc-4.0
-	CXX := g++-4.0
+	TC_OSX_SDK ?= $(shell xcrun --show-sdk-path)
 
-	C_CXX_FLAGS += -DTC_UNIX -DTC_BSD -DTC_MACOSX -mmacosx-version-min=10.4 -isysroot $(TC_OSX_SDK)
-	LFLAGS += -mmacosx-version-min=10.4 -Wl,-syslibroot $(TC_OSX_SDK)
-	WX_CONFIGURE_FLAGS += --with-macosx-version-min=10.4 --with-macosx-sdk=$(TC_OSX_SDK)
+	C_CXX_FLAGS += -DTC_UNIX -DTC_BSD -DTC_MACOSX -mmacosx-version-min=11.0 -isysroot $(TC_OSX_SDK)
+	CXXFLAGS += -std=c++14 -stdlib=libc++ -Wno-deprecated-declarations
+	LFLAGS += -mmacosx-version-min=11.0 -Wl,-syslibroot,$(TC_OSX_SDK) -stdlib=libc++
 
-	ifeq "$(CPU_ARCH)" "x64"
-		CPU_ARCH = x86
-	endif
-
-	ASM_OBJ_FORMAT = macho
+	ASM_OBJ_FORMAT = macho64
 	ASFLAGS += --prefix _
 
 	ifeq "$(TC_BUILD_CONFIG)" "Release"
@@ -196,16 +164,8 @@ ifeq "$(shell uname -s)" "Darwin"
 		S := $(C_CXX_FLAGS)
 		C_CXX_FLAGS = $(subst -MMD,,$(S))
 
-		C_CXX_FLAGS += -gfull -arch i386 -arch ppc
-		LFLAGS += -Wl,-dead_strip -arch i386 -arch ppc
-
-		WX_CONFIGURE_FLAGS += --enable-universal_binary
-		WXCONFIG_CFLAGS += -gfull
-		WXCONFIG_CXXFLAGS += -gfull
-
-	else
-
-		WX_CONFIGURE_FLAGS += --disable-universal_binary
+		C_CXX_FLAGS += -g
+		LFLAGS += -Wl,-dead_strip
 
 	endif
 
@@ -230,7 +190,6 @@ ifeq "$(shell uname -s)" "SunOS"
 	PLATFORM := Solaris
 	PLATFORM_UNSUPPORTED := 1
 	C_CXX_FLAGS += -DTC_UNIX -DTC_SOLARIS
-	WX_CONFIGURE_FLAGS += --with-gtk
 
 endif
 
@@ -242,58 +201,40 @@ CXXFLAGS := $(C_CXX_FLAGS) $(CXXFLAGS) $(TC_EXTRA_CXXFLAGS)
 ASFLAGS += -f $(ASM_OBJ_FORMAT)
 LFLAGS := $(LFLAGS) $(TC_EXTRA_LFLAGS)
 
-WX_CONFIGURE_FLAGS += --enable-unicode -disable-shared --disable-dependency-tracking --disable-compat26 --enable-exceptions --enable-std_string --enable-dataobj --enable-mimetype \
-	--disable-protocol --disable-protocols --disable-url --disable-ipc --disable-sockets --disable-fs_inet --disable-ole --disable-docview --disable-clipboard \
-	--disable-help --disable-html --disable-mshtmlhelp --disable-htmlhelp --disable-mdi --disable-metafile --disable-webkit \
-	--disable-xrc --disable-aui --disable-postscript --disable-printarch \
-	--disable-arcstream --disable-fs_archive --disable-fs_zip --disable-tarstream --disable-zipstream \
-	--disable-animatectrl --disable-bmpcombobox --disable-calendar --disable-caret --disable-checklst --disable-collpane --disable-colourpicker --disable-comboctrl \
-	--disable-datepick --disable-display --disable-dirpicker --disable-filepicker --disable-fontpicker --disable-grid  --disable-dataviewctrl \
-	--disable-listbook --disable-odcombobox --disable-sash  --disable-searchctrl --disable-slider --disable-splitter --disable-togglebtn \
-	--disable-toolbar --disable-tbarnative --disable-treebook --disable-toolbook --disable-tipwindow --disable-popupwin \
-	--disable-commondlg --disable-aboutdlg --disable-coldlg --disable-finddlg --disable-fontdlg --disable-numberdlg --disable-splash \
-	--disable-tipdlg --disable-progressdlg --disable-wizarddlg --disable-miniframe --disable-tooltips --disable-splines --disable-palette \
-	--disable-richtext --disable-dialupman --disable-debugreport --disable-filesystem \
-	--disable-graphics_ctx --disable-sound --disable-mediactrl --disable-joystick --disable-apple_ieee \
-	--disable-gif --disable-pcx --disable-tga --disable-iff --disable-gif --disable-pnm \
-	--without-expat --without-libtiff --without-libjpeg --without-libpng -without-regex --without-zlib
-
 
 #------ Project build ------
 
-PROJ_DIRS := Platform Volume Driver/Fuse Core Main
+CORE_DIRS := Platform Volume Driver/Fuse Core
 
-.PHONY: all clean wxbuild
+.PHONY: libTrueCryptCore cli clean
 
-all clean:
-	@if pwd | grep -q ' '; then echo 'Error: source code is stored in a path containing spaces' >&2; exit 1; fi
+#------ Core library (no UI dependency) ------
 
-	@for DIR in $(PROJ_DIRS); do \
+libTrueCryptCore:
+	@for DIR in $(CORE_DIRS); do \
 		PROJ=$$(echo $$DIR | cut -d/ -f1); \
-		$(MAKE) -C $$DIR -f $$PROJ.make NAME=$$PROJ $(MAKECMDGOALS) || exit $?; \
-		export LIBS="$(BASE_DIR)/$$DIR/$$PROJ.a $$LIBS"; \
-	done	
+		$(MAKE) -C $$DIR -f $$PROJ.make NAME=$$PROJ || exit $$?; \
+	done
+	@echo "Creating libTrueCryptCore.a..."
+	libtool -static -o $(BASE_DIR)/libTrueCryptCore.a \
+		$(BASE_DIR)/Platform/Platform.a \
+		$(BASE_DIR)/Volume/Volume.a \
+		$(BASE_DIR)/Driver/Fuse/Driver.a \
+		$(BASE_DIR)/Core/Core.a
 
 
-#------ wxWidgets build ------
+#------ Standalone CLI (no UI dependency) ------
 
-ifeq "$(MAKECMDGOALS)" "wxbuild"
-CFLAGS :=
-CXXFLAGS :=
-LFLAGS :=
-endif
+cli: libTrueCryptCore
+	$(MAKE) -C CLI -f CLI.make APPNAME=truecrypt-cli
 
-wxbuild:
 
-ifneq "$(shell test -f $(WX_ROOT)/configure || test -f $(WX_BUILD_DIR)/../configure && echo 1)" "1"
-	@echo 'Error: WX_ROOT must point to wxWidgets source code directory' >&2
-	@exit 1
-endif
+#------ Clean ------
 
-	rm -rf "$(WX_BUILD_DIR)"
-	mkdir -p "$(WX_BUILD_DIR)"
-	@echo Configuring wxWidgets library...
-	cd "$(WX_BUILD_DIR)" && "$(WX_ROOT)/configure" $(WX_CONFIGURE_FLAGS) >/dev/null
-	
-	@echo Building wxWidgets library...
-	cd "$(WX_BUILD_DIR)" && $(MAKE)
+clean:
+	@for DIR in $(CORE_DIRS); do \
+		PROJ=$$(echo $$DIR | cut -d/ -f1); \
+		$(MAKE) -C $$DIR -f $$PROJ.make NAME=$$PROJ clean 2>/dev/null || true; \
+	done
+	$(MAKE) -C CLI -f CLI.make clean 2>/dev/null || true
+	rm -f $(BASE_DIR)/libTrueCryptCore.a

@@ -35,8 +35,8 @@
 	<key>CFBundleLongVersionString</key>
 	<string>TrueCrypt _VERSION_</string>
 
-	<key>LSRequiresCarbon</key>
-	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>11.0</string>
 
 	<key>CSResourcesFileMapped</key>
 	<true/>

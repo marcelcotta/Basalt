@@ -1,0 +1,45 @@
+name: TrueCryptMac
+options:
+  deploymentTarget:
+    macOS: "12.0"
+  xcodeVersion: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MACOSX_DEPLOYMENT_TARGET: "12.0"
+    SWIFT_VERSION: "5.9"
+    CLANG_CXX_LANGUAGE_STANDARD: "c++14"
+    CLANG_CXX_LIBRARY: "libc++"
+
+targets:
+  TrueCryptMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        type: group
+      - path: Bridge
+        type: group
+        compilerFlags:
+          - "-I${SRCROOT}/.."
+          - "-I${SRCROOT}/../Crypto"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.truecrypt.mac
+        INFOPLIST_FILE: Info.plist
+        SWIFT_OBJC_BRIDGING_HEADER: Bridge/TrueCryptMac-Bridging-Header.h
+        OTHER_LDFLAGS:
+          - "-L${SRCROOT}/.."
+          - "-lTrueCryptCore"
+          - "$(shell pkg-config fuse --libs)"
+          - "-lc++"
+          - "-framework Security"
+          - "-framework AppKit"
+        HEADER_SEARCH_PATHS:
+          - "${SRCROOT}/.."
+          - "${SRCROOT}/../Crypto"
+        LIBRARY_SEARCH_PATHS:
+          - "${SRCROOT}/.."
+    info:
+      path: Info.plist
