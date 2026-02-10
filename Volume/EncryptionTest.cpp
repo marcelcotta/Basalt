@@ -895,9 +895,9 @@ namespace TrueCrypt
 
 	void EncryptionTest::TestArgon2id ()
 	{
-		// Argon2id test with reduced parameters (m=32 KiB, t=3, p=4) for speed.
-		// Test vector generated from PHC reference implementation.
-		static const byte expectedHash[] = {
+		// 1. Basic Argon2id test with reduced parameters (m=32 KiB, t=3, p=4).
+		//    Verifies the reference implementation produces correct output.
+		static const byte expectedReduced[] = {
 			0x37, 0x4f, 0xa1, 0x1c, 0x1d, 0xef, 0x2e, 0x88,
 			0xb6, 0x28, 0xcb, 0xa2, 0xeb, 0x79, 0xbf, 0x27,
 			0xf1, 0x0e, 0x88, 0xcc, 0xbb, 0x9e, 0x16, 0x0b,
@@ -914,7 +914,49 @@ namespace TrueCrypt
 		if (rc != 0)
 			throw TestFailed (SRC_POS);
 
-		if (memcmp (hash, expectedHash, 32) != 0)
+		if (memcmp (hash, expectedReduced, 32) != 0)
+			throw TestFailed (SRC_POS);
+
+		// 2. Full Standard KDF (m=512 MB, t=4, p=4).
+		//    Tests the production C wrapper with hardcoded parameters.
+		//    Catches accidental changes to ARGON2ID_STD_M/T/P defines.
+		static const byte expectedStandard[] = {
+			0xdb, 0x09, 0xd5, 0xc6, 0x71, 0x40, 0xd8, 0x6f,
+			0xf6, 0x99, 0x19, 0x39, 0xab, 0x67, 0x0b, 0x1c,
+			0xd2, 0x3f, 0x0f, 0xf8, 0x34, 0x21, 0x64, 0x07,
+			0xce, 0xe4, 0x00, 0xda, 0x2a, 0x04, 0x0e, 0x80
+		};
+
+		rc = derive_key_argon2id (
+			(char *) "password", 8,
+			(char *) "somesalt01234567", 16,
+			(char *) hash, 32);
+
+		if (rc != 0)
+			throw TestFailed (SRC_POS);
+
+		if (memcmp (hash, expectedStandard, 32) != 0)
+			throw TestFailed (SRC_POS);
+
+		// 3. Full Maximum Security KDF (m=1 GB, t=4, p=8).
+		//    Tests the production C wrapper with hardcoded parameters.
+		//    Catches accidental changes to ARGON2ID_MAX_M/T/P defines.
+		static const byte expectedMaximum[] = {
+			0x83, 0xcb, 0x29, 0xa9, 0x2c, 0xa2, 0x8d, 0x8d,
+			0x9c, 0x88, 0x8e, 0xe6, 0x9d, 0xa0, 0x61, 0x6d,
+			0xdc, 0x48, 0xcc, 0xbf, 0x52, 0x0b, 0xa0, 0xe2,
+			0xa3, 0x5d, 0x15, 0x69, 0xde, 0x6c, 0x04, 0x6a
+		};
+
+		rc = derive_key_argon2id_max (
+			(char *) "password", 8,
+			(char *) "somesalt01234567", 16,
+			(char *) hash, 32);
+
+		if (rc != 0)
+			throw TestFailed (SRC_POS);
+
+		if (memcmp (hash, expectedMaximum, 32) != 0)
 			throw TestFailed (SRC_POS);
 	}
 }
