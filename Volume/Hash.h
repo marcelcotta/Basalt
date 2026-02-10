@@ -154,6 +154,23 @@ namespace TrueCrypt
 		Argon2idHash (const Argon2idHash &);
 		Argon2idHash &operator= (const Argon2idHash &);
 	};
+
+	// Argon2id Maximum Security — sentinel hash for KDF type-matching.
+	// Functionally identical to Argon2idHash (Blake2b-512), but a distinct
+	// type so typeid-based KDF selection picks KdfArgon2idMax.
+	class Argon2idMaxHash : public Argon2idHash
+	{
+	public:
+		Argon2idMaxHash () { }
+		virtual ~Argon2idMaxHash () { }
+
+		virtual wstring GetName () const { return L"Argon2id-Max"; }
+		virtual shared_ptr <Hash> GetNew () const { return shared_ptr <Hash> (new Argon2idMaxHash); }
+
+	private:
+		Argon2idMaxHash (const Argon2idMaxHash &);
+		Argon2idMaxHash &operator= (const Argon2idMaxHash &);
+	};
 }
 
 #endif // TC_HEADER_Encryption_Hash

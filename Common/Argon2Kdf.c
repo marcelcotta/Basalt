@@ -10,23 +10,41 @@
 #include "Crypto/Argon2/argon2.h"
 
 /*
- * Hardcoded Argon2id parameters (correct security posture — no configuration):
- *   m_cost = 262144 KiB (256 MB)
- *   t_cost = 3 passes
- *   parallelism = 4 lanes/threads
+ * Hardcoded Argon2id parameters (correct security posture — no configuration).
+ *
+ * Standard:  m=512 MB, t=4, p=4  — fast on any macOS 14 capable Mac
+ * Maximum:   m=1 GB,   t=4, p=8  — for high-value data, leverages 8+ cores
  */
-#define ARGON2ID_M_COST  262144
-#define ARGON2ID_T_COST  3
-#define ARGON2ID_P        4
+#define ARGON2ID_STD_M_COST   524288    /* 512 MB */
+#define ARGON2ID_STD_T_COST   4
+#define ARGON2ID_STD_P        4
+
+#define ARGON2ID_MAX_M_COST   1048576   /* 1 GB */
+#define ARGON2ID_MAX_T_COST   4
+#define ARGON2ID_MAX_P        8
 
 int derive_key_argon2id (char *pwd, int pwd_len,
                          char *salt, int salt_len,
                          char *dk, int dklen)
 {
     return argon2id_hash_raw (
-        ARGON2ID_T_COST,
-        ARGON2ID_M_COST,
-        ARGON2ID_P,
+        ARGON2ID_STD_T_COST,
+        ARGON2ID_STD_M_COST,
+        ARGON2ID_STD_P,
+        pwd, (size_t) pwd_len,
+        salt, (size_t) salt_len,
+        dk, (size_t) dklen
+    );
+}
+
+int derive_key_argon2id_max (char *pwd, int pwd_len,
+                              char *salt, int salt_len,
+                              char *dk, int dklen)
+{
+    return argon2id_hash_raw (
+        ARGON2ID_MAX_T_COST,
+        ARGON2ID_MAX_M_COST,
+        ARGON2ID_MAX_P,
         pwd, (size_t) pwd_len,
         salt, (size_t) salt_len,
         dk, (size_t) dklen

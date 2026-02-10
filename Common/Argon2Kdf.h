@@ -16,15 +16,20 @@ extern "C" {
 #endif
 
 /*
- * Derive key using Argon2id with hardcoded parameters:
- *   m_cost = 262144 (256 MB), t_cost = 3, parallelism = 4
- *
- * Returns 0 on success, Argon2 error code on failure (e.g., out of memory).
- * On failure, the output buffer is zeroed.
+ * Derive key using Argon2id Standard (m=512 MB, t=4, p=4).
+ * Returns 0 on success, Argon2 error code on failure.
  */
 int derive_key_argon2id (char *pwd, int pwd_len,
                          char *salt, int salt_len,
                          char *dk, int dklen);
+
+/*
+ * Derive key using Argon2id Maximum Security (m=1 GB, t=4, p=8).
+ * Returns 0 on success, Argon2 error code on failure.
+ */
+int derive_key_argon2id_max (char *pwd, int pwd_len,
+                              char *salt, int salt_len,
+                              char *dk, int dklen);
 
 /*
  * Test-only variant with caller-specified parameters.

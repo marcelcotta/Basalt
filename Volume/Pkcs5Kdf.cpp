@@ -58,8 +58,9 @@ namespace TrueCrypt
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1_Legacy ()));
 
 		// Argon2id before modern PBKDF2: memory-hard but multi-threaded,
-		// completes in ~1-2s on Apple Silicon vs ~3-4s per modern PBKDF2
+		// completes faster than a single modern PBKDF2 attempt
 		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2id ()));
+		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idMax ()));
 
 		// Modern PBKDF2 (high iteration counts, single-threaded, ~3-4s each)
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160 ()));
@@ -76,8 +77,9 @@ namespace TrueCrypt
 			throw ParameterIncorrect (SRC_POS);
 	}
 
-	// --- Argon2id KDF implementation (RFC 9106, m=256MB, t=3, p=4) ---
+	// --- Argon2id KDF implementations (RFC 9106) ---
 
+	// Standard: m=512 MB, t=4, p=4
 	void KdfArgon2id::DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const
 	{
 		ValidateParameters (key, password, salt, iterationCount);
@@ -86,10 +88,22 @@ namespace TrueCrypt
 			(char *) salt.Get(), (int) salt.Size(),
 			(char *) key.Get(), (int) key.Size());
 		if (rc != 0)
-			throw ParameterIncorrect (SRC_POS);  // Typically ARGON2_MEMORY_ALLOCATION_ERROR
+			throw ParameterIncorrect (SRC_POS);
 	}
 
-	// --- Modern KDF implementations ---
+	// Maximum Security: m=1 GB, t=4, p=8
+	void KdfArgon2idMax::DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const
+	{
+		ValidateParameters (key, password, salt, iterationCount);
+		int rc = derive_key_argon2id_max (
+			(char *) password.DataPtr(), (int) password.Size(),
+			(char *) salt.Get(), (int) salt.Size(),
+			(char *) key.Get(), (int) key.Size());
+		if (rc != 0)
+			throw ParameterIncorrect (SRC_POS);
+	}
+
+	// --- Modern PBKDF2 implementations ---
 
 	void Pkcs5HmacRipemd160::DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const
 	{

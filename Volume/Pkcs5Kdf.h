@@ -120,13 +120,31 @@ namespace TrueCrypt
 
 		virtual void DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const;
 		virtual shared_ptr <Hash> GetHash () const { return shared_ptr <Hash> (new Argon2idHash); }
-		virtual int GetIterationCount () const { return 3; } // t_cost (passes)
+		virtual int GetIterationCount () const { return 4; } // t_cost (passes)
 		virtual wstring GetName () const { return L"Argon2id"; }
 		virtual bool IsDeprecated () const { return false; }
 
 	private:
 		KdfArgon2id (const KdfArgon2id &);
 		KdfArgon2id &operator= (const KdfArgon2id &);
+	};
+
+	// Argon2id Maximum Security: m=1 GB, t=4, p=8
+	class KdfArgon2idMax : public Pkcs5Kdf
+	{
+	public:
+		KdfArgon2idMax () { }
+		virtual ~KdfArgon2idMax () { }
+
+		virtual void DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const;
+		virtual shared_ptr <Hash> GetHash () const { return shared_ptr <Hash> (new Argon2idMaxHash); }
+		virtual int GetIterationCount () const { return 4; }  // t_cost
+		virtual wstring GetName () const { return L"Argon2id-Max"; }
+		virtual bool IsDeprecated () const { return false; }
+
+	private:
+		KdfArgon2idMax (const KdfArgon2idMax &);
+		KdfArgon2idMax &operator= (const KdfArgon2idMax &);
 	};
 
 	// --- Legacy KDFs (original TrueCrypt iteration counts for opening old volumes) ---
