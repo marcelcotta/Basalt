@@ -18,6 +18,14 @@ CXXFLAGS += -I$(BASE_DIR)/CLI -I$(BASE_DIR)
 
 FUSE_LIBS = $(shell pkg-config fuse --libs)
 
+#------ C++ standard library (libc++ on macOS, libstdc++ on Linux) ------
+
+ifeq "$(shell uname -s)" "Darwin"
+CXX_STDLIB := -lc++
+else
+CXX_STDLIB := -lstdc++ -lpthread
+endif
+
 #------ Core library ------
 
 CORE_LIB = $(BASE_DIR)/libTrueCryptCore.a
@@ -28,7 +36,7 @@ APPNAME := basalt-cli
 
 $(APPNAME): $(CORE_LIB) $(OBJS)
 	@echo Linking $@
-	$(CXX) -o $(APPNAME) $(LFLAGS) $(OBJS) $(CORE_LIB) $(FUSE_LIBS) $(LIBS) -lc++
+	$(CXX) -o $(APPNAME) $(LFLAGS) $(OBJS) $(CORE_LIB) $(FUSE_LIBS) $(LIBS) $(CXX_STDLIB)
 
 ifeq "$(TC_BUILD_CONFIG)" "Release"
 ifndef NOSTRIP

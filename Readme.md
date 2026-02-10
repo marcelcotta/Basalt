@@ -1,6 +1,6 @@
 # Basalt
 
-A modern, security-hardened fork of TrueCrypt 7.1a for macOS (Apple Silicon + Intel).
+A modern, security-hardened fork of TrueCrypt 7.1a for macOS and Linux.
 
 Basalt replaces TrueCrypt's wxWidgets GUI with a native SwiftUI app and adds
 state-of-the-art key derivation via Argon2id — while maintaining full backward
@@ -36,6 +36,8 @@ or VeraCrypt (which lack Argon2id support).
 
 ## Building
 
+### macOS
+
 Requirements: macOS 12+, Xcode Command Line Tools, macFUSE, pkg-config
 
 ```sh
@@ -55,17 +57,43 @@ bash build-universal.sh release
 Note: If your source path contains spaces, the build system automatically
 creates a symlink at `/tmp/truecrypt-build`.
 
+### Linux
+
+Requirements: g++ (5+), make, pkg-config, libfuse-dev, dm-crypt kernel module
+
+```sh
+# Install dependencies (Debian/Ubuntu)
+sudo apt install build-essential pkg-config libfuse-dev
+
+# Install dependencies (Fedora/RHEL)
+sudo dnf install gcc-c++ make pkgconfig fuse-devel
+
+# Build CLI tool
+make NOASM=1 cli
+
+# Run self-tests
+./CLI/basalt-cli --test
+
+# Mount a volume (requires sudo for device-mapper)
+sudo ./CLI/basalt-cli --mount /path/to/volume
+```
+
+The Linux build produces `basalt-cli` (command-line only). The SwiftUI GUI
+is macOS-exclusive.
+
 
 ## Architecture
 
 ```
 Basalt.app (SwiftUI)          Native macOS UI (macOS 12+)
 TCCoreBridge.mm (ObjC++)      Bridge: Foundation <-> C++
-basalt-cli (C++)              Standalone terminal tool
+basalt-cli (C++)              Standalone terminal tool (macOS + Linux)
 libTrueCryptCore.a            Platform + Volume + Driver + Core
 ```
 
 The C++ namespace remains `TrueCrypt` for internal compatibility.
+On Linux, mounting uses FUSE + device-mapper (`dm-crypt`); on macOS it uses
+FUSE + `hdiutil`.
 
 
 ## Security

@@ -128,6 +128,7 @@ ifeq "$(shell uname -s)" "Linux"
 
 	PLATFORM := Linux
 	C_CXX_FLAGS += -DTC_UNIX -DTC_LINUX
+	CXXFLAGS += -std=c++14 -Wno-deprecated-declarations
 
 	ifeq "$(TC_BUILD_CONFIG)" "Release"
 		C_CXX_FLAGS += -fdata-sections -ffunction-sections
@@ -210,17 +211,30 @@ CORE_DIRS := Platform Volume Driver/Fuse Core
 
 #------ Core library (no UI dependency) ------
 
+CORE_ARCHIVES := \
+	$(BASE_DIR)/Platform/Platform.a \
+	$(BASE_DIR)/Volume/Volume.a \
+	$(BASE_DIR)/Driver/Fuse/Driver.a \
+	$(BASE_DIR)/Core/Core.a
+
 libTrueCryptCore:
 	@for DIR in $(CORE_DIRS); do \
 		PROJ=$$(echo $$DIR | cut -d/ -f1); \
 		$(MAKE) -C $$DIR -f $$PROJ.make NAME=$$PROJ || exit $$?; \
 	done
 	@echo "Creating libTrueCryptCore.a..."
-	libtool -static -o $(BASE_DIR)/libTrueCryptCore.a \
-		$(BASE_DIR)/Platform/Platform.a \
-		$(BASE_DIR)/Volume/Volume.a \
-		$(BASE_DIR)/Driver/Fuse/Driver.a \
-		$(BASE_DIR)/Core/Core.a
+ifeq "$(shell uname -s)" "Darwin"
+	libtool -static -o $(BASE_DIR)/libTrueCryptCore.a $(CORE_ARCHIVES)
+else
+	rm -f $(BASE_DIR)/libTrueCryptCore.a
+	$(eval TMPDIR_AR := $(shell mktemp -d))
+	@for archive in $(CORE_ARCHIVES); do \
+		cd $(TMPDIR_AR) && $(AR) x $$archive; \
+	done
+	$(AR) rcs $(BASE_DIR)/libTrueCryptCore.a $(TMPDIR_AR)/*.o
+	$(RANLIB) $(BASE_DIR)/libTrueCryptCore.a
+	rm -rf $(TMPDIR_AR)
+endif
 
 
 #------ Standalone CLI (no UI dependency) ------
