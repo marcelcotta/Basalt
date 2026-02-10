@@ -1,4 +1,4 @@
-name: TrueCryptMac
+name: Basalt
 options:
   deploymentTarget:
     macOS: "12.0"
@@ -13,7 +13,7 @@ settings:
     CLANG_CXX_LIBRARY: "libc++"
 
 targets:
-  TrueCryptMac:
+  Basalt:
     type: application
     platform: macOS
     sources:
@@ -26,9 +26,9 @@ targets:
           - "-I${SRCROOT}/../Crypto"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.truecrypt.mac
+        PRODUCT_BUNDLE_IDENTIFIER: org.basalt.Basalt
         INFOPLIST_FILE: Info.plist
-        SWIFT_OBJC_BRIDGING_HEADER: Bridge/TrueCryptMac-Bridging-Header.h
+        SWIFT_OBJC_BRIDGING_HEADER: Bridge/Basalt-Bridging-Header.h
         OTHER_LDFLAGS:
           - "-L${SRCROOT}/.."
           - "-lTrueCryptCore"

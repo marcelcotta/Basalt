@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2024 TrueCrypt macOS Port. All rights reserved.
+ Copyright (c) 2024-2025 Basalt contributors. All rights reserved.
 
  Governed by the TrueCrypt License 3.0 the full text of which is contained in
  the file License.txt included in TrueCrypt binary and source code distribution
@@ -53,7 +53,7 @@ struct PreferencesView: View {
             Divider()
 
             Section("On Quit") {
-                Toggle("Dismount all volumes when TrueCrypt quits", isOn: $prefs.dismountOnQuit)
+                Toggle("Dismount all volumes when Basalt quits", isOn: $prefs.dismountOnQuit)
             }
 
             Divider()

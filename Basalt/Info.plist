@@ -5,13 +5,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>TrueCryptMac</string>
+	<string>Basalt</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.truecrypt.TrueCryptMac</string>
+	<string>org.basalt.Basalt</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>TrueCrypt</string>
+	<string>Basalt</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -21,11 +21,11 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0</string>
 	<key>CFBundleSignature</key>
-	<string>TRUE</string>
+	<string>BSLT</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>CFBundleIconFile</key>
-	<string>TrueCrypt</string>
+	<string>Basalt</string>
 	<key>LSUIElement</key>
 	<false/>
 	<key>CFBundleDocumentTypes</key>
@@ -37,7 +37,7 @@
 				<string>hc</string>
 			</array>
 			<key>CFBundleTypeName</key>
-			<string>TrueCrypt Volume</string>
+			<string>Basalt Volume</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSHandlerRank</key>

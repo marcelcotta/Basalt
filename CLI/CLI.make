@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024 TrueCrypt macOS Port. All rights reserved.
+# Copyright (c) 2024-2025 Basalt contributors. All rights reserved.
 #
 # Governed by the TrueCrypt License 3.0 the full text of which is contained in
 # the file License.txt included in TrueCrypt binary and source code distribution
@@ -24,7 +24,7 @@ CORE_LIB = $(BASE_DIR)/libTrueCryptCore.a
 
 #------ Executable ------
 
-APPNAME := truecrypt-cli
+APPNAME := basalt-cli
 
 $(APPNAME): $(CORE_LIB) $(OBJS)
 	@echo Linking $@

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Build script for TrueCryptMac — SwiftUI + ObjC++ Bridge + libTrueCryptCore
+# Build script for Basalt — SwiftUI + ObjC++ Bridge + libTrueCryptCore
 # Usage: ./build.sh [release|debug]
 #
 
@@ -17,17 +17,17 @@ ln -sfn "${ROOT_DIR}" "${SYMLINK}"
 
 # Paths (all via symlink — no spaces)
 SRC_ROOT="${SYMLINK}"
-BRIDGE_DIR="${SYMLINK}/TrueCryptMac/Bridge"
-APP_DIR="${SYMLINK}/TrueCryptMac/App"
+BRIDGE_DIR="${SYMLINK}/Basalt/Bridge"
+APP_DIR="${SYMLINK}/Basalt/App"
 CORE_LIB="${SYMLINK}/libTrueCryptCore.a"
-APP_BUNDLE="${BUILD_DIR}/TrueCryptMac.app"
+APP_BUNDLE="${BUILD_DIR}/Basalt.app"
 
 # SDK & arch
 SDK_PATH="$(xcrun --show-sdk-path)"
 ARCH="$(uname -m)"
 MIN_MACOS="12.0"
 
-echo "=== TrueCryptMac Build ==="
+echo "=== Basalt Build ==="
 echo "Config:    ${BUILD_CONFIG}"
 echo "Arch:      ${ARCH}"
 echo "SDK:       ${SDK_PATH}"
@@ -47,7 +47,7 @@ if [ ! -f "${CORE_LIB}" ]; then
 fi
 
 # Build dir (use symlink path too)
-BUILD_OBJ="${SYMLINK}/TrueCryptMac/build/obj"
+BUILD_OBJ="${SYMLINK}/Basalt/build/obj"
 mkdir -p "${BUILD_OBJ}"
 
 # Compiler flags (no spaces in paths now)
@@ -79,7 +79,7 @@ done
 # Step 2: Compile Swift files
 echo "Compiling Swift..."
 SWIFT_SOURCES=$(find "${APP_DIR}" -name "*.swift" -type f | sort)
-BRIDGING_HEADER="${BRIDGE_DIR}/TrueCryptMac-Bridging-Header.h"
+BRIDGING_HEADER="${BRIDGE_DIR}/Basalt-Bridging-Header.h"
 
 # Generate output-file-map for swiftc (maps each .swift → .o in build dir)
 OUTPUT_FILE_MAP="${BUILD_OBJ}/output-file-map.json"
@@ -100,15 +100,15 @@ swiftc \
     -target "${ARCH}-apple-macosx${MIN_MACOS}" \
     -sdk "${SDK_PATH}" \
     -import-objc-header "${BRIDGING_HEADER}" \
-    -module-name TrueCryptMac \
-    -emit-module -emit-module-path "${BUILD_OBJ}/TrueCryptMac.swiftmodule" \
+    -module-name Basalt \
+    -emit-module -emit-module-path "${BUILD_OBJ}/Basalt.swiftmodule" \
     -emit-object \
     -parse-as-library \
     -output-file-map "${OUTPUT_FILE_MAP}" \
     ${SWIFT_SOURCES}
 
 # Step 3: Link everything
-echo "Linking TrueCryptMac..."
+echo "Linking Basalt..."
 LINK_FLAGS="-arch ${ARCH} -mmacosx-version-min=${MIN_MACOS} -isysroot ${SDK_PATH}"
 LINK_FLAGS="${LINK_FLAGS} -stdlib=libc++ -Wl,-dead_strip"
 
@@ -130,7 +130,7 @@ clang++ ${LINK_FLAGS} \
     -framework Combine \
     -L "${SWIFT_LIB_DIR}" \
     -Wl,-rpath,/usr/lib/swift \
-    -o "${BUILD_OBJ}/../TrueCryptMac"
+    -o "${BUILD_OBJ}/../Basalt"
 
 # Step 4: Create app bundle
 echo "Creating app bundle..."
@@ -138,14 +138,14 @@ mkdir -p "${BUILD_DIR}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
-cp "${BUILD_OBJ}/../TrueCryptMac" "${APP_BUNDLE}/Contents/MacOS/TrueCryptMac"
-cp "${SYMLINK}/TrueCryptMac/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
+cp "${BUILD_OBJ}/../Basalt" "${APP_BUNDLE}/Contents/MacOS/Basalt"
+cp "${SYMLINK}/Basalt/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
 
-echo -n "APPLTRUE" > "${APP_BUNDLE}/Contents/PkgInfo"
+echo -n "APPLBSLT" > "${APP_BUNDLE}/Contents/PkgInfo"
 
 # Copy icon if available
-if [ -f "${SYMLINK}/Resources/Icons/TrueCrypt.icns" ]; then
-    cp "${SYMLINK}/Resources/Icons/TrueCrypt.icns" "${APP_BUNDLE}/Contents/Resources/"
+if [ -f "${SYMLINK}/Resources/Icons/Basalt.icns" ]; then
+    cp "${SYMLINK}/Resources/Icons/Basalt.icns" "${APP_BUNDLE}/Contents/Resources/"
 fi
 
 # Step 5: Ad-hoc code sign
@@ -156,6 +156,6 @@ echo ""
 echo "=== Build complete ==="
 echo "App bundle: ${APP_BUNDLE}"
 echo ""
-file "${APP_BUNDLE}/Contents/MacOS/TrueCryptMac"
+file "${APP_BUNDLE}/Contents/MacOS/Basalt"
 codesign -dvv "${APP_BUNDLE}" 2>&1 | head -5
-ls -lh "${APP_BUNDLE}/Contents/MacOS/TrueCryptMac"
+ls -lh "${APP_BUNDLE}/Contents/MacOS/Basalt"

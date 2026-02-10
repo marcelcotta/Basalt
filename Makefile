@@ -24,7 +24,7 @@
 
 #------ Build configuration ------
 
-export APPNAME := truecrypt
+export APPNAME := basalt
 export BASE_DIR := $(CURDIR)
 export BUILD_INC := $(BASE_DIR)/Build/Include
 
@@ -146,7 +146,7 @@ endif
 ifeq "$(shell uname -s)" "Darwin"
 
 	PLATFORM := MacOSX
-	APPNAME := TrueCrypt
+	APPNAME := Basalt
 
 	TC_OSX_SDK ?= $(shell xcrun --show-sdk-path)
 
@@ -226,7 +226,7 @@ libTrueCryptCore:
 #------ Standalone CLI (no UI dependency) ------
 
 cli: libTrueCryptCore
-	$(MAKE) -C CLI -f CLI.make APPNAME=truecrypt-cli
+	$(MAKE) -C CLI -f CLI.make APPNAME=basalt-cli
 
 
 #------ Clean ------

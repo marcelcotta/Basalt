@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2024 TrueCrypt macOS Port. All rights reserved.
+ Copyright (c) 2024-2025 Basalt contributors. All rights reserved.
 
  Governed by the TrueCrypt License 3.0 the full text of which is contained in
  the file License.txt included in TrueCrypt binary and source code distribution
@@ -55,7 +55,7 @@ static bool AskAdminPassword (string &passwordOut)
     dispatch_block_t block = ^{
         NSAlert *alert = [[NSAlert alloc] init];
         alert.messageText = @"Administrator privileges required";
-        alert.informativeText = @"TrueCrypt needs administrator privileges to mount volumes. Enter your macOS password:";
+        alert.informativeText = @"Basalt needs administrator privileges to mount volumes. Enter your macOS password:";
         alert.alertStyle = NSAlertStyleWarning;
         [alert addButtonWithTitle:@"OK"];
         [alert addButtonWithTitle:@"Cancel"];
@@ -745,7 +745,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 
         if (!cppOpts->VolumeHeaderKdf)
         {
-            if (error) *error = [NSError errorWithDomain:@"TrueCrypt" code:-1
+            if (error) *error = [NSError errorWithDomain:@"Basalt" code:-1
                 userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Unknown hash algorithm: %@", options.hashAlgorithm]}];
             return NO;
         }
@@ -809,7 +809,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         // 3. Run newfs_hfs on the virtual block device
         list <string> args;
         args.push_back ("-v");
-        args.push_back ("TrueCrypt");
+        args.push_back ("Basalt");
         args.push_back (virtualDev);
 
         try

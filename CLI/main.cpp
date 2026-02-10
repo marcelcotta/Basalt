@@ -1,12 +1,12 @@
 /*
- Copyright (c) 2024 TrueCrypt macOS Port. All rights reserved.
+ Copyright (c) 2024-2025 Basalt contributors. All rights reserved.
 
  Governed by the TrueCrypt License 3.0 the full text of which is contained in
  the file License.txt included in TrueCrypt binary and source code distribution
  packages.
 */
 
-// Standalone CLI for TrueCrypt — no wxWidgets dependency.
+// Standalone CLI for Basalt — no wxWidgets dependency.
 // Links only against libTrueCryptCore.a + libfuse + system libraries.
 
 #include "Core/CorePublicAPI.h"
@@ -440,7 +440,7 @@ int main (int argc, char *argv[])
 
 	if (command == CmdVersion)
 	{
-		std::cout << "TrueCrypt " << Version::String () << std::endl;
+		std::cout << "Basalt " << Version::String () << std::endl;
 		return 0;
 	}
 

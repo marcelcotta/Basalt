@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Build universal (arm64 + x86_64) binaries for TrueCrypt macOS
-# Produces: libTrueCryptCore.a, truecrypt-cli, TrueCryptMac.app
+# Build universal (arm64 + x86_64) binaries for Basalt (macOS)
+# Produces: libTrueCryptCore.a, basalt-cli, Basalt.app
 #
 # Usage: ./build-universal.sh [release|debug]
 #
@@ -21,7 +21,7 @@ X86_64_DIR="${BUILD_ROOT}/x86_64"
 OUTPUT_DIR="${BUILD_ROOT}/universal"
 
 echo "============================================"
-echo "  TrueCrypt Universal Binary Build"
+echo "  Basalt Universal Binary Build"
 echo "  Config: ${BUILD_CONFIG}"
 echo "============================================"
 echo ""
@@ -77,11 +77,11 @@ build_cli() {
     local OUT_DIR="$2"
 
     echo ""
-    echo "=== Building truecrypt-cli (${ARCH}) ==="
+    echo "=== Building basalt-cli (${ARCH}) ==="
     echo ""
 
     # Clean CLI objects
-    rm -f "${SYMLINK}/CLI/"*.o "${SYMLINK}/CLI/truecrypt-cli"
+    rm -f "${SYMLINK}/CLI/"*.o "${SYMLINK}/CLI/basalt-cli"
 
     make -C "${SYMLINK}" BASE_DIR="${SYMLINK}" NOASM=1 NOTEST=1 \
         TARGET_ARCH="${ARCH}" \
@@ -90,7 +90,7 @@ build_cli() {
         TC_EXTRA_LFLAGS="-arch ${ARCH}" \
         cli
 
-    cp "${SYMLINK}/CLI/truecrypt-cli" "${OUT_DIR}/truecrypt-cli"
+    cp "${SYMLINK}/CLI/basalt-cli" "${OUT_DIR}/basalt-cli"
 }
 
 # ============================================================
@@ -102,14 +102,14 @@ build_swiftui() {
     local CORE_LIB="${OUT_DIR}/libTrueCryptCore.a"
 
     echo ""
-    echo "=== Building TrueCryptMac (${ARCH}) ==="
+    echo "=== Building Basalt (${ARCH}) ==="
     echo ""
 
     local SDK_PATH
     SDK_PATH="$(xcrun --show-sdk-path)"
     local MIN_MACOS="12.0"
-    local BRIDGE_DIR="${SYMLINK}/TrueCryptMac/Bridge"
-    local APP_DIR="${SYMLINK}/TrueCryptMac/App"
+    local BRIDGE_DIR="${SYMLINK}/Basalt/Bridge"
+    local APP_DIR="${SYMLINK}/Basalt/App"
     local OBJ_DIR="${OUT_DIR}/obj"
     mkdir -p "${OBJ_DIR}"
 
@@ -140,7 +140,7 @@ build_swiftui() {
     echo "  Compiling Swift (${ARCH})..."
     local SWIFT_SOURCES
     SWIFT_SOURCES=$(find "${APP_DIR}" -name "*.swift" -type f | sort)
-    local BRIDGING_HEADER="${BRIDGE_DIR}/TrueCryptMac-Bridging-Header.h"
+    local BRIDGING_HEADER="${BRIDGE_DIR}/Basalt-Bridging-Header.h"
 
     # Generate output-file-map
     local OUTPUT_FILE_MAP="${OBJ_DIR}/output-file-map.json"
@@ -161,8 +161,8 @@ build_swiftui() {
         -target "${ARCH}-apple-macosx${MIN_MACOS}" \
         -sdk "${SDK_PATH}" \
         -import-objc-header "${BRIDGING_HEADER}" \
-        -module-name TrueCryptMac \
-        -emit-module -emit-module-path "${OBJ_DIR}/TrueCryptMac.swiftmodule" \
+        -module-name Basalt \
+        -emit-module -emit-module-path "${OBJ_DIR}/Basalt.swiftmodule" \
         -emit-object \
         -parse-as-library \
         -output-file-map "${OUTPUT_FILE_MAP}" \
@@ -195,7 +195,7 @@ build_swiftui() {
         -framework Combine \
         -L "${SWIFT_LIB_DIR}" \
         -Wl,-rpath,/usr/lib/swift \
-        -o "${OUT_DIR}/TrueCryptMac"
+        -o "${OUT_DIR}/Basalt"
 }
 
 # ============================================================
@@ -226,19 +226,19 @@ lipo -create \
     "${X86_64_DIR}/libTrueCryptCore.a" \
     -output "${OUTPUT_DIR}/libTrueCryptCore.a"
 
-# truecrypt-cli
-echo "  truecrypt-cli..."
+# basalt-cli
+echo "  basalt-cli..."
 lipo -create \
-    "${ARM64_DIR}/truecrypt-cli" \
-    "${X86_64_DIR}/truecrypt-cli" \
-    -output "${OUTPUT_DIR}/truecrypt-cli"
+    "${ARM64_DIR}/basalt-cli" \
+    "${X86_64_DIR}/basalt-cli" \
+    -output "${OUTPUT_DIR}/basalt-cli"
 
-# TrueCryptMac
-echo "  TrueCryptMac..."
+# Basalt
+echo "  Basalt..."
 lipo -create \
-    "${ARM64_DIR}/TrueCryptMac" \
-    "${X86_64_DIR}/TrueCryptMac" \
-    -output "${OUTPUT_DIR}/TrueCryptMac"
+    "${ARM64_DIR}/Basalt" \
+    "${X86_64_DIR}/Basalt" \
+    -output "${OUTPUT_DIR}/Basalt"
 
 # ============================================================
 # Step 4: Create app bundle
@@ -247,17 +247,17 @@ echo ""
 echo "=== Creating App Bundle ==="
 echo ""
 
-APP_BUNDLE="${OUTPUT_DIR}/TrueCryptMac.app"
+APP_BUNDLE="${OUTPUT_DIR}/Basalt.app"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS"
 mkdir -p "${APP_BUNDLE}/Contents/Resources"
 
-cp "${OUTPUT_DIR}/TrueCryptMac" "${APP_BUNDLE}/Contents/MacOS/TrueCryptMac"
-cp "${SYMLINK}/TrueCryptMac/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
-echo -n "APPLTRUE" > "${APP_BUNDLE}/Contents/PkgInfo"
+cp "${OUTPUT_DIR}/Basalt" "${APP_BUNDLE}/Contents/MacOS/Basalt"
+cp "${SYMLINK}/Basalt/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
+echo -n "APPLBSLT" > "${APP_BUNDLE}/Contents/PkgInfo"
 
 # Copy icon if available
-if [ -f "${SYMLINK}/Resources/Icons/TrueCrypt.icns" ]; then
-    cp "${SYMLINK}/Resources/Icons/TrueCrypt.icns" "${APP_BUNDLE}/Contents/Resources/"
+if [ -f "${SYMLINK}/Resources/Icons/Basalt.icns" ]; then
+    cp "${SYMLINK}/Resources/Icons/Basalt.icns" "${APP_BUNDLE}/Contents/Resources/"
 fi
 
 # ============================================================
@@ -268,8 +268,8 @@ echo "=== Code Signing ==="
 echo ""
 
 codesign --force --deep --sign - "${APP_BUNDLE}"
-codesign --force --sign - "${OUTPUT_DIR}/truecrypt-cli"
-echo "  Signed TrueCryptMac.app and truecrypt-cli"
+codesign --force --sign - "${OUTPUT_DIR}/basalt-cli"
+echo "  Signed Basalt.app and basalt-cli"
 
 # ============================================================
 # Summary
@@ -285,14 +285,14 @@ lipo -info "${OUTPUT_DIR}/libTrueCryptCore.a"
 ls -lh "${OUTPUT_DIR}/libTrueCryptCore.a"
 echo ""
 
-echo "truecrypt-cli:"
-lipo -info "${OUTPUT_DIR}/truecrypt-cli"
-ls -lh "${OUTPUT_DIR}/truecrypt-cli"
+echo "basalt-cli:"
+lipo -info "${OUTPUT_DIR}/basalt-cli"
+ls -lh "${OUTPUT_DIR}/basalt-cli"
 echo ""
 
-echo "TrueCryptMac.app:"
-lipo -info "${APP_BUNDLE}/Contents/MacOS/TrueCryptMac"
-ls -lh "${APP_BUNDLE}/Contents/MacOS/TrueCryptMac"
+echo "Basalt.app:"
+lipo -info "${APP_BUNDLE}/Contents/MacOS/Basalt"
+ls -lh "${APP_BUNDLE}/Contents/MacOS/Basalt"
 echo ""
 
 echo "Output directory: ${OUTPUT_DIR}"

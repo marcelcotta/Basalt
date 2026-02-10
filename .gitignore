@@ -5,9 +5,9 @@
 *.gch
 
 # Binaries
-truecrypt-cli
-CLI/truecrypt-cli
-TrueCryptMac/build/
+basalt-cli
+CLI/basalt-cli
+Basalt/build/
 build-universal/
 libTrueCryptCore.a
 

@@ -6,25 +6,25 @@
 	<string>6.0</string>
 
 	<key>CFBundleIdentifier</key>
-	<string>org.TrueCryptFoundation.TrueCrypt</string>
+	<string>org.basalt.Basalt</string>
 
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 
 	<key>CFBundleExecutable</key>
-	<string>TrueCrypt</string>
+	<string>Basalt</string>
 
 	<key>CFBundleIconFile</key>
-	<string>TrueCrypt.icns</string>
+	<string>Basalt.icns</string>
 
 	<key>CFBundleName</key>
-	<string>TrueCrypt</string>
+	<string>Basalt</string>
 
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 
 	<key>CFBundleSignature</key>
-	<string>TRUE</string>
+	<string>BSLT</string>
 
 	<key>CFBundleVersion</key>
 	<string>0</string>
@@ -33,7 +33,7 @@
 	<string>_VERSION_</string>
 
 	<key>CFBundleLongVersionString</key>
-	<string>TrueCrypt _VERSION_</string>
+	<string>Basalt _VERSION_</string>
 
 	<key>LSMinimumSystemVersion</key>
 	<string>11.0</string>

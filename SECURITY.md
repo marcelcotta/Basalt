@@ -1,4 +1,4 @@
-# Security Hardening: TrueCrypt 7.1a macOS Port
+# Security Hardening: Basalt (TrueCrypt 7.1a macOS Port)
 
 This document describes all security-relevant changes made to the TrueCrypt 7.1a
 codebase as part of the macOS 14 (Apple Silicon) port. The goal is to fix known
@@ -227,11 +227,11 @@ platform string conversions creating uncontrollable copies.
    separately by each UI layer.
 3. **Standalone CLI (`truecrypt-cli`)** — getopt_long + POSIX terminal I/O (termios).
    Password input uses `tcsetattr()` to disable echo. No toolkit dependency.
-4. **SwiftUI macOS app (`TrueCryptMac.app`)** — Native macOS UI via ObjC++ bridge
+4. **SwiftUI macOS app (`Basalt.app`)** — Native macOS UI via ObjC++ bridge
    (`TCCoreBridge.mm`). Passwords handled through `NSSecureTextField` (system-managed).
 
 ### 20. ObjC++ Bridge Security Design
-**Files:** `TrueCryptMac/Bridge/TCCoreBridge.mm`, `TrueCryptMac/Bridge/TCCocoaCallback.mm`
+**Files:** `Basalt/Bridge/TCCoreBridge.mm`, `Basalt/Bridge/TCCocoaCallback.mm`
 **Design principles:**
 - C++ exceptions are caught at the bridge boundary and converted to `NSError`. No C++
   exceptions propagate into Swift/ObjC runtime.
@@ -253,7 +253,7 @@ Passwords are read directly into `VolumePassword` objects backed by `mlock()`-pi
 ## Wave 7 — Runtime Protection & Auto-Dismount
 
 ### 22. Inactivity-Based Auto-Dismount
-**Files:** `TrueCryptMac/App/VolumeManager.swift`, `TrueCryptMac/App/PreferencesManager.swift`
+**Files:** `Basalt/App/VolumeManager.swift`, `Basalt/App/PreferencesManager.swift`
 **Problem:** Mounted volumes remain accessible indefinitely, even when the user has
 stopped working. An unattended machine with mounted encrypted volumes defeats the
 purpose of encryption.
@@ -265,7 +265,7 @@ automatically dismounted. Each volume is tracked independently — only idle vol
 are affected.
 
 ### 23. Event-Based Auto-Dismount
-**Files:** `TrueCryptMac/App/TrueCryptApp.swift` (AppDelegate)
+**Files:** `Basalt/App/TrueCryptApp.swift` (AppDelegate)
 **Problem:** Volumes remain mounted during security-sensitive system transitions
 (screen lock, sleep, application exit, logout) where the user is not actively present.
 **Fix:** Four automatic dismount triggers:
@@ -279,7 +279,7 @@ applies to all dismount operations (manual and automatic), ensuring volumes can 
 be closed even when processes hold open file handles.
 
 ### 25. Force Dismount as Default
-**Files:** `TrueCryptMac/App/PreferencesManager.swift`, `TrueCryptMac/App/MainWindow.swift`
+**Files:** `Basalt/App/PreferencesManager.swift`, `Basalt/App/MainWindow.swift`
 **Problem:** Non-forced dismount fails when any process holds an open file handle to
 the mounted volume. This creates a security issue: the user intends to close the volume
 but cannot because of a background process (Spotlight indexing, antivirus scan, shell
@@ -335,9 +335,9 @@ privileges.
 is unaffected as it calls `fuse_main()` directly, not via PATH lookup.
 
 ### 29. Screen Capture Protection
-**Files:** `TrueCryptMac/App/MainWindow.swift`, `TrueCryptMac/App/MountSheet.swift`,
-`TrueCryptMac/App/ChangePasswordSheet.swift`, `TrueCryptMac/Bridge/TCCocoaCallback.mm`,
-`TrueCryptMac/Bridge/TCCoreBridge.mm`
+**Files:** `Basalt/App/MainWindow.swift`, `Basalt/App/MountSheet.swift`,
+`Basalt/App/ChangePasswordSheet.swift`, `Basalt/Bridge/TCCocoaCallback.mm`,
+`Basalt/Bridge/TCCoreBridge.mm`
 **Problem:** Screen recording malware can capture password entry and volume metadata
 (container paths, mount points). macOS provides `NSWindow.sharingType = .none` to prevent
 screenshots, screen recording, and AirPlay mirroring of specific windows.
@@ -364,7 +364,7 @@ distributions for removable media.
 ## Wave 9: Volume Creation & UX Hardening
 
 ### 31. Volume Creation: FilesystemClusterSize Initialization
-**Files:** `TrueCryptMac/Bridge/TCCoreBridge.mm`
+**Files:** `Basalt/Bridge/TCCoreBridge.mm`
 **Problem:** The `VolumeCreationOptions` C++ struct has no constructor. The bridge allocated
 it with `make_shared<VolumeCreationOptions>()` without initializing `FilesystemClusterSize`,
 leaving it as garbage memory. The FAT formatter used this garbage value as cluster size
@@ -373,7 +373,7 @@ instead of auto-detecting the optimal size, producing a corrupt FAT filesystem t
 **Fix:** Explicitly set `cppOpts->FilesystemClusterSize = 0` (0 = auto-detect).
 
 ### 32. Volume Creation: HFS+ Filesystem Formatting
-**Files:** `TrueCryptMac/Bridge/TCCoreBridge.mm`, `TrueCryptMac/App/VolumeManager.swift`
+**Files:** `Basalt/Bridge/TCCoreBridge.mm`, `Basalt/App/VolumeManager.swift`
 **Problem:** The VolumeCreator C++ class only formats FAT filesystems internally. HFS+
 (Mac OS Extended) requires an external formatter (`newfs_hfs`), which the deleted wxWidgets
 UI layer previously handled. Without it, HFS+ volumes were created with encrypted
@@ -384,8 +384,8 @@ the volume is temporarily mounted with `NoFilesystem=true` (FUSE + `hdiutil atta
 volume is dismounted. The VolumeManager orchestrates this automatically for HFS+ volumes.
 
 ### 33. Legacy KDF Iteration Option for 7.1a Compatibility
-**Files:** `TrueCryptMac/Bridge/TCCoreBridge.h`, `TrueCryptMac/Bridge/TCCoreBridge.mm`,
-`TrueCryptMac/App/CreateVolumeSheet.swift`
+**Files:** `Basalt/Bridge/TCCoreBridge.h`, `Basalt/Bridge/TCCoreBridge.mm`,
+`Basalt/App/CreateVolumeSheet.swift`
 **Problem:** Volumes created with modern iteration counts (500,000+) cannot be opened by
 TrueCrypt 7.1a. Users who need cross-version compatibility had no option to create
 legacy-compatible volumes.
@@ -395,7 +395,7 @@ bridge passes `allowLegacy=true` to `Pkcs5Kdf::GetAlgorithm()`, selecting the or
 iteration counts (1000/2000). A warning is displayed explaining the weaker key derivation.
 
 ### 34. Tab Navigation: Password Field Focus Order
-**Files:** `TrueCryptMac/App/PasswordView.swift`
+**Files:** `Basalt/App/PasswordView.swift`
 **Problem:** The show/hide password toggle button (eye icon) was focusable, intercepting
 Tab key navigation between password fields. In the Create Volume wizard, pressing Tab after
 the first password field focused the eye icon instead of the confirmation field.

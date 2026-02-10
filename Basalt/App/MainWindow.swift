@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2024 TrueCrypt macOS Port. All rights reserved.
+ Copyright (c) 2024-2025 Basalt contributors. All rights reserved.
 
  Governed by the TrueCrypt License 3.0 the full text of which is contained in
  the file License.txt included in TrueCrypt binary and source code distribution
@@ -137,8 +137,7 @@ struct VolumeRow: View {
 
                     if volume.pkcs5PrfName.hasPrefix("Argon2id") {
                         Label(kdfLabel(volume.pkcs5PrfName), systemImage: "shield.checkered")
-                            .font(.caption2)
-                            .fontWeight(.medium)
+                            .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.green)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 1)

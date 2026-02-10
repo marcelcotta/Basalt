@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2024 TrueCrypt macOS Port. All rights reserved.
+ Copyright (c) 2024-2025 Basalt contributors. All rights reserved.
 
  Governed by the TrueCrypt License 3.0 the full text of which is contained in
  the file License.txt included in TrueCrypt binary and source code distribution
@@ -83,7 +83,7 @@ struct CreateVolumeSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Title
-            Text("Create TrueCrypt Volume")
+            Text("Create Basalt Volume")
                 .font(.title2)
                 .fontWeight(.semibold)
 
@@ -177,7 +177,7 @@ struct CreateVolumeSheet: View {
 
                 Button("Browse...") {
                     let panel = NSSavePanel()
-                    panel.title = "Create TrueCrypt Volume"
+                    panel.title = "Create Basalt Volume"
                     panel.nameFieldStringValue = "volume.tc"
                     panel.canCreateDirectories = true
                     if panel.runModal() == .OK, let url = panel.url {
@@ -242,7 +242,7 @@ struct CreateVolumeSheet: View {
                 Toggle("TrueCrypt 7.1a compatible (legacy iterations)", isOn: $legacyIterations)
 
                 if legacyIterations {
-                    Label("Uses original TrueCrypt iteration counts (1000–2000). The volume can be opened with TrueCrypt 7.1a but has weaker key derivation.", systemImage: "exclamationmark.triangle")
+                    Label("Uses original TrueCrypt 7.1a iteration counts (1000–2000). The volume can be opened with TrueCrypt 7.1a but has weaker key derivation.", systemImage: "exclamationmark.triangle")
                         .font(.caption)
                         .foregroundColor(.orange)
                 } else {
