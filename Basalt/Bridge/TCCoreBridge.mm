@@ -302,7 +302,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     if (self)
     {
         _volumeType = TCVolumeTypeNormal;
-        _filesystem = TCFilesystemTypeHFSPlus;
+        _filesystem = TCFilesystemTypeMacOsExt;
     }
     return self;
 }
