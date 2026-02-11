@@ -1,0 +1,354 @@
+/*
+ * LamarckFUSE — platform compatibility layer
+ *
+ * Abstracts POSIX-only APIs so the NFSv4 server code can compile
+ * on both macOS/Linux (POSIX) and Windows (Winsock2/Win32).
+ *
+ * Copyright (c) 2025 Basalt contributors. All rights reserved.
+ * Licensed under the MIT License.
+ */
+
+#ifndef LAMARCKFUSE_PLATFORM_COMPAT_H
+#define LAMARCKFUSE_PLATFORM_COMPAT_H
+
+#ifdef _WIN32
+
+/* ---- Windows ---- */
+
+/* Must come before windows.h to get Winsock2 */
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
+#include <bcrypt.h>
+#include <io.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdint.h>
+#include <stdio.h>
+
+#pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "bcrypt.lib")
+
+/* ---- Socket abstraction ---- */
+
+typedef SOCKET sock_t;
+#define INVALID_SOCK INVALID_SOCKET
+
+static inline ssize_t sock_read(sock_t s, void *buf, size_t len)
+{
+    return recv(s, (char *)buf, (int)len, 0);
+}
+
+static inline ssize_t sock_write(sock_t s, const void *buf, size_t len)
+{
+    return send(s, (const char *)buf, (int)len, 0);
+}
+
+static inline void sock_close(sock_t s)
+{
+    if (s != INVALID_SOCKET)
+        closesocket(s);
+}
+
+static inline int sock_set_nonblocking(sock_t s)
+{
+    u_long mode = 1;
+    return ioctlsocket(s, FIONBIO, &mode);
+}
+
+static inline int sock_error(void)
+{
+    return WSAGetLastError();
+}
+
+/* Map WSAPoll to poll-like interface */
+#define poll_fd_t     WSAPOLLFD
+#define POLL_IN       POLLIN
+#define POLL_OUT      POLLOUT
+#define POLL_ERR      POLLERR
+#define POLL_HUP      POLLHUP
+#define platform_poll WSAPoll
+
+/* ---- POSIX type definitions ---- */
+
+#ifndef _UID_T_DEFINED
+typedef uint32_t uid_t;
+#define _UID_T_DEFINED
+#endif
+
+#ifndef _GID_T_DEFINED
+typedef uint32_t gid_t;
+#define _GID_T_DEFINED
+#endif
+
+#ifndef _PID_T_DEFINED
+typedef int pid_t;
+#define _PID_T_DEFINED
+#endif
+
+/* off_t: MSVC defines it as long (32-bit); we need 64-bit */
+#ifndef _OFF64_T_DEFINED
+typedef int64_t off64_t;
+#define _OFF64_T_DEFINED
+#endif
+/* Use off_t for FUSE API compatibility — redefine to 64-bit */
+#ifdef off_t
+#undef off_t
+#endif
+#define off_t int64_t
+
+#ifndef _MODE_T_DEFINED
+typedef uint32_t mode_t;
+#define _MODE_T_DEFINED
+#endif
+
+#ifndef _DEV_T_DEFINED
+typedef uint32_t dev_t;
+#define _DEV_T_DEFINED
+#endif
+
+#ifndef _SSIZE_T_DEFINED
+typedef intptr_t ssize_t;
+#define _SSIZE_T_DEFINED
+#endif
+
+/* ---- stat compatibility ---- */
+
+/* Windows struct stat doesn't have st_blocks, st_blksize etc.
+ * We define our own for FUSE callbacks. */
+struct fuse_stat {
+    dev_t     st_dev;
+    uint64_t  st_ino;
+    mode_t    st_mode;
+    uint32_t  st_nlink;
+    uid_t     st_uid;
+    gid_t     st_gid;
+    dev_t     st_rdev;
+    int64_t   st_size;
+    int64_t   st_atime;
+    int64_t   st_mtime;
+    int64_t   st_ctime;
+    int32_t   st_blksize;
+    int64_t   st_blocks;
+};
+
+/* ---- File mode macros (not in Windows) ---- */
+
+#ifndef S_IFMT
+#define S_IFMT   0xF000
+#define S_IFSOCK 0xC000
+#define S_IFLNK  0xA000
+#define S_IFREG  0x8000
+#define S_IFBLK  0x6000
+#define S_IFDIR  0x4000
+#define S_IFCHR  0x2000
+#define S_IFIFO  0x1000
+#endif
+
+#ifndef S_ISREG
+#define S_ISREG(m)  (((m) & S_IFMT) == S_IFREG)
+#define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
+#define S_ISCHR(m)  (((m) & S_IFMT) == S_IFCHR)
+#define S_ISBLK(m)  (((m) & S_IFMT) == S_IFBLK)
+#define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
+#define S_ISLNK(m)  (((m) & S_IFMT) == S_IFLNK)
+#define S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK)
+#endif
+
+/* Permission bits */
+#ifndef S_IRWXU
+#define S_IRWXU 0700
+#define S_IRUSR 0400
+#define S_IWUSR 0200
+#define S_IXUSR 0100
+#define S_IRWXG 0070
+#define S_IRGRP 0040
+#define S_IWGRP 0020
+#define S_IXGRP 0010
+#define S_IRWXO 0007
+#define S_IROTH 0004
+#define S_IWOTH 0002
+#define S_IXOTH 0001
+#endif
+
+/* Access mode checks */
+#ifndef R_OK
+#define R_OK 4
+#define W_OK 2
+#define X_OK 1
+#define F_OK 0
+#endif
+
+/* ---- Byte order (htonl/ntohl) ---- */
+
+/* Winsock2 provides htonl/ntohl/htons/ntohs */
+
+/* ---- Random number generation ---- */
+
+static inline uint32_t platform_arc4random(void)
+{
+    uint32_t val;
+    BCryptGenRandom(NULL, (PUCHAR)&val, sizeof(val),
+                    BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+    return val;
+}
+
+#define arc4random platform_arc4random
+
+/* ---- Wakeup pipe (TCP loopback socketpair) ---- */
+
+/*
+ * POSIX pipe() doesn't work with WSAPoll().
+ * We create a TCP loopback socketpair instead.
+ * fds[0] = read end, fds[1] = write end.
+ * Returns 0 on success, -1 on error.
+ */
+static inline int platform_socketpair(sock_t fds[2])
+{
+    fds[0] = INVALID_SOCKET;
+    fds[1] = INVALID_SOCKET;
+
+    /* Create listener on loopback */
+    sock_t listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listener == INVALID_SOCKET)
+        return -1;
+
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;  /* ephemeral */
+
+    if (bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        goto fail;
+
+    int addrlen = sizeof(addr);
+    if (getsockname(listener, (struct sockaddr *)&addr, &addrlen) < 0)
+        goto fail;
+
+    if (listen(listener, 1) < 0)
+        goto fail;
+
+    /* Connect */
+    fds[1] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (fds[1] == INVALID_SOCKET)
+        goto fail;
+
+    if (connect(fds[1], (struct sockaddr *)&addr, sizeof(addr)) < 0)
+        goto fail;
+
+    /* Accept */
+    fds[0] = accept(listener, NULL, NULL);
+    if (fds[0] == INVALID_SOCKET)
+        goto fail;
+
+    closesocket(listener);
+    return 0;
+
+fail:
+    if (fds[0] != INVALID_SOCKET) closesocket(fds[0]);
+    if (fds[1] != INVALID_SOCKET) closesocket(fds[1]);
+    fds[0] = INVALID_SOCKET;
+    fds[1] = INVALID_SOCKET;
+    closesocket(listener);
+    return -1;
+}
+
+/* ---- Thread-local storage ---- */
+
+#define THREAD_LOCAL __declspec(thread)
+
+/* ---- getpid / getuid / getgid ---- */
+
+static inline pid_t platform_getpid(void) { return (pid_t)GetCurrentProcessId(); }
+static inline uid_t platform_getuid(void) { return 0; }
+static inline gid_t platform_getgid(void) { return 0; }
+
+#define getpid  platform_getpid
+#define getuid  platform_getuid
+#define getgid  platform_getgid
+
+/* ---- Sleep ---- */
+
+static inline void platform_usleep(unsigned int usec)
+{
+    Sleep(usec / 1000);
+}
+
+#else /* !_WIN32 */
+
+/* ---- POSIX (macOS / Linux) ---- */
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <errno.h>
+#include <stdint.h>
+#include <stdio.h>
+
+typedef int sock_t;
+#define INVALID_SOCK (-1)
+
+static inline ssize_t sock_read(sock_t s, void *buf, size_t len)
+{
+    return read(s, buf, len);
+}
+
+static inline ssize_t sock_write(sock_t s, const void *buf, size_t len)
+{
+    return write(s, buf, len);
+}
+
+static inline void sock_close(sock_t s)
+{
+    if (s >= 0)
+        close(s);
+}
+
+static inline int sock_set_nonblocking(sock_t s)
+{
+    int flags = fcntl(s, F_GETFL, 0);
+    if (flags < 0) return -1;
+    return fcntl(s, F_SETFL, flags | O_NONBLOCK);
+}
+
+static inline int sock_error(void)
+{
+    return errno;
+}
+
+#define poll_fd_t     struct pollfd
+#define POLL_IN       POLLIN
+#define POLL_OUT      POLLOUT
+#define POLL_ERR      POLLERR
+#define POLL_HUP      POLLHUP
+#define platform_poll poll
+
+/* Use struct stat directly on POSIX */
+#define fuse_stat stat
+
+#define THREAD_LOCAL __thread
+
+static inline int platform_socketpair(sock_t fds[2])
+{
+    int pipefd[2];
+    if (pipe(pipefd) < 0)
+        return -1;
+    fds[0] = pipefd[0];
+    fds[1] = pipefd[1];
+    return 0;
+}
+
+#endif /* _WIN32 */
+
+#endif /* LAMARCKFUSE_PLATFORM_COMPAT_H */
