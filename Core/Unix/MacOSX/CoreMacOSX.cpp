@@ -12,7 +12,6 @@
 #include <sys/param.h>
 #include <sys/ucred.h>
 #include <sys/mount.h>
-#include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "CoreMacOSX.h"
@@ -108,26 +107,6 @@ namespace TrueCrypt
 
 	void CoreMacOSX::MountAuxVolumeImage (const DirectoryPath &auxMountPoint, const MountOptions &options) const
 	{
-#ifndef DARWINFUSE
-		// Check FUSE version (only needed with MacFUSE kext — DarwinFUSE uses NFSv4)
-		char fuseVersionString[MAXHOSTNAMELEN + 1] = { 0 };
-		size_t fuseVersionStringLength = MAXHOSTNAMELEN;
-
-		if (sysctlbyname ("vfs.generic.macfuse.version.number", fuseVersionString, &fuseVersionStringLength, NULL, 0) != 0
-			&& sysctlbyname ("macfuse.version.number", fuseVersionString, &fuseVersionStringLength, NULL, 0) != 0)
-			throw HigherFuseVersionRequired (SRC_POS);
-
-		vector <string> fuseVersion = StringConverter::Split (string (fuseVersionString), ".");
-		if (fuseVersion.size() < 2)
-			throw HigherFuseVersionRequired (SRC_POS);
-
-		uint32 fuseVersionMajor = StringConverter::ToUInt32 (fuseVersion[0]);
-		uint32 fuseVersionMinor = StringConverter::ToUInt32 (fuseVersion[1]);
-
-		if (fuseVersionMajor < 1 || (fuseVersionMajor == 1 && fuseVersionMinor < 3))
-			throw HigherFuseVersionRequired (SRC_POS);
-#endif
-
 		// Mount volume image
 		string volImage = string (auxMountPoint) + FuseService::GetVolumeImagePath();
 
