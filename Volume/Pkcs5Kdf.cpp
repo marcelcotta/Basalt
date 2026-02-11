@@ -51,21 +51,20 @@ namespace TrueCrypt
 	{
 		Pkcs5KdfList l;
 
-		// Legacy KDFs first (fast match for existing TrueCrypt 7.1a volumes)
-		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160_Legacy ()));
+		// Legacy KDFs first (near-zero cost, fast match for TrueCrypt 7.1a volumes)
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha512_Legacy ()));
+		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160_Legacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacWhirlpool_Legacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1_Legacy ()));
 
-		// Argon2id before modern PBKDF2: memory-hard but multi-threaded,
-		// completes faster than a single modern PBKDF2 attempt
-		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2id ()));
+		// Argon2id: Basalt default (Max first — new volumes use this)
 		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idMax ()));
+		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2id ()));
 
-		// Modern PBKDF2 (high iteration counts, single-threaded, ~3-4s each)
-		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160 ()));
+		// Modern PBKDF2: SHA-512 first (TC/VC default), then remaining
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha512 ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacWhirlpool ()));
+		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160 ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1 ()));
 
 		return l;
