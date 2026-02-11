@@ -98,7 +98,10 @@ struct MainWindow: View {
                 .environmentObject(vm)
                 .environmentObject(prefs)
         }
-        .alert("Error", isPresented: .constant(vm.errorMessage != nil)) {
+        .alert("Error", isPresented: Binding(
+            get: { vm.errorMessage != nil && !vm.showMountSheet },
+            set: { if !$0 { vm.errorMessage = nil } }
+        )) {
             Button("OK") { vm.errorMessage = nil }
         } message: {
             Text(vm.errorMessage ?? "")

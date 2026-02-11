@@ -84,13 +84,78 @@ static bool AskAdminPassword (string &passwordOut)
 }
 
 // ---- Helper: C++ exception → NSError ----
+//
+// TrueCrypt exceptions carry SRC_POS ("FunctionName:LineNumber") as their
+// message, which is useful for developers but meaningless to users.
+// Map known exception types to user-friendly descriptions.
 
 static NSError *ExceptionToError (const std::exception &e)
 {
-    NSString *desc = [NSString stringWithUTF8String:e.what ()];
+    NSString *desc = nil;
+
+    // --- Core exceptions (CoreException.h) ---
+    if (dynamic_cast <const VolumeAlreadyMounted *> (&e))
+        desc = @"The volume is already mounted.";
+    else if (dynamic_cast <const MountPointUnavailable *> (&e))
+        desc = @"The mount point is already in use.";
+    else if (dynamic_cast <const MountPointRequired *> (&e))
+        desc = @"A mount point is required.";
+    else if (dynamic_cast <const HigherFuseVersionRequired *> (&e))
+        desc = @"A newer version of FUSE is required.";
+    else if (dynamic_cast <const VolumeSlotUnavailable *> (&e))
+        desc = @"The volume slot is unavailable.";
+    else if (dynamic_cast <const TemporaryDirectoryFailure *> (&e))
+        desc = @"Failed to create a temporary directory.";
+
+    // --- Password exceptions (VolumePassword.h) ---
+    // Order matters: most-derived first (PasswordKeyfilesIncorrect before PasswordIncorrect).
+    else if (dynamic_cast <const ProtectionPasswordKeyfilesIncorrect *> (&e))
+        desc = @"Incorrect password or keyfile(s) for the hidden volume.";
+    else if (dynamic_cast <const ProtectionPasswordIncorrect *> (&e))
+        desc = @"Incorrect password for the hidden volume.";
+    else if (dynamic_cast <const PasswordKeyfilesIncorrect *> (&e))
+        desc = @"Incorrect password or keyfile(s).";
+    else if (dynamic_cast <const PasswordIncorrect *> (&e))
+        desc = @"Incorrect password.";
+    else if (dynamic_cast <const PasswordTooLong *> (&e))
+        desc = @"The password is too long.";
+    else if (dynamic_cast <const PasswordEmpty *> (&e))
+        desc = @"No password was provided.";
+
+    // --- User abort (cancelled dialog) ---
+    else if (dynamic_cast <const UserAbort *> (&e))
+        desc = @"Operation cancelled.";
+
+    // --- External process failure (hdiutil, mount_nfs, etc.) ---
+    else if (auto *epf = dynamic_cast <const ExecutedProcessFailed *> (&e)) {
+        string errOut = epf->GetErrorOutput ();
+        if (!errOut.empty ())
+            desc = [NSString stringWithFormat:@"%s failed:\n%s",
+                    epf->GetCommand ().c_str (), errOut.c_str ()];
+        else
+            desc = [NSString stringWithFormat:@"%s failed (exit code %lld).",
+                    epf->GetCommand ().c_str (), (long long) epf->GetExitCode ()];
+    }
+
+    // --- System exception: include errno text ---
+    else if (auto *se = dynamic_cast <const SystemException *> (&e)) {
+        wstring sysText = se->SystemText ();
+        if (!sysText.empty ())
+            desc = [NSString stringWithFormat:@"System error: %@", ToNS (sysText)];
+    }
+
+    // --- Fallback: use what() as-is ---
+    if (!desc) {
+        const char *msg = e.what ();
+        if (msg && *msg)
+            desc = [NSString stringWithUTF8String:msg];
+        else
+            desc = @"An unknown error occurred.";
+    }
+
     return [NSError errorWithDomain:TCErrorDomain
                                code:-1
-                           userInfo:@{NSLocalizedDescriptionKey: desc ?: @"Unknown error"}];
+                           userInfo:@{NSLocalizedDescriptionKey: desc}];
 }
 
 // ---- Helper: Keyfile list conversion ----
@@ -237,7 +302,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     if (self)
     {
         _volumeType = TCVolumeTypeNormal;
-        _filesystem = TCFilesystemTypeFAT;
+        _filesystem = TCFilesystemTypeHFSPlus;
     }
     return self;
 }

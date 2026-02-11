@@ -189,5 +189,8 @@ struct MountSheet: View {
         .onChange(of: vm.showMountSheet) { newValue in
             if !newValue { dismiss() }
         }
+        .onDisappear {
+            vm.errorMessage = nil
+        }
     }
 }
