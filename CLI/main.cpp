@@ -10,17 +10,26 @@
 // Links only against libTrueCryptCore.a + libfuse + system libraries.
 
 #include "Core/CorePublicAPI.h"
+#ifdef TC_WINDOWS
+#include "Core/Windows/CoreWindows.h"
+#include "Platform/Windows/Process.h"
+#else
 #include "Core/Unix/CoreService.h"
+#include "Platform/Unix/Process.h"
+#endif
 #include "Core/VolumeOperations.h"
 #include "Core/VolumeCreator.h"
 #include "Core/RandomNumberGenerator.h"
 #include "Volume/Version.h"
 #include "Volume/EncryptionTest.h"
 #include "Platform/PlatformTest.h"
-#include "Platform/Unix/Process.h"
 #include "CLICallback.h"
 
+#ifdef TC_WINDOWS
+#include "CLI/getopt.h"
+#else
 #include <getopt.h>
+#endif
 #include <iostream>
 #include <string>
 #include <cstdlib>
@@ -567,6 +576,10 @@ int main (int argc, char *argv[])
 
 	try
 	{
+#ifdef TC_WINDOWS
+		// On Windows, CoreWindows is used directly — no privilege elevation needed.
+		Core->Init ();
+#else
 		// Admin password callback for elevated operations
 		struct CLIAdminPasswordFunctor : public GetStringFunctor
 		{
@@ -591,6 +604,7 @@ int main (int argc, char *argv[])
 
 		CoreService::Start ();
 		Core->Init ();
+#endif
 
 		// Apply parsed options to MountOptions
 		if (!argPassword.empty ())
@@ -914,7 +928,11 @@ int main (int argc, char *argv[])
 						break;
 					}
 
+#ifdef TC_WINDOWS
+					Sleep (200);
+#else
 					usleep (200000);  // 200ms
+#endif
 				}
 
 				std::wcerr << L"\r                     \r" << std::flush;
@@ -953,16 +971,22 @@ int main (int argc, char *argv[])
 	}
 	catch (UserAbort &)
 	{
+#ifndef TC_WINDOWS
 		try { CoreService::Stop (); } catch (...) {}
+#endif
 		return 1;
 	}
 	catch (exception &e)
 	{
 		std::wcerr << L"Error: " << StringConverter::ToWide (e.what ()) << std::endl;
+#ifndef TC_WINDOWS
 		try { CoreService::Stop (); } catch (...) {}
+#endif
 		return 1;
 	}
 
+#ifndef TC_WINDOWS
 	try { CoreService::Stop (); } catch (...) {}
+#endif
 	return 0;
 }

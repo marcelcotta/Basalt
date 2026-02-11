@@ -10,8 +10,10 @@
 #define TC_HEADER_Driver_Fuse_FuseService
 
 #include "Platform/Platform.h"
+#ifndef TC_WINDOWS
 #include "Platform/Unix/Pipe.h"
 #include "Platform/Unix/Process.h"
+#endif
 #include "Volume/VolumeInfo.h"
 #include "Volume/Volume.h"
 
@@ -20,6 +22,7 @@ namespace TrueCrypt
 
 	class FuseService
 	{
+#ifndef TC_WINDOWS
 	protected:
 		struct ExecFunctor : public ProcessExecFunctor
 		{
@@ -35,17 +38,22 @@ namespace TrueCrypt
 		};
 
 		friend class ExecFunctor;
+#endif
 
 	public:
 		static bool AuxDeviceInfoReceived () { return !OpenVolumeInfo.VirtualDevice.IsEmpty(); }
+#ifndef TC_WINDOWS
 		static bool CheckAccessRights ();
+#endif
 		static void Dismount ();
 		static int ExceptionToErrorCode ();
 		static const char *GetControlPath () { return "/control"; }
 		static const char *GetVolumeImagePath ();
 		static string GetDeviceType () { return "truecrypt"; }
+#ifndef TC_WINDOWS
 		static uid_t GetGroupId () { return GroupId; }
 		static uid_t GetUserId () { return UserId; }
+#endif
 		static shared_ptr <Buffer> GetVolumeInfo ();
 		static uint64 GetVolumeSize ();
 		static uint64 GetVolumeSectorSize () { return MountedVolume->GetSectorSize(); }
@@ -58,15 +66,19 @@ namespace TrueCrypt
 	protected:
 		FuseService ();
 		static void CloseMountedVolume ();
+#ifndef TC_WINDOWS
 		static void OnSignal (int signal);
+#endif
 
 		static VolumeInfo OpenVolumeInfo;
 		static Mutex OpenVolumeInfoMutex;
 		static shared_ptr <Volume> MountedVolume;
 		static VolumeSlotNumber SlotNumber;
+#ifndef TC_WINDOWS
 		static uid_t UserId;
 		static gid_t GroupId;
 		static unique_ptr <Pipe> SignalHandlerPipe;
+#endif
 	};
 }
 

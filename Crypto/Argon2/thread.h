@@ -11,12 +11,21 @@
 extern "C" {
 #endif
 
-/* Use pthreads on macOS/Unix */
+#if defined(_WIN32)
+/* Windows threading */
+#include <windows.h>
+
+typedef HANDLE argon2_thread_handle_t;
+typedef unsigned long argon2_thread_return_t;
+typedef unsigned long (__stdcall *argon2_thread_func_t)(void *);
+#else
+/* pthreads on macOS/Unix */
 #include <pthread.h>
 
 typedef pthread_t argon2_thread_handle_t;
 typedef void *argon2_thread_return_t;
 typedef void *(*argon2_thread_func_t)(void *);
+#endif
 
 int argon2_thread_create(argon2_thread_handle_t *handle,
                          argon2_thread_func_t func, void *args);
