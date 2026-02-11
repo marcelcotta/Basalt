@@ -60,6 +60,12 @@ namespace TrueCrypt
 			sigaction (SIGQUIT, &action, nullptr);
 			sigaction (SIGTERM, &action, nullptr);
 
+#ifdef TC_MACOSX
+			// DarwinFUSE calls init() in the daemon child after fork().
+			// Worker threads from the parent don't survive fork(), so we
+			// must reset the stale pool state before starting fresh threads.
+			EncryptionThreadPool::ResetAfterFork();
+#endif
 			if (!EncryptionThreadPool::IsRunning())
 				EncryptionThreadPool::Start();
 		}
@@ -482,6 +488,31 @@ namespace TrueCrypt
 
 	void FuseService::SendAuxDeviceInfo (const DirectoryPath &fuseMountPoint, const DevicePath &virtualDevice, const DevicePath &loopDevice)
 	{
+#ifdef DARWINFUSE
+		// On DarwinFUSE (NFS-based), we cannot write to the NFS-mounted FUSE
+		// filesystem because the NFS client caches write data and corrupts
+		// subsequent reads of the /control file. Instead, write a local file
+		// alongside the aux mount directory that GetMountedVolumes will read.
+		string localPath = string (fuseMountPoint) + ".auxinfo";
+		int fd = open (localPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+		if (fd >= 0)
+		{
+			shared_ptr <Stream> stream (new MemoryStream);
+			Serializer sr (stream);
+			sr.Serialize ("VirtualDevice", string (virtualDevice));
+			sr.Serialize ("LoopDevice", string (loopDevice));
+
+			ConstBufferPtr buf = dynamic_cast <MemoryStream&> (*stream);
+			ssize_t written = write (fd, buf.Get(), buf.Size());
+			close (fd);
+			if (written < 0 || (size_t)written != buf.Size())
+				throw SystemException (SRC_POS, localPath);
+		}
+		else
+		{
+			throw SystemException (SRC_POS, localPath);
+		}
+#else
 		File fuseServiceControl;
 		fuseServiceControl.Open (string (fuseMountPoint) + GetControlPath(), File::OpenWrite);
 
@@ -491,6 +522,7 @@ namespace TrueCrypt
 		sr.Serialize ("VirtualDevice", string (virtualDevice));
 		sr.Serialize ("LoopDevice", string (loopDevice));
 		fuseServiceControl.Write (dynamic_cast <MemoryStream&> (*stream));
+#endif
 	}
 
 	void FuseService::WriteVolumeSectors (const ConstBufferPtr &buffer, uint64 byteOffset)
@@ -555,6 +587,14 @@ namespace TrueCrypt
 		fuse_service_oper.readdir = fuse_service_readdir;
 		fuse_service_oper.write = fuse_service_write;
 
+#ifdef TC_MACOSX
+		// On macOS with DarwinFUSE, fuse_main handles daemonization
+		// internally (forks a daemon child and returns 0 in the parent).
+		// No signal-handler child is needed — DarwinFUSE's daemon handles
+		// its own lifecycle.  We just call fuse_main and _exit.
+		setsid ();
+		_exit (fuse_main (argc, argv, &fuse_service_oper, NULL));
+#else
 		// Create a new session
 		setsid ();
 
@@ -586,6 +626,7 @@ namespace TrueCrypt
 		SignalHandlerPipe->GetWriteFD();
 
 		_exit (fuse_main (argc, argv, &fuse_service_oper, NULL));
+#endif
 	}
 
 	VolumeInfo FuseService::OpenVolumeInfo;

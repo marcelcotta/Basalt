@@ -64,6 +64,14 @@ namespace TrueCrypt
 		static void Start ();
 		static void Stop ();
 
+		/*
+		 * Reset stale state after fork().  Worker threads do not survive
+		 * fork (POSIX: only the calling thread is duplicated), so we must
+		 * clear the running flag and thread list without attempting to
+		 * join them.  Call this before Start() in a forked child.
+		 */
+		static void ResetAfterFork ();
+
 	protected:
 		static void WorkThreadProc ();
 

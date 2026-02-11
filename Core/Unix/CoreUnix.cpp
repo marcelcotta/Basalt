@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "Platform/FileStream.h"
+#include "Platform/Serializer.h"
 #include "Driver/Fuse/FuseService.h"
 
 namespace TrueCrypt
@@ -259,20 +260,43 @@ namespace TrueCrypt
 			try
 			{
 				shared_ptr <File> controlFile (new File);
-				controlFile->Open (string (mf->MountPoint) + FuseService::GetControlPath());
+				string controlPath = string (mf->MountPoint) + FuseService::GetControlPath();
+				controlFile->Open (controlPath);
 
 				shared_ptr <Stream> controlFileStream (new FileStream (controlFile));
 				mountedVol = Serializable::DeserializeNew <VolumeInfo> (controlFileStream);
 			}
-			catch (...)
+			catch (exception &ex)
 			{
 				continue;
 			}
 
 			if (!volumePath.IsEmpty() && wstring (mountedVol->Path).compare (volumePath) != 0)
+			{
 				continue;
+			}
 
 			mountedVol->AuxMountPoint = mf->MountPoint;
+
+#ifdef DARWINFUSE
+			// On DarwinFUSE, VirtualDevice/LoopDevice info is stored in a
+			// local file alongside the aux mount dir (not in the NFS-served
+			// control file) to avoid NFS client cache corruption.
+			if (mountedVol->VirtualDevice.IsEmpty())
+			{
+				string auxInfoPath = string (mf->MountPoint) + ".auxinfo";
+				try
+				{
+					shared_ptr <File> auxFile (new File);
+					auxFile->Open (auxInfoPath);
+					shared_ptr <Stream> auxStream (new FileStream (auxFile));
+					Serializer sr (auxStream);
+					mountedVol->VirtualDevice = sr.DeserializeString ("VirtualDevice");
+					mountedVol->LoopDevice = sr.DeserializeString ("LoopDevice");
+				}
+				catch (...) { }
+			}
+#endif
 
 			if (!mountedVol->VirtualDevice.IsEmpty())
 			{

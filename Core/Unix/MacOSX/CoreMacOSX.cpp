@@ -108,7 +108,8 @@ namespace TrueCrypt
 
 	void CoreMacOSX::MountAuxVolumeImage (const DirectoryPath &auxMountPoint, const MountOptions &options) const
 	{
-		// Check FUSE version
+#ifndef DARWINFUSE
+		// Check FUSE version (only needed with MacFUSE kext — DarwinFUSE uses NFSv4)
 		char fuseVersionString[MAXHOSTNAMELEN + 1] = { 0 };
 		size_t fuseVersionStringLength = MAXHOSTNAMELEN;
 
@@ -125,6 +126,7 @@ namespace TrueCrypt
 
 		if (fuseVersionMajor < 1 || (fuseVersionMajor == 1 && fuseVersionMinor < 3))
 			throw HigherFuseVersionRequired (SRC_POS);
+#endif
 
 		// Mount volume image
 		string volImage = string (auxMountPoint) + FuseService::GetVolumeImagePath();

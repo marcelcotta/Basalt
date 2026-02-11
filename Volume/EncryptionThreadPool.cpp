@@ -229,6 +229,27 @@ namespace TrueCrypt
 		ThreadPoolRunning = false;
 	}
 
+	void EncryptionThreadPool::ResetAfterFork ()
+	{
+		/*
+		 * After fork(), the worker threads from the parent no longer
+		 * exist in this process.  We cannot Join() them — just discard
+		 * the stale handles and reset state so Start() can create fresh
+		 * threads.
+		 */
+		RunningThreads.clear();
+		ThreadCount = 0;
+		StopPending = false;
+		ThreadPoolRunning = false;
+		DequeuePosition = 0;
+		EnqueuePosition = 0;
+
+		for (size_t i = 0; i < sizeof (WorkItemQueue) / sizeof (WorkItemQueue[0]); ++i)
+		{
+			WorkItemQueue[i].State.Set (WorkItem::State::Free);
+		}
+	}
+
 	void EncryptionThreadPool::WorkThreadProc ()
 	{
 		try

@@ -32,13 +32,15 @@ targets:
         OTHER_LDFLAGS:
           - "-L${SRCROOT}/.."
           - "-lTrueCryptCore"
-          - "$(shell pkg-config fuse --libs)"
+          - "-L${SRCROOT}/../DarwinFUSE"
+          - "-ldarwinfuse"
           - "-lc++"
           - "-framework Security"
           - "-framework AppKit"
         HEADER_SEARCH_PATHS:
           - "${SRCROOT}/.."
           - "${SRCROOT}/../Crypto"
+          - "${SRCROOT}/../DarwinFUSE/include"
         LIBRARY_SEARCH_PATHS:
           - "${SRCROOT}/.."
     info:

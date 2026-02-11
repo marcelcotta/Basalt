@@ -25,4 +25,8 @@ ifeq "$(PLATFORM)" "MacOSX"
 OBJS += Unix/FreeBSD/CoreFreeBSD.o
 endif
 
+ifeq "$(shell uname -s)" "Darwin"
+    CXXFLAGS += -DDARWINFUSE
+endif
+
 include $(BUILD_INC)/Makefile.inc

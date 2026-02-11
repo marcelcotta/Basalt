@@ -181,6 +181,7 @@ namespace TrueCrypt
 		}
 
 		int exitCode = (WIFEXITED (status) ? WEXITSTATUS (status) : 1);
+
 		if (exitCode != 0)
 		{
 			string strErrOutput;

@@ -207,7 +207,18 @@ LFLAGS := $(LFLAGS) $(TC_EXTRA_LFLAGS)
 
 CORE_DIRS := Platform Volume Driver/Fuse Core
 
-.PHONY: libTrueCryptCore cli clean
+.PHONY: libTrueCryptCore cli clean darwinfuse
+
+#------ DarwinFUSE (macOS only — NFSv4 FUSE replacement) ------
+
+ifeq "$(shell uname -s)" "Darwin"
+DARWINFUSE_LIB := $(BASE_DIR)/DarwinFUSE/libdarwinfuse.a
+
+darwinfuse: $(DARWINFUSE_LIB)
+
+$(DARWINFUSE_LIB):
+	$(MAKE) -C $(BASE_DIR)/DarwinFUSE TC_BUILD_CONFIG=$(TC_BUILD_CONFIG)
+endif
 
 #------ Core library (no UI dependency) ------
 
@@ -216,6 +227,10 @@ CORE_ARCHIVES := \
 	$(BASE_DIR)/Volume/Volume.a \
 	$(BASE_DIR)/Driver/Fuse/Driver.a \
 	$(BASE_DIR)/Core/Core.a
+
+ifeq "$(shell uname -s)" "Darwin"
+libTrueCryptCore: $(DARWINFUSE_LIB)
+endif
 
 libTrueCryptCore:
 	@for DIR in $(CORE_DIRS); do \
@@ -251,4 +266,7 @@ clean:
 		$(MAKE) -C $$DIR -f $$PROJ.make NAME=$$PROJ clean 2>/dev/null || true; \
 	done
 	$(MAKE) -C CLI -f CLI.make clean 2>/dev/null || true
+ifeq "$(shell uname -s)" "Darwin"
+	$(MAKE) -C $(BASE_DIR)/DarwinFUSE clean 2>/dev/null || true
+endif
 	rm -f $(BASE_DIR)/libTrueCryptCore.a

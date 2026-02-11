@@ -16,7 +16,11 @@ CXXFLAGS += -I$(BASE_DIR)/CLI -I$(BASE_DIR)
 
 #------ FUSE configuration ------
 
-FUSE_LIBS = $(shell pkg-config fuse --libs)
+ifeq "$(shell uname -s)" "Darwin"
+    FUSE_LIBS = $(BASE_DIR)/DarwinFUSE/libdarwinfuse.a
+else
+    FUSE_LIBS = $(shell pkg-config fuse --libs)
+endif
 
 #------ C++ standard library (libc++ on macOS, libstdc++ on Linux) ------
 

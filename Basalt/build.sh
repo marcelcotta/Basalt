@@ -65,7 +65,7 @@ else
     SWIFT_FLAGS="-Onone -g"
 fi
 
-FUSE_LIBS="$(pkg-config fuse --libs 2>/dev/null || echo '-losxfuse')"
+FUSE_LIBS="${SYMLINK}/DarwinFUSE/libdarwinfuse.a"
 
 # Step 1: Compile ObjC++ Bridge files
 echo "Compiling Bridge..."

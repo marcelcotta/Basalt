@@ -11,6 +11,10 @@ NAME := Driver
 OBJS :=
 OBJS += FuseService.o
 
-CXXFLAGS += $(shell pkg-config fuse --cflags)
+ifeq "$(shell uname -s)" "Darwin"
+    CXXFLAGS += -I$(BASE_DIR)/DarwinFUSE/include -DDARWINFUSE
+else
+    CXXFLAGS += $(shell pkg-config fuse --cflags)
+endif
 
 include $(BUILD_INC)/Makefile.inc
