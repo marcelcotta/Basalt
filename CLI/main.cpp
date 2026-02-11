@@ -10,10 +10,14 @@
 // Links only against libTrueCryptCore.a + libfuse + system libraries.
 
 #include "Core/CorePublicAPI.h"
+#include "Core/Unix/CoreService.h"
 #include "Core/VolumeOperations.h"
+#include "Core/VolumeCreator.h"
+#include "Core/RandomNumberGenerator.h"
 #include "Volume/Version.h"
 #include "Volume/EncryptionTest.h"
 #include "Platform/PlatformTest.h"
+#include "Platform/Unix/Process.h"
 #include "CLICallback.h"
 
 #include <getopt.h>
@@ -21,6 +25,7 @@
 #include <string>
 #include <cstdlib>
 #include <signal.h>
+#include <list>
 
 #ifdef TC_UNIX
 #include <unistd.h>
@@ -35,6 +40,7 @@ enum CLICommand
 	CmdNone = 0,
 	CmdMount,
 	CmdDismount,
+	CmdCreate,
 	CmdList,
 	CmdTest,
 	CmdBackupHeaders,
@@ -70,6 +76,82 @@ static wstring FormatSize (uint64 size)
 	return s.str ();
 }
 
+// ---- Size parsing ----
+
+static uint64 ParseSize (const string &s)
+{
+	if (s.empty ())
+		throw ParameterIncorrect (SRC_POS);
+
+	char *end = nullptr;
+	unsigned long long val = strtoull (s.c_str (), &end, 10);
+
+	if (end == s.c_str () || val == 0)
+		throw ParameterIncorrect (SRC_POS);
+
+	if (end && *end)
+	{
+		char suffix = *end;
+		if (suffix == 'K' || suffix == 'k')
+			val *= 1024ULL;
+		else if (suffix == 'M' || suffix == 'm')
+			val *= 1024ULL * 1024;
+		else if (suffix == 'G' || suffix == 'g')
+			val *= 1024ULL * 1024 * 1024;
+		else
+		{
+			std::wcerr << L"Invalid size suffix: " << suffix << std::endl;
+			throw ParameterIncorrect (SRC_POS);
+		}
+	}
+
+	return (uint64) val;
+}
+
+// ---- HFS+ post-creation formatting (macOS) ----
+
+#ifdef TC_MACOSX
+static void FormatHfsPlus (const string &volumePath, shared_ptr <VolumePassword> password,
+                            shared_ptr <KeyfileList> keyfiles)
+{
+	// Mount with NoFilesystem to get the virtual block device
+	MountOptions opts;
+	opts.Path = make_shared <VolumePath> (StringConverter::ToWide (volumePath));
+	opts.Password = password;
+	opts.Keyfiles = keyfiles;
+	opts.NoFilesystem = true;
+
+	shared_ptr <VolumeInfo> vol = Core->MountVolume (opts);
+	if (!vol)
+		throw ParameterIncorrect (SRC_POS);
+
+	string virtualDev = vol->VirtualDevice;
+	if (virtualDev.empty ())
+	{
+		Core->DismountVolume (vol, true);
+		throw ParameterIncorrect (SRC_POS);
+	}
+
+	// Run newfs_hfs
+	list <string> args;
+	args.push_back ("-v");
+	args.push_back ("Basalt");
+	args.push_back (virtualDev);
+
+	try
+	{
+		Process::Execute ("/sbin/newfs_hfs", args);
+	}
+	catch (...)
+	{
+		try { Core->DismountVolume (vol, true); } catch (...) { }
+		throw;
+	}
+
+	Core->DismountVolume (vol, true);
+}
+#endif
+
 // ---- Help text ----
 
 static void ShowHelp (const char *argv0)
@@ -79,6 +161,7 @@ static void ShowHelp (const char *argv0)
 		"       " << argv0 << " [OPTIONS] VOLUME_PATH [MOUNT_POINT]\n"
 		"\n"
 		"Commands:\n"
+		"  --create, -c PATH        Create a new volume\n"
 		"  --mount, -m              Mount a volume\n"
 		"  --dismount, -d [PATH]    Dismount volume(s)\n"
 		"  --list, -l               List mounted volumes\n"
@@ -93,17 +176,21 @@ static void ShowHelp (const char *argv0)
 		"Options:\n"
 		"  -p, --password=PASS      Volume password\n"
 		"  -k, --keyfiles=K1[,K2]   Keyfile(s), comma-separated\n"
+		"  --size=SIZE              Volume size for --create (e.g. 10M, 1G, 500K)\n"
+		"  --encryption=ALG         Encryption algorithm (default: AES)\n"
+		"  --hash=HASH              Hash algorithm (default: Argon2id-Max)\n"
+		"  --filesystem=TYPE        Filesystem: fat, hfs, none (default: hfs on macOS)\n"
+		"  --quick                  Quick format (skip random data fill)\n"
 		"  --new-password=PASS      New password (for --change)\n"
 		"  --new-keyfiles=K1[,K2]   New keyfiles (for --change)\n"
-		"  --hash=HASH              Hash algorithm\n"
 		"  --mount-options=OPTS     Mount options (readonly,headerbak,nokernelcrypto,timestamp)\n"
-		"  --filesystem=TYPE        Filesystem type (default: auto)\n"
 		"  --slot=N                 Volume slot number (1-64)\n"
 		"  --force                  Force mount/dismount\n"
 		"  --non-interactive        No user interaction\n"
 		"  --verbose, -v            Verbose output\n"
 		"\n"
 		"Examples:\n"
+		"  " << argv0 << " -c volume.tc --size=100M --password=secret\n"
 		"  " << argv0 << " volume.tc /mnt/tc\n"
 		"  " << argv0 << " -d volume.tc\n"
 		"  " << argv0 << " -l\n"
@@ -258,8 +345,10 @@ int main (int argc, char *argv[])
 	{
 		{ "backup-headers",  required_argument, nullptr, 'B' },
 		{ "change",          optional_argument, nullptr, 'C' },
+		{ "create",          required_argument, nullptr, 'c' },
 		{ "create-keyfile",  required_argument, nullptr, 'K' },
 		{ "dismount",        optional_argument, nullptr, 'd' },
+		{ "encryption",      required_argument, nullptr, 'E' },
 		{ "filesystem",      required_argument, nullptr, 'F' },
 		{ "force",           no_argument,       nullptr, 'f' },
 		{ "hash",            required_argument, nullptr, 'H' },
@@ -272,7 +361,9 @@ int main (int argc, char *argv[])
 		{ "new-password",    required_argument, nullptr, 'P' },
 		{ "non-interactive", no_argument,       nullptr, 'I' },
 		{ "password",        required_argument, nullptr, 'p' },
+		{ "quick",           no_argument,       nullptr, 'Q' },
 		{ "restore-headers", required_argument, nullptr, 'R' },
+		{ "size",            required_argument, nullptr, 'Z' },
 		{ "slot",            required_argument, nullptr, 'S' },
 		{ "test",            no_argument,       nullptr, 'T' },
 		{ "verbose",         no_argument,       nullptr, 'v' },
@@ -290,9 +381,13 @@ int main (int argc, char *argv[])
 	string argVolumePath;
 	string argMountPoint;
 	string argFilePath;
+	string argSize;
+	string argEncryption;
+	string argFilesystem;
 	bool verbose = false;
 	bool force = false;
 	bool nonInteractive = false;
+	bool quickFormat = false;
 
 	int opt;
 	int optIndex = 0;
@@ -300,12 +395,17 @@ int main (int argc, char *argv[])
 	// Reset getopt
 	optind = 1;
 
-	while ((opt = getopt_long (argc, argv, "B:C::d::hk:lmp:vK:", longOptions, &optIndex)) != -1)
+	while ((opt = getopt_long (argc, argv, "B:C::c:d::hk:lmp:vK:", longOptions, &optIndex)) != -1)
 	{
 		switch (opt)
 		{
 		case 'B':  // --backup-headers
 			command = CmdBackupHeaders;
+			argVolumePath = optarg;
+			break;
+
+		case 'c':  // --create
+			command = CmdCreate;
 			argVolumePath = optarg;
 			break;
 
@@ -325,9 +425,14 @@ int main (int argc, char *argv[])
 			force = true;
 			break;
 
+		case 'E':  // --encryption
+			argEncryption = optarg;
+			break;
+
 		case 'F':  // --filesystem
 			{
 				string fs = optarg;
+				argFilesystem = fs;
 				if (fs == "none")
 					mountOptions.NoFilesystem = true;
 				else
@@ -380,6 +485,10 @@ int main (int argc, char *argv[])
 			argNewPassword = optarg;
 			break;
 
+		case 'Q':  // --quick
+			quickFormat = true;
+			break;
+
 		case 'R':  // --restore-headers
 			command = CmdRestoreHeaders;
 			argVolumePath = optarg;
@@ -400,6 +509,10 @@ int main (int argc, char *argv[])
 
 		case 'T':  // --test
 			command = CmdTest;
+			break;
+
+		case 'Z':  // --size
+			argSize = optarg;
 			break;
 
 		case 'v':  // --verbose
@@ -454,6 +567,29 @@ int main (int argc, char *argv[])
 
 	try
 	{
+		// Admin password callback for elevated operations
+		struct CLIAdminPasswordFunctor : public GetStringFunctor
+		{
+			bool nonInteractive;
+			CLIAdminPasswordFunctor (bool ni) : nonInteractive (ni) {}
+			virtual void operator() (string &password)
+			{
+				if (nonInteractive)
+					throw UserAbort (SRC_POS);
+
+				std::wcerr << L"Enter admin password: ";
+				wstring wpass;
+				std::getline (std::wcin, wpass);
+				if (std::wcin.fail ())
+					throw UserAbort (SRC_POS);
+				password = StringConverter::ToSingle (wpass);
+			}
+		};
+
+		CoreService::SetAdminPasswordCallback (
+			shared_ptr <GetStringFunctor> (new CLIAdminPasswordFunctor (nonInteractive)));
+
+		CoreService::Start ();
 		Core->Init ();
 
 		// Apply parsed options to MountOptions
@@ -617,6 +753,192 @@ int main (int argc, char *argv[])
 			}
 			break;
 
+		case CmdCreate:
+			{
+				if (argVolumePath.empty ())
+					throw ParameterIncorrect (SRC_POS);
+				if (argSize.empty ())
+				{
+					std::wcerr << L"Error: --size is required for --create" << std::endl;
+					return 1;
+				}
+
+				uint64 volumeSize;
+				try { volumeSize = ParseSize (argSize); }
+				catch (...)
+				{
+					std::wcerr << L"Error: Invalid size: " << StringConverter::ToWide (argSize) << std::endl;
+					std::wcerr << L"  Use e.g. 10M, 1G, 500K, or size in bytes" << std::endl;
+					return 1;
+				}
+
+				// Password
+				shared_ptr <VolumePassword> password;
+				if (!argPassword.empty ())
+					password = make_shared <VolumePassword> (StringConverter::ToWide (argPassword));
+				else
+					password = cb.AskPassword ();
+
+				// Keyfiles
+				shared_ptr <KeyfileList> keyfiles;
+				if (!argKeyfiles.empty ())
+					keyfiles = ParseKeyfiles (argKeyfiles);
+
+				// Encryption algorithm (default: AES)
+				string encName = argEncryption.empty () ? "AES" : argEncryption;
+				shared_ptr <TrueCrypt::EncryptionAlgorithm> ea;
+				for (const auto &a : TrueCrypt::EncryptionAlgorithm::GetAvailableAlgorithms ())
+				{
+					if (!a->IsDeprecated () && StringConverter::ToSingle (a->GetName ()) == encName)
+					{
+						ea = a;
+						break;
+					}
+				}
+				if (!ea)
+				{
+					std::wcerr << L"Unknown encryption algorithm: " << StringConverter::ToWide (encName) << std::endl;
+					std::wcerr << L"Available: ";
+					for (const auto &a : TrueCrypt::EncryptionAlgorithm::GetAvailableAlgorithms ())
+						if (!a->IsDeprecated ())
+							std::wcerr << a->GetName () << L"  ";
+					std::wcerr << std::endl;
+					return 1;
+				}
+
+				// Hash / KDF (default: Argon2id-Max)
+				string hashName = argHash.empty () ? "Argon2id-Max" : argHash;
+				shared_ptr <TrueCrypt::Hash> hash;
+				for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+				{
+					if (!h->IsDeprecated () && StringConverter::ToSingle (h->GetName ()) == hashName)
+					{
+						hash = h;
+						break;
+					}
+				}
+				if (!hash)
+				{
+					std::wcerr << L"Unknown hash algorithm: " << StringConverter::ToWide (hashName) << std::endl;
+					std::wcerr << L"Available: ";
+					for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+						if (!h->IsDeprecated ())
+							std::wcerr << h->GetName () << L"  ";
+					std::wcerr << std::endl;
+					return 1;
+				}
+
+				shared_ptr <Pkcs5Kdf> kdf = Pkcs5Kdf::GetAlgorithm (*hash);
+
+				// Filesystem (default: HFS+ on macOS, FAT elsewhere)
+#ifdef TC_MACOSX
+				VolumeCreationOptions::FilesystemType::Enum fsType = VolumeCreationOptions::FilesystemType::MacOsExt;
+#else
+				VolumeCreationOptions::FilesystemType::Enum fsType = VolumeCreationOptions::FilesystemType::FAT;
+#endif
+				if (!argFilesystem.empty ())
+				{
+					if (argFilesystem == "none")
+						fsType = VolumeCreationOptions::FilesystemType::None;
+					else if (argFilesystem == "fat" || argFilesystem == "FAT")
+						fsType = VolumeCreationOptions::FilesystemType::FAT;
+#ifdef TC_MACOSX
+					else if (argFilesystem == "hfs" || argFilesystem == "hfs+" || argFilesystem == "HFS+")
+						fsType = VolumeCreationOptions::FilesystemType::MacOsExt;
+#endif
+					else
+					{
+						std::wcerr << L"Unknown filesystem: " << StringConverter::ToWide (argFilesystem) << std::endl;
+						return 1;
+					}
+				}
+
+				// For HFS+, use None during creation (format afterwards via newfs_hfs)
+				VolumeCreationOptions::FilesystemType::Enum creationFsType = fsType;
+#ifdef TC_MACOSX
+				if (fsType == VolumeCreationOptions::FilesystemType::MacOsExt)
+					creationFsType = VolumeCreationOptions::FilesystemType::None;
+#endif
+
+				// Enrich RNG
+				cb.EnrichRandomPool (hash);
+				RandomNumberGenerator::SetHash (hash);
+
+				// Build creation options
+				auto options = make_shared <VolumeCreationOptions> ();
+				options->Path = VolumePath (StringConverter::ToWide (argVolumePath));
+				options->Type = VolumeType::Normal;
+				options->Size = volumeSize;
+				options->Password = password;
+				options->Keyfiles = keyfiles;
+				options->VolumeHeaderKdf = kdf;
+				options->EA = ea;
+				options->Quick = quickFormat;
+				options->Filesystem = creationFsType;
+				options->FilesystemClusterSize = 0;  // auto
+				options->SectorSize = 0;
+
+				if (verbose)
+				{
+					std::wcout << L"Creating volume: " << StringConverter::ToWide (argVolumePath) << std::endl;
+					std::wcout << L"  Size:       " << FormatSize (volumeSize) << std::endl;
+					std::wcout << L"  Encryption: " << ea->GetName () << std::endl;
+					std::wcout << L"  Hash:       " << hash->GetName () << std::endl;
+					std::wcout << L"  Filesystem: " << (fsType == VolumeCreationOptions::FilesystemType::FAT ? L"FAT" :
+						(fsType == VolumeCreationOptions::FilesystemType::MacOsExt ? L"HFS+" : L"None")) << std::endl;
+					std::wcout << L"  Quick:      " << (quickFormat ? L"Yes" : L"No") << std::endl;
+				}
+
+				// Start creation (spawns background thread)
+				VolumeCreator creator;
+				creator.CreateVolume (options);
+
+				// Poll progress
+				VolumeCreator::ProgressInfo progress;
+				while (true)
+				{
+					progress = creator.GetProgressInfo ();
+					if (!progress.CreationInProgress)
+						break;
+
+					if (progress.TotalSize > 0)
+					{
+						int pct = (int) (progress.SizeDone * 100 / progress.TotalSize);
+						std::wcerr << L"\rCreating... " << pct << L"%" << std::flush;
+					}
+
+					if (TerminationRequested)
+					{
+						creator.Abort ();
+						std::wcerr << std::endl << L"Aborted." << std::endl;
+						break;
+					}
+
+					usleep (200000);  // 200ms
+				}
+
+				std::wcerr << L"\r                     \r" << std::flush;
+
+				// Check for errors from the creation thread
+				creator.CheckResult ();
+
+				if (TerminationRequested)
+					return 1;
+
+				// HFS+ post-creation formatting
+#ifdef TC_MACOSX
+				if (fsType == VolumeCreationOptions::FilesystemType::MacOsExt)
+				{
+					if (verbose)
+						std::wcout << L"Formatting as HFS+..." << std::endl;
+					FormatHfsPlus (argVolumePath, password, keyfiles);
+				}
+#endif
+
+				std::wcout << L"Volume created: " << StringConverter::ToWide (argVolumePath) << std::endl;
+			}
+			break;
+
 		case CmdCreateKeyfile:
 			{
 				FilePath keyfilePath (StringConverter::ToWide (argFilePath));
@@ -631,13 +953,16 @@ int main (int argc, char *argv[])
 	}
 	catch (UserAbort &)
 	{
+		try { CoreService::Stop (); } catch (...) {}
 		return 1;
 	}
 	catch (exception &e)
 	{
 		std::wcerr << L"Error: " << StringConverter::ToWide (e.what ()) << std::endl;
+		try { CoreService::Stop (); } catch (...) {}
 		return 1;
 	}
 
+	try { CoreService::Stop (); } catch (...) {}
 	return 0;
 }

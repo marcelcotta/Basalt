@@ -35,7 +35,7 @@ struct CreateVolumeSheet: View {
     @FocusState private var passwordFocused: Bool
 
     // Step 4: Filesystem & Format
-    @State private var filesystem: Int = 1 // 0=None, 1=FAT, 2=HFS+
+    @State private var filesystem: Int = 2 // 0=None, 1=FAT, 2=HFS+
     @State private var quickFormat = false
 
     // Progress
@@ -129,7 +129,9 @@ struct CreateVolumeSheet: View {
         .screenCaptureProtection()
         .onAppear {
             // Set defaults from available algorithms
-            if selectedHash.isEmpty, let first = vm.availableHashAlgorithms.first(where: { $0.contains("SHA-512") }) {
+            if selectedHash.isEmpty, let first = vm.availableHashAlgorithms.first(where: { $0 == "Argon2id-Max" }) {
+                selectedHash = first
+            } else if selectedHash.isEmpty, let first = vm.availableHashAlgorithms.first(where: { $0.contains("Argon2id") }) {
                 selectedHash = first
             } else if selectedHash.isEmpty, let first = vm.availableHashAlgorithms.first {
                 selectedHash = first
