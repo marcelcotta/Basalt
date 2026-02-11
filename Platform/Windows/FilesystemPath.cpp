@@ -31,9 +31,7 @@ namespace TrueCrypt
 	{
 		// Windows does not have simple UID-based ownership.
 		// Return a dummy owner — ACLs are used instead.
-		UserId owner;
-		owner.SystemId = 0;
-		return owner;
+		return UserId ();
 	}
 
 	FilesystemPathType::Enum FilesystemPath::GetType () const

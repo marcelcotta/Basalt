@@ -45,7 +45,7 @@ namespace TrueCrypt
 		};
 
 #ifdef TC_WINDOWS
-		typedef FILE* SystemFileHandleType;
+		typedef void* SystemFileHandleType;  // HANDLE (void*) on Windows
 #else
 		typedef int SystemFileHandleType;
 #endif

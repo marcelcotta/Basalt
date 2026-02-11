@@ -21,7 +21,7 @@ extern "C"
 
 #ifndef rotl
 
-#ifdef _WIN32
+#if defined(_MSC_VER)
 #include <stdlib.h>
 #pragma intrinsic(_lrotr,_lrotl)
 #define rotr(x,n) _lrotr(x,n)

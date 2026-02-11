@@ -75,7 +75,12 @@ static inline int sock_error(void)
 #define platform_poll WSAPoll
 
 /* ---- POSIX type definitions ---- */
+/*
+ * MinGW provides pid_t, mode_t, dev_t, ssize_t, off_t via <sys/types.h>.
+ * MSVC provides none of these. uid_t/gid_t are missing from both.
+ */
 
+/* uid_t and gid_t: missing from both MSVC and MinGW */
 #ifndef _UID_T_DEFINED
 typedef uint32_t uid_t;
 #define _UID_T_DEFINED
@@ -86,21 +91,13 @@ typedef uint32_t gid_t;
 #define _GID_T_DEFINED
 #endif
 
+/* Types provided by MinGW but not MSVC */
+#ifndef __MINGW32__
+
 #ifndef _PID_T_DEFINED
 typedef int pid_t;
 #define _PID_T_DEFINED
 #endif
-
-/* off_t: MSVC defines it as long (32-bit); we need 64-bit */
-#ifndef _OFF64_T_DEFINED
-typedef int64_t off64_t;
-#define _OFF64_T_DEFINED
-#endif
-/* Use off_t for FUSE API compatibility — redefine to 64-bit */
-#ifdef off_t
-#undef off_t
-#endif
-#define off_t int64_t
 
 #ifndef _MODE_T_DEFINED
 typedef uint32_t mode_t;
@@ -116,6 +113,14 @@ typedef uint32_t dev_t;
 typedef intptr_t ssize_t;
 #define _SSIZE_T_DEFINED
 #endif
+
+/* off_t: MSVC defines it as long (32-bit); we need 64-bit for FUSE */
+#ifdef off_t
+#undef off_t
+#endif
+#define off_t int64_t
+
+#endif /* !__MINGW32__ */
 
 /* ---- stat compatibility ---- */
 
@@ -137,26 +142,53 @@ struct fuse_stat {
     int64_t   st_blocks;
 };
 
-/* ---- File mode macros (not in Windows) ---- */
+/* ---- File mode macros ---- */
+/* Define each individually — MinGW provides some but not all */
 
 #ifndef S_IFMT
 #define S_IFMT   0xF000
+#endif
+#ifndef S_IFSOCK
 #define S_IFSOCK 0xC000
+#endif
+#ifndef S_IFLNK
 #define S_IFLNK  0xA000
+#endif
+#ifndef S_IFREG
 #define S_IFREG  0x8000
+#endif
+#ifndef S_IFBLK
 #define S_IFBLK  0x6000
+#endif
+#ifndef S_IFDIR
 #define S_IFDIR  0x4000
+#endif
+#ifndef S_IFCHR
 #define S_IFCHR  0x2000
+#endif
+#ifndef S_IFIFO
 #define S_IFIFO  0x1000
 #endif
 
 #ifndef S_ISREG
 #define S_ISREG(m)  (((m) & S_IFMT) == S_IFREG)
+#endif
+#ifndef S_ISDIR
 #define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
+#endif
+#ifndef S_ISCHR
 #define S_ISCHR(m)  (((m) & S_IFMT) == S_IFCHR)
+#endif
+#ifndef S_ISBLK
 #define S_ISBLK(m)  (((m) & S_IFMT) == S_IFBLK)
+#endif
+#ifndef S_ISFIFO
 #define S_ISFIFO(m) (((m) & S_IFMT) == S_IFIFO)
+#endif
+#ifndef S_ISLNK
 #define S_ISLNK(m)  (((m) & S_IFMT) == S_IFLNK)
+#endif
+#ifndef S_ISSOCK
 #define S_ISSOCK(m) (((m) & S_IFMT) == S_IFSOCK)
 #endif
 
@@ -210,6 +242,9 @@ static inline uint32_t platform_arc4random(void)
  */
 static inline int platform_socketpair(sock_t fds[2])
 {
+    int addrlen;
+    struct sockaddr_in addr;
+
     fds[0] = INVALID_SOCKET;
     fds[1] = INVALID_SOCKET;
 
@@ -218,7 +253,6 @@ static inline int platform_socketpair(sock_t fds[2])
     if (listener == INVALID_SOCKET)
         return -1;
 
-    struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -227,7 +261,7 @@ static inline int platform_socketpair(sock_t fds[2])
     if (bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0)
         goto fail;
 
-    int addrlen = sizeof(addr);
+    addrlen = sizeof(addr);
     if (getsockname(listener, (struct sockaddr *)&addr, &addrlen) < 0)
         goto fail;
 
@@ -261,7 +295,11 @@ fail:
 
 /* ---- Thread-local storage ---- */
 
+#ifdef __MINGW32__
+#define THREAD_LOCAL __thread
+#else
 #define THREAD_LOCAL __declspec(thread)
+#endif
 
 /* ---- getpid / getuid / getgid ---- */
 

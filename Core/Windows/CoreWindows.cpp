@@ -12,6 +12,8 @@
 #include <shlobj.h>
 #include "Platform/FileStream.h"
 #include "Platform/Serializer.h"
+#include "Platform/SystemInfo.h"
+#include "Platform/Windows/Process.h"
 #include "Driver/Fuse/FuseService.h"
 #include "Core/Core.h"
 

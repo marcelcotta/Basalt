@@ -127,7 +127,7 @@ static inline int is_interrupted(void)
 static inline const char *sock_strerror(void)
 {
 #ifdef _WIN32
-    static __declspec(thread) char buf[64];
+    static THREAD_LOCAL char buf[64];
     snprintf(buf, sizeof(buf), "WSA error %d", WSAGetLastError());
     return buf;
 #else

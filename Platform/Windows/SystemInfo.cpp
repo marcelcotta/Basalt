@@ -10,7 +10,7 @@
 #include "Platform/SystemInfo.h"
 
 #include <windows.h>
-#include <versionhelpers.h>
+#include <winternl.h>
 
 namespace TrueCrypt
 {
@@ -23,17 +23,18 @@ namespace TrueCrypt
 	{
 		// Use RtlGetVersion via ntdll to get accurate version numbers
 		// (GetVersionEx is deprecated and lies on Windows 10+)
-		typedef NTSTATUS (WINAPI *RtlGetVersionFunc)(PRTL_OSVERSIONINFOW);
+		typedef LONG (WINAPI *RtlGetVersionFunc)(OSVERSIONINFOW *);
 
 		vector <int> version;
 
 		HMODULE ntdll = GetModuleHandleW (L"ntdll.dll");
 		if (ntdll)
 		{
-			RtlGetVersionFunc rtlGetVersion = (RtlGetVersionFunc) GetProcAddress (ntdll, "RtlGetVersion");
+			RtlGetVersionFunc rtlGetVersion = (RtlGetVersionFunc)
+				GetProcAddress (ntdll, "RtlGetVersion");
 			if (rtlGetVersion)
 			{
-				RTL_OSVERSIONINFOW osvi = {};
+				OSVERSIONINFOW osvi = {};
 				osvi.dwOSVersionInfoSize = sizeof (osvi);
 
 				if (rtlGetVersion (&osvi) == 0)
