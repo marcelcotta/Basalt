@@ -205,17 +205,17 @@ namespace TrueCrypt
 
 	string CoreUnix::GetDefaultMountPointPrefix () const
 	{
-		const char *envPrefix = getenv ("TRUECRYPT_MOUNT_PREFIX");
+		const char *envPrefix = getenv ("BASALT_MOUNT_PREFIX");
 		if (envPrefix && !string (envPrefix).empty())
 			return envPrefix;
-		
+
 		if (FilesystemPath ("/media").IsDirectory())
-			return "/media/truecrypt";
-		
+			return "/media/basalt";
+
 		if (FilesystemPath ("/mnt").IsDirectory())
-			return "/mnt/truecrypt";
-		
-		return GetTempDirectory() + "/truecrypt_mnt";
+			return "/mnt/basalt";
+
+		return GetTempDirectory() + "/basalt_mnt";
 	}
 
 	uint32 CoreUnix::GetDeviceSectorSize (const DevicePath &devicePath) const
