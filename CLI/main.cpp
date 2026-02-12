@@ -26,7 +26,7 @@
 #include "CLICallback.h"
 
 #ifdef TC_WINDOWS
-#include "CLI/getopt.h"
+#include "CLI/getopt_win.h"
 #else
 #include <getopt.h>
 #endif
@@ -38,6 +38,9 @@
 
 #ifdef TC_UNIX
 #include <unistd.h>
+#endif
+#ifdef TC_WINDOWS
+#include <io.h>
 #endif
 
 using namespace TrueCrypt;
@@ -160,6 +163,71 @@ static void FormatHfsPlus (const string &volumePath, shared_ptr <VolumePassword>
 	Core->DismountVolume (vol, true);
 }
 #endif
+
+// ---- ANSI terminal banner ----
+
+static bool TerminalSupportsColor ()
+{
+#ifdef TC_WINDOWS
+	// Windows 10 1607+ supports ANSI via Virtual Terminal Processing
+	HANDLE hOut = GetStdHandle (STD_ERROR_HANDLE);
+	if (hOut == INVALID_HANDLE_VALUE)
+		return false;
+	DWORD mode = 0;
+	if (!GetConsoleMode (hOut, &mode))
+		return false;  // redirected
+	// Enable VT processing if not already on
+	if (!(mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+	{
+		mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+		SetConsoleMode (hOut, mode);
+	}
+	return true;
+#else
+	return isatty (fileno (stderr)) != 0;
+#endif
+}
+
+static void ShowBanner ()
+{
+	if (!TerminalSupportsColor ())
+	{
+		// Plain-text fallback for pipes / dumb terminals
+		std::cerr <<
+			"\n"
+			"  ____    _    ____    _    _   _____\n"
+			" | __ )  / \\  / ___|  / \\  | | |_   _|\n"
+			" |  _ \\ / _ \\ \\___ \\ / _ \\ | |   | |\n"
+			" | |_) / ___ \\ ___) / ___ \\| |___| |\n"
+			" |____/_/   \\_\\____/_/   \\_\\_____|_|\n"
+			"\n";
+		return;
+	}
+
+	// 256-color ANSI: dark violet gradient (53→54→55→97→98→99)
+	// with anthracite grey (240) tagline
+	//
+	// Each row uses a slightly brighter violet shade for a
+	// bottom-to-top "stone lit from below" effect.
+
+	const char *v1 = "\033[38;5;53m";   // deepest violet
+	const char *v2 = "\033[38;5;54m";
+	const char *v3 = "\033[38;5;55m";
+	const char *v4 = "\033[38;5;97m";
+	const char *v5 = "\033[38;5;98m";   // brightest violet
+	const char *g  = "\033[38;5;240m";  // anthracite grey
+	const char *r  = "\033[0m";         // reset
+
+	std::cerr
+		<< "\n"
+		<< v1 << "  ____    _    ____    _    _   _____ " << r << "\n"
+		<< v2 << " | __ )  / \\  / ___|  / \\  | | |_   _|" << r << "\n"
+		<< v3 << " |  _ \\ / _ \\ \\___ \\ / _ \\ | |   | |  " << r << "\n"
+		<< v4 << " | |_) / ___ \\ ___) / ___ \\| |___| |  " << r << "\n"
+		<< v5 << " |____/_/   \\_\\____/_/   \\_\\_____|_|  " << r << "\n"
+		<< g  << "  encrypted volume management" << r << "\n"
+		<< "\n";
+}
 
 // ---- Help text ----
 
@@ -556,18 +624,21 @@ int main (int argc, char *argv[])
 
 	if (command == CmdHelp)
 	{
+		ShowBanner ();
 		ShowHelp (argv[0]);
 		return 0;
 	}
 
 	if (command == CmdVersion)
 	{
+		ShowBanner ();
 		std::cout << "Basalt " << Version::String () << std::endl;
 		return 0;
 	}
 
 	if (command == CmdNone)
 	{
+		ShowBanner ();
 		ShowHelp (argv[0]);
 		return 1;
 	}
