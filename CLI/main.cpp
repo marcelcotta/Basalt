@@ -267,9 +267,22 @@ static void ShowHelp (const char *argv0)
 		"  --non-interactive        No user interaction\n"
 		"  --verbose, -v            Verbose output\n"
 		"\n"
+		"Mount point:\n"
+#ifdef TC_WINDOWS
+		"  On Windows, volumes are mounted as drive letters (e.g. Z:, M:).\n"
+		"  If no mount point is given, the next free letter (Z: downwards) is used.\n"
+#else
+		"  On macOS/Linux, specify a directory as mount point.\n"
+#endif
+		"\n"
 		"Examples:\n"
 		"  " << argv0 << " -c volume.tc --size=100M --password=secret\n"
+#ifdef TC_WINDOWS
+		"  " << argv0 << " volume.tc                Mount on next free drive letter\n"
+		"  " << argv0 << " volume.tc M:             Mount on M:\n"
+#else
 		"  " << argv0 << " volume.tc /mnt/tc\n"
+#endif
 		"  " << argv0 << " -d volume.tc\n"
 		"  " << argv0 << " -l\n"
 		"  " << argv0 << " --test\n"
@@ -716,7 +729,7 @@ int main (int argc, char *argv[])
 
 				shared_ptr <VolumeInfo> volume = Core->MountVolume (mountOptions);
 
-				if (verbose && volume)
+				if (volume)
 				{
 					std::wcout << L"Volume \"" << wstring (volume->Path) << L"\" mounted at "
 						<< wstring (volume->MountPoint) << L" (slot " << volume->SlotNumber << L")" << std::endl;
@@ -725,6 +738,31 @@ int main (int argc, char *argv[])
 				// Offer KDF upgrade for legacy volumes (low iteration count)
 				if (volume && !nonInteractive)
 					VolumeOperations::UpgradeKdf (Core, cb, volume, mountOptions, false);
+
+#ifdef TC_WINDOWS
+				// On Windows, fuse_main() is non-blocking — the NFS server runs
+				// on a background thread.  The CLI process MUST stay alive to keep
+				// the server running.  Block here until Ctrl+C / SIGTERM.
+				if (volume)
+				{
+					std::wcout << L"Press Ctrl+C to dismount and exit." << std::endl;
+
+					while (!TerminationRequested)
+						Sleep (500);
+
+					std::wcout << std::endl << L"Dismounting..." << std::endl;
+
+					try
+					{
+						Core->DismountVolume (volume, true);
+						std::wcout << L"Volume dismounted." << std::endl;
+					}
+					catch (exception &ex)
+					{
+						std::wcerr << L"Dismount error: " << StringConverter::ToExceptionString (ex) << std::endl;
+					}
+				}
+#endif
 			}
 			break;
 
@@ -1048,9 +1086,20 @@ int main (int argc, char *argv[])
 #endif
 		return 1;
 	}
+#ifdef TC_WINDOWS
+	catch (DriveLetterUnavailable &)
+	{
+		wstring mountPoint = argMountPoint.empty () ? L"(auto)" : StringConverter::ToWide (argMountPoint);
+		std::wcerr << L"Error: Drive letter " << mountPoint << L" is already in use." << std::endl;
+		std::wcerr << L"  If this is a stale mount from a previous run, disconnect it first:" << std::endl;
+		std::wcerr << L"    net use " << mountPoint << L" /delete" << std::endl;
+		std::wcerr << L"  Or try a different letter, e.g.: basalt-cli volume.tc Z:" << std::endl;
+		return 1;
+	}
+#endif
 	catch (exception &e)
 	{
-		std::wcerr << L"Error: " << StringConverter::ToWide (e.what ()) << std::endl;
+		std::wcerr << L"Error: " << StringConverter::ToExceptionString (e) << std::endl;
 #ifndef TC_WINDOWS
 		try { CoreService::Stop (); } catch (...) {}
 #endif

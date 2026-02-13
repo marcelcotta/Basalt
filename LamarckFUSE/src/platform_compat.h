@@ -1,8 +1,10 @@
 /*
- * LamarckFUSE — platform compatibility layer
+ * LamarckFUSE — platform compatibility layer (Windows-only)
  *
- * Abstracts POSIX-only APIs so the NFSv4 server code can compile
- * on both macOS/Linux (POSIX) and Windows (Winsock2/Win32).
+ * Provides POSIX-like APIs (socket abstraction, type definitions, etc.)
+ * for Windows (Winsock2/Win32).
+ *
+ * On macOS/Linux, DarwinFUSE is used instead (separate directory).
  *
  * Copyright (c) 2025 Basalt contributors. All rights reserved.
  * Licensed under the MIT License.
@@ -10,8 +12,6 @@
 
 #ifndef LAMARCKFUSE_PLATFORM_COMPAT_H
 #define LAMARCKFUSE_PLATFORM_COMPAT_H
-
-#ifdef _WIN32
 
 /* ---- Windows ---- */
 
@@ -317,76 +317,5 @@ static inline void platform_usleep(unsigned int usec)
 {
     Sleep(usec / 1000);
 }
-
-#else /* !_WIN32 */
-
-/* ---- POSIX (macOS / Linux) ---- */
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <errno.h>
-#include <stdint.h>
-#include <stdio.h>
-
-typedef int sock_t;
-#define INVALID_SOCK (-1)
-
-static inline ssize_t sock_read(sock_t s, void *buf, size_t len)
-{
-    return read(s, buf, len);
-}
-
-static inline ssize_t sock_write(sock_t s, const void *buf, size_t len)
-{
-    return write(s, buf, len);
-}
-
-static inline void sock_close(sock_t s)
-{
-    if (s >= 0)
-        close(s);
-}
-
-static inline int sock_set_nonblocking(sock_t s)
-{
-    int flags = fcntl(s, F_GETFL, 0);
-    if (flags < 0) return -1;
-    return fcntl(s, F_SETFL, flags | O_NONBLOCK);
-}
-
-static inline int sock_error(void)
-{
-    return errno;
-}
-
-#define poll_fd_t     struct pollfd
-#define POLL_IN       POLLIN
-#define POLL_OUT      POLLOUT
-#define POLL_ERR      POLLERR
-#define POLL_HUP      POLLHUP
-#define platform_poll poll
-
-/* Use struct stat directly on POSIX */
-#define fuse_stat stat
-
-#define THREAD_LOCAL __thread
-
-static inline int platform_socketpair(sock_t fds[2])
-{
-    int pipefd[2];
-    if (pipe(pipefd) < 0)
-        return -1;
-    fds[0] = pipefd[0];
-    fds[1] = pipefd[1];
-    return 0;
-}
-
-#endif /* _WIN32 */
 
 #endif /* LAMARCKFUSE_PLATFORM_COMPAT_H */

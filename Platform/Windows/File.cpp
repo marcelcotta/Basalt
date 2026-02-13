@@ -158,9 +158,19 @@ namespace TrueCrypt
 			flagsAndAttributes |= FILE_FLAG_WRITE_THROUGH;
 
 		wstring wPath = path;
+
+		// Convert relative paths to absolute (avoids ambiguous errors on Windows)
+		if (!wPath.empty() && wPath[0] != L'\\' && (wPath.size() < 2 || wPath[1] != L':'))
+		{
+			wchar_t absPath[MAX_PATH];
+			DWORD len = GetFullPathNameW (wPath.c_str(), MAX_PATH, absPath, NULL);
+			if (len > 0 && len < MAX_PATH)
+				wPath = absPath;
+		}
+
 		FileHandle = CreateFileW (wPath.c_str(), desiredAccess, shareFlags,
 			NULL, creationDisposition, flagsAndAttributes, NULL);
-		throw_sys_sub_if (FileHandle == INVALID_HANDLE_VALUE, wstring (path));
+		throw_sys_sub_if (FileHandle == INVALID_HANDLE_VALUE, wPath);
 
 		Path = path;
 		mFileOpenFlags = flags;

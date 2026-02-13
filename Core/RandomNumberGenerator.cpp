@@ -6,7 +6,10 @@
  packages.
 */
 
-#ifndef TC_WINDOWS
+#ifdef TC_WINDOWS
+#include <windows.h>
+#include <bcrypt.h>
+#else
 #include <sys/types.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -25,9 +28,22 @@ namespace TrueCrypt
 		SecureBuffer buffer (PoolSize);
 
 #ifdef TC_WINDOWS
-#ifndef DEBUG
-		throw NotImplemented (SRC_POS);
-#endif
+		/* Windows: BCryptGenRandom — kernel CSPRNG, no file descriptors needed.
+		   BCryptGenRandom with BCRYPT_USE_SYSTEM_PREFERRED_RNG uses the system
+		   default RNG provider (same entropy source as CryptGenRandom/RtlGenRandom).
+		   Available on Windows Vista+ / Server 2008+. */
+		{
+			NTSTATUS status = BCryptGenRandom (
+				NULL,
+				buffer.Ptr(),
+				(ULONG) buffer.Size(),
+				BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+
+			if (!BCRYPT_SUCCESS (status))
+				throw SystemException (SRC_POS);
+
+			AddToPool (buffer);
+		}
 
 #elif defined (TC_MACOSX)
 		/* macOS: Use getentropy() - kernel CSPRNG, no file descriptors needed.

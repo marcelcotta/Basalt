@@ -1,12 +1,13 @@
 /*
- * LamarckFUSE — libfuse-compatible public API
+ * LamarckFUSE — libfuse-compatible public API (Windows-only)
  *
- * Cross-platform FUSE API for Windows and POSIX.
- * Compatible with FUSE API version 26 (the subset used by TrueCrypt/Basalt).
+ * FUSE API for Windows, compatible with FUSE API version 26
+ * (the subset used by TrueCrypt/Basalt).
  *
- * On POSIX: identical to DarwinFUSE's fuse.h (uses native types).
- * On Windows: provides typedefs for uid_t, gid_t, mode_t, off_t, dev_t,
- *             and a fuse_stat struct that maps to FUSE callbacks.
+ * Provides typedefs for uid_t, gid_t, mode_t, off_t, dev_t,
+ * and a fuse_stat struct that maps to FUSE callbacks.
+ *
+ * On macOS/Linux, DarwinFUSE is used instead (separate directory).
  *
  * Copyright (c) 2025 Basalt contributors. All rights reserved.
  * Licensed under the MIT License.
@@ -17,9 +18,7 @@
 
 #define FUSE_USE_VERSION 26
 
-#ifdef _WIN32
-
-/* Windows: pull in platform_compat.h for all type definitions */
+/* Pull in platform_compat.h for all type definitions */
 #include "../src/platform_compat.h"
 
 /* On Windows, struct stat for FUSE callbacks uses our fuse_stat */
@@ -69,17 +68,6 @@ struct timespec {
 };
 #define _TIMESPEC_DEFINED
 #endif
-
-#else /* POSIX */
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <fcntl.h>
-
-#endif /* _WIN32 */
 
 #ifdef __cplusplus
 extern "C" {
@@ -173,20 +161,26 @@ struct fuse_operations {
 /* ---- API functions ---- */
 
 /*
- * Main entry point. Parses arguments, starts NFSv4 server, mounts,
- * and runs event loop. Blocks until the filesystem is unmounted.
+ * Main entry point. Mounts the filesystem.
  *
- * On Windows: Mounts as a drive letter via mount.exe or WNetAddConnection2.
- * On POSIX:   Mounts via mount_nfs (same as DarwinFUSE).
+ * Non-blocking. Starts iSCSI target on 127.0.0.1:3260,
+ * connects Windows iSCSI Initiator, assigns drive letter,
+ * and returns immediately. Call fuse_teardown() to unmount.
  *
  * argc/argv: typically device_type, mount_point, -o options...
- * op:        filesystem callbacks
+ * op:        filesystem callbacks (only init/destroy used)
  * user_data: passed to op->init
  *
  * Returns 0 on success, non-zero on failure.
  */
 int fuse_main(int argc, char *argv[],
               const struct fuse_operations *op, void *user_data);
+
+/*
+ * Stop the iSCSI server, disconnect iSCSI session, and free all resources.
+ * mount_point: the drive letter used in fuse_main (e.g. "Z:").
+ */
+void fuse_teardown(const char *mount_point);
 
 /*
  * Returns the FUSE context for the current request.

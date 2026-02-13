@@ -8,14 +8,19 @@
 
 #include "CoreWindows.h"
 #include <windows.h>
-#include <winnetwk.h>
 #include <shlobj.h>
+#include <cstdio>
 #include "Platform/FileStream.h"
 #include "Platform/Serializer.h"
 #include "Platform/SystemInfo.h"
 #include "Platform/Windows/Process.h"
 #include "Driver/Fuse/FuseService.h"
 #include "Core/Core.h"
+
+// LamarckFUSE C API (for fuse_teardown)
+extern "C" {
+#include "fuse.h"
+}
 
 namespace TrueCrypt
 {
@@ -48,32 +53,26 @@ namespace TrueCrypt
 
 	void CoreWindows::DismountFilesystem (const DirectoryPath &mountPoint, bool force) const
 	{
-		// On Windows, unmounting is done via WNetCancelConnection2
+		// On Windows, unmounting is done via iSCSI logout + fuse_teardown
 		// The actual disconnect happens in DismountVolume
 	}
 
 	shared_ptr <VolumeInfo> CoreWindows::DismountVolume (shared_ptr <VolumeInfo> mountedVolume, bool ignoreOpenFiles, bool syncVolumeInfo)
 	{
-		// Disconnect the network drive (NFS mount)
+		// Use fuse_teardown() to handle the complete unmount sequence:
+		// 1. Logout iSCSI session
+		// 2. Stop iSCSI server
+		// 3. Call FuseService::Dismount (via op->destroy callback)
 		if (!mountedVolume->MountPoint.IsEmpty())
 		{
-			wstring driveLetter = mountedVolume->MountPoint;
-			DWORD result = WNetCancelConnection2W (driveLetter.c_str(),
-				0,  // dwFlags: 0 = don't update profile
-				ignoreOpenFiles ? TRUE : FALSE);
-
-			if (result != NO_ERROR && result != ERROR_NOT_CONNECTED)
-			{
-				if (!ignoreOpenFiles && (result == ERROR_OPEN_FILES || result == ERROR_DEVICE_IN_USE))
-					throw MountedVolumeInUse (SRC_POS);
-
-				// Try force disconnect
-				WNetCancelConnection2W (driveLetter.c_str(), 0, TRUE);
-			}
+			string mp = StringConverter::ToSingle (wstring (mountedVolume->MountPoint));
+			fuse_teardown (mp.c_str());
 		}
-
-		// Stop the FUSE/NFS server
-		FuseService::Dismount ();
+		else
+		{
+			// No mount point — just stop the iSCSI server directly
+			FuseService::Dismount ();
+		}
 
 		// Remove from tracked list
 		{
@@ -235,7 +234,18 @@ namespace TrueCrypt
 			DWORD drives = GetLogicalDrives();
 			int driveIndex = toupper ((char) driveLetter[0]) - 'A';
 			if (driveIndex >= 0 && driveIndex < 26)
-				return !(drives & (1 << driveIndex));
+			{
+				bool inUse = (drives & (1 << driveIndex)) != 0;
+				if (inUse)
+				{
+					OutputDebugStringA ("IsMountPointAvailable: drive ");
+					char buf[64];
+					snprintf (buf, sizeof(buf), "%c: is IN USE (GetLogicalDrives=0x%08lX)\n",
+						(char)('A' + driveIndex), (unsigned long)drives);
+					OutputDebugStringA (buf);
+				}
+				return !inUse;
+			}
 		}
 
 		return true;
@@ -330,35 +340,17 @@ namespace TrueCrypt
 				throw ParameterIncorrect (SRC_POS);  // No free drive letter
 		}
 
-		// Step 3: Start LamarckFUSE (NFSv4 server serving decrypted sectors)
+		// Step 3: Start LamarckFUSE — this does EVERYTHING:
+		// - Starts NFSv4/v3 server on 127.0.0.1:2049
+		// - Connects NFS share (\\127.0.0.1\nfs)
+		// - Synthesizes VHD footer on volume data
+		// - Attaches VHD via AttachVirtualDisk
+		// - Assigns the drive letter via PowerShell
+		// - Returns immediately (server runs on background thread)
 		string fuseMountPoint = StringConverter::ToSingle (driveLetter);
 		FuseService::Mount (volume, options.SlotNumber, fuseMountPoint);
 
-		// Step 4: Connect Windows NFS client to the LamarckFUSE server
-		try
-		{
-			NETRESOURCEW nr = {};
-			nr.dwType = RESOURCETYPE_DISK;
-			nr.lpLocalName = const_cast <wchar_t*> (driveLetter.c_str());
-			nr.lpRemoteName = const_cast <wchar_t*> (L"\\\\127.0.0.1\\basalt");
-			nr.lpProvider = NULL;
-
-			DWORD result = WNetAddConnection2W (&nr, NULL, NULL, 0);
-			if (result != NO_ERROR)
-			{
-				// Cleanup: stop the NFS server
-				FuseService::Dismount();
-				SetLastError (result);
-				throw SystemException (SRC_POS, driveLetter);
-			}
-		}
-		catch (...)
-		{
-			FuseService::Dismount();
-			throw;
-		}
-
-		// Step 5: Build and track VolumeInfo
+		// Step 4: Build and track VolumeInfo
 		shared_ptr <VolumeInfo> mountedVolume (new VolumeInfo);
 		mountedVolume->Path = *options.Path;
 		mountedVolume->MountPoint = DirectoryPath (driveLetter);

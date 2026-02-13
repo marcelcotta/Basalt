@@ -6,9 +6,9 @@
  packages.
 
  Windows-specific FuseService implementation.
- Uses LamarckFUSE (NFSv4 loopback) instead of native FUSE.
- On Windows, the NFS server provides decrypted volume sectors directly,
- and Windows NFS client mounts them as a drive letter.
+ Uses LamarckFUSE with an iSCSI target (127.0.0.1:3260) instead of VHD+NFS.
+ The Windows iSCSI Initiator creates a real local block device that Windows
+ can format and mount as a drive letter.
 */
 
 #ifdef TC_WINDOWS
@@ -35,14 +35,68 @@ extern "C" {
 
 namespace TrueCrypt
 {
-	// ---- FUSE callback implementations (shared with Unix) ----
+	// ---- iSCSI Block-I/O Wrappers (C-callable) ----
+	// These bridge the C iSCSI target to the C++ FuseService crypto layer.
 
-	static int fuse_service_access (const char *path, int mask)
-	{
-		// On Windows, access control is handled by the NFS client.
-		// Always allow access from localhost.
-		return 0;
+	extern "C" {
+		int basalt_iscsi_read(void *ctx, uint8_t *buf, uint64_t offset, uint32_t len)
+		{
+			(void)ctx;
+			try
+			{
+				FuseService::ReadVolumeSectors (BufferPtr (buf, len), offset);
+				return 0;
+			}
+			catch (...)
+			{
+				return -1;
+			}
+		}
+
+		int basalt_iscsi_write(void *ctx, const uint8_t *buf, uint64_t offset, uint32_t len)
+		{
+			(void)ctx;
+			try
+			{
+				FuseService::WriteVolumeSectors (ConstBufferPtr (buf, len), offset);
+				return 0;
+			}
+			catch (...)
+			{
+				return -1;
+			}
+		}
+
+		uint64_t basalt_iscsi_get_size(void *ctx)
+		{
+			(void)ctx;
+			try
+			{
+				return FuseService::GetVolumeSize();
+			}
+			catch (...)
+			{
+				return 0;
+			}
+		}
+
+		uint32_t basalt_iscsi_get_sector_size(void *ctx)
+		{
+			(void)ctx;
+			try
+			{
+				return (uint32_t)FuseService::GetVolumeSectorSize();
+			}
+			catch (...)
+			{
+				return 512;
+			}
+		}
 	}
+
+	// ---- FUSE callback implementations (init/destroy only) ----
+	// The NFS file-serving callbacks (getattr, read, write, readdir, open) are
+	// no longer needed — iSCSI serves data directly via block-level callbacks.
 
 	static void *fuse_service_init (struct fuse_conn_info *conn)
 	{
@@ -77,172 +131,6 @@ namespace TrueCrypt
 		{
 			SystemLog::WriteException (UnknownException (SRC_POS));
 		}
-	}
-
-	static int fuse_service_getattr (const char *path, struct stat *statData)
-	{
-		try
-		{
-			memset (statData, 0, sizeof (*statData));
-
-			statData->st_uid = 0;
-			statData->st_gid = 0;
-			statData->st_atime = (int64_t) time (NULL);
-			statData->st_ctime = (int64_t) time (NULL);
-			statData->st_mtime = (int64_t) time (NULL);
-
-			if (strcmp (path, "/") == 0)
-			{
-				statData->st_mode = S_IFDIR | 0500;
-				statData->st_nlink = 2;
-			}
-			else
-			{
-				if (strcmp (path, FuseService::GetVolumeImagePath()) == 0)
-				{
-					statData->st_mode = S_IFREG | 0600;
-					statData->st_nlink = 1;
-					statData->st_size = FuseService::GetVolumeSize();
-				}
-				else if (strcmp (path, FuseService::GetControlPath()) == 0)
-				{
-					statData->st_mode = S_IFREG | 0600;
-					statData->st_nlink = 1;
-					statData->st_size = FuseService::GetVolumeInfo()->Size();
-				}
-				else
-				{
-					return -ENOENT;
-				}
-			}
-		}
-		catch (...)
-		{
-			return FuseService::ExceptionToErrorCode();
-		}
-
-		return 0;
-	}
-
-	static int fuse_service_opendir (const char *path, struct fuse_file_info *fi)
-	{
-		if (strcmp (path, "/") != 0)
-			return -ENOENT;
-		return 0;
-	}
-
-	static int fuse_service_open (const char *path, struct fuse_file_info *fi)
-	{
-		if (strcmp (path, FuseService::GetVolumeImagePath()) == 0)
-			return 0;
-
-		if (strcmp (path, FuseService::GetControlPath()) == 0)
-		{
-			fi->direct_io = 1;
-			return 0;
-		}
-
-		return -ENOENT;
-	}
-
-	static int fuse_service_read (const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
-	{
-		try
-		{
-			if (strcmp (path, FuseService::GetVolumeImagePath()) == 0)
-			{
-				try
-				{
-					if ((uint64) offset + size > FuseService::GetVolumeSize())
-						size = (size_t) (FuseService::GetVolumeSize() - offset);
-
-					size_t sectorSize = FuseService::GetVolumeSectorSize();
-					if (size % sectorSize != 0 || offset % sectorSize != 0)
-					{
-						uint64 alignedOffset = offset - (offset % sectorSize);
-						uint64 alignedSize = size + (offset % sectorSize);
-
-						if (alignedSize % sectorSize != 0)
-							alignedSize += sectorSize - (alignedSize % sectorSize);
-
-						SecureBuffer alignedBuffer (alignedSize);
-						FuseService::ReadVolumeSectors (alignedBuffer, alignedOffset);
-						BufferPtr ((byte *) buf, size).CopyFrom (alignedBuffer.GetRange (offset % sectorSize, size));
-					}
-					else
-					{
-						FuseService::ReadVolumeSectors (BufferPtr ((byte *) buf, size), offset);
-					}
-				}
-				catch (MissingVolumeData&)
-				{
-					return 0;
-				}
-
-				return (int) size;
-			}
-
-			if (strcmp (path, FuseService::GetControlPath()) == 0)
-			{
-				shared_ptr <Buffer> infoBuf = FuseService::GetVolumeInfo();
-				BufferPtr outBuf ((byte *)buf, size);
-
-				if (offset >= (off_t) infoBuf->Size())
-					return 0;
-
-				if (offset + size > infoBuf->Size())
-					size = infoBuf->Size () - offset;
-
-				outBuf.CopyFrom (infoBuf->GetRange (offset, size));
-				return (int) size;
-			}
-		}
-		catch (...)
-		{
-			return FuseService::ExceptionToErrorCode();
-		}
-
-		return -ENOENT;
-	}
-
-	static int fuse_service_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
-	{
-		if (strcmp (path, "/") != 0)
-			return -ENOENT;
-
-		filler (buf, ".", NULL, 0);
-		filler (buf, "..", NULL, 0);
-		filler (buf, FuseService::GetVolumeImagePath() + 1, NULL, 0);
-		filler (buf, FuseService::GetControlPath() + 1, NULL, 0);
-
-		return 0;
-	}
-
-	static int fuse_service_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
-	{
-		try
-		{
-			if (strcmp (path, FuseService::GetVolumeImagePath()) == 0)
-			{
-				FuseService::WriteVolumeSectors (BufferPtr ((byte *) buf, size), offset);
-				return (int) size;
-			}
-
-			if (strcmp (path, FuseService::GetControlPath()) == 0)
-			{
-				if (FuseService::AuxDeviceInfoReceived())
-					return -EACCES;
-
-				FuseService::ReceiveAuxDeviceInfo (ConstBufferPtr ((const byte *)buf, size));
-				return (int) size;
-			}
-		}
-		catch (...)
-		{
-			return FuseService::ExceptionToErrorCode();
-		}
-
-		return -ENOENT;
 	}
 
 	// ---- FuseService methods ----
@@ -331,6 +219,8 @@ namespace TrueCrypt
 
 	const char *FuseService::GetVolumeImagePath ()
 	{
+		// No longer used on Windows (iSCSI serves data directly).
+		// Keep for API compatibility.
 		return "/volume";
 	}
 
@@ -344,27 +234,22 @@ namespace TrueCrypt
 
 	void FuseService::Mount (shared_ptr <Volume> openVolume, VolumeSlotNumber slotNumber, const string &fuseMountPoint)
 	{
-		// On Windows, LamarckFUSE handles everything:
-		// 1. Starts NFSv4 server on 127.0.0.1:2049
-		// 2. fuse_main() blocks until the server exits
+		// On Windows, LamarckFUSE now uses iSCSI:
+		// 1. Starts iSCSI target on 127.0.0.1:3260
+		// 2. Windows iSCSI Initiator connects and creates a block device
+		// 3. Drive letter assigned to the iSCSI disk
 		//
-		// We set up the FUSE callbacks, then call fuse_main() which runs on a background
-		// thread (LamarckFUSE internally uses CreateThread, not fork).
+		// fuse_main() is non-blocking — returns after mount completes.
+		// The iSCSI server runs on a background thread.
 
 		MountedVolume = openVolume;
 		SlotNumber = slotNumber;
 		OpenVolumeInfo.SerialInstanceNumber = (uint64) GetTickCount64();
 
+		// Only init and destroy callbacks are needed — iSCSI bypasses FUSE file ops
 		static struct fuse_operations fuse_service_oper = {};
-		fuse_service_oper.access = fuse_service_access;
-		fuse_service_oper.destroy = fuse_service_destroy;
-		fuse_service_oper.getattr = fuse_service_getattr;
 		fuse_service_oper.init = fuse_service_init;
-		fuse_service_oper.open = fuse_service_open;
-		fuse_service_oper.opendir = fuse_service_opendir;
-		fuse_service_oper.read = fuse_service_read;
-		fuse_service_oper.readdir = fuse_service_readdir;
-		fuse_service_oper.write = fuse_service_write;
+		fuse_service_oper.destroy = fuse_service_destroy;
 
 		// Build argc/argv for fuse_main
 		// LamarckFUSE expects: device_type mount_point

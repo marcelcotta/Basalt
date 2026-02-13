@@ -1,5 +1,5 @@
 /*
- * LamarckFUSE — internal fuse context management
+ * LamarckFUSE — internal fuse context management (Windows-only)
  *
  * Adapted from DarwinFUSE: uses platform_compat.h for uid_t/gid_t.
  *
@@ -14,8 +14,7 @@
 
 /*
  * Set the thread-local FUSE context uid/gid.
- * Called by nfs4_ops.c before invoking any FUSE callback,
- * using the uid/gid extracted from the ONC RPC AUTH_SYS credentials.
+ * Called before invoking any FUSE callback.
  */
 void lamarckfuse_set_context(uid_t uid, gid_t gid);
 
