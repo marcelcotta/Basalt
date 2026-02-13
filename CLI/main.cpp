@@ -26,6 +26,7 @@
 #include "CLICallback.h"
 
 #ifdef TC_WINDOWS
+#include <cstdio>
 #include "CLI/getopt_win.h"
 #else
 #include <getopt.h>
@@ -724,6 +725,16 @@ int main (int argc, char *argv[])
 				if (!mountOptions.Path)
 					throw ParameterIncorrect (SRC_POS);
 
+				// Check that the volume file exists before asking for password
+				{
+					FilesystemPath volumeFilePath (wstring (*mountOptions.Path));
+					if (!volumeFilePath.IsFile ())
+					{
+						std::wcerr << L"No such volume: " << wstring (*mountOptions.Path) << std::endl;
+						return 1;
+					}
+				}
+
 				if (!mountOptions.Password)
 					mountOptions.Password = cb.AskPassword ();
 
@@ -740,17 +751,40 @@ int main (int argc, char *argv[])
 					VolumeOperations::UpgradeKdf (Core, cb, volume, mountOptions, false);
 
 #ifdef TC_WINDOWS
-				// On Windows, fuse_main() is non-blocking — the NFS server runs
+				// On Windows, fuse_main() is non-blocking — the iSCSI target runs
 				// on a background thread.  The CLI process MUST stay alive to keep
-				// the server running.  Block here until Ctrl+C / SIGTERM.
+				// the iSCSI server and crypto engine running.
+				//
+				// Dismount via: basalt-cli -d <volume>  (from another terminal)
+				//           or: Ctrl+C in this terminal
 				if (volume)
 				{
-					std::wcout << L"Press Ctrl+C to dismount and exit." << std::endl;
+					// Create a named event for cross-process dismount signaling.
+					// basalt-cli -d opens this event by name and signals it.
+					char eventName[64];
+					snprintf (eventName, sizeof(eventName), "Global\\BasaltDismount_Slot%u",
+					          (unsigned)volume->SlotNumber);
+					HANDLE hDismountEvent = CreateEventA (NULL, TRUE, FALSE, eventName);
 
+					std::wcout << L"To dismount: basalt-cli -d "
+					           << wstring (volume->Path) << std::endl;
+
+					// Wait for dismount signal or Ctrl+C
 					while (!TerminationRequested)
-						Sleep (500);
+					{
+						if (hDismountEvent)
+						{
+							DWORD wait = WaitForSingleObject (hDismountEvent, 500);
+							if (wait == WAIT_OBJECT_0)
+								break;
+						}
+						else
+						{
+							Sleep (500);
+						}
+					}
 
-					std::wcout << std::endl << L"Dismounting..." << std::endl;
+					std::wcout << L"Dismounting..." << std::endl;
 
 					try
 					{
@@ -759,8 +793,12 @@ int main (int argc, char *argv[])
 					}
 					catch (exception &ex)
 					{
-						std::wcerr << L"Dismount error: " << StringConverter::ToExceptionString (ex) << std::endl;
+						std::wcerr << L"Dismount error: "
+						           << StringConverter::ToExceptionString (ex) << std::endl;
 					}
+
+					if (hDismountEvent)
+						CloseHandle (hDismountEvent);
 				}
 #endif
 			}

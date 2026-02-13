@@ -3,13 +3,14 @@
 </p>
 <h1 align="center">Basalt</h1>
 <p align="center">
-  <strong>A security-hardened fork of TrueCrypt 7.1a for macOS and Linux</strong><br>
+  <strong>A security-hardened fork of TrueCrypt 7.1a for macOS, Linux, and Windows</strong><br>
   Native SwiftUI app &middot; Argon2id key derivation &middot; DarwinFUSE (no kext) &middot; Universal Binary (arm64 + x86_64)
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0-blue" alt="Version 1.0">
   <img src="https://img.shields.io/badge/macOS-12%2B-blue" alt="macOS 12+">
   <img src="https://img.shields.io/badge/Linux-CLI-green" alt="Linux CLI">
+  <img src="https://img.shields.io/badge/Windows-CLI-green" alt="Windows CLI">
   <img src="https://img.shields.io/badge/license-TrueCrypt%203.0-lightgrey" alt="License">
 </p>
 
@@ -40,7 +41,7 @@ TrueCrypt's crypto was audited and found sound. Its implementation had issues:
 | **XTS keys** | No validation | Rejects identical key pairs |
 | **PBKDF2 block counter** | Single byte (RFC non-compliant) | 4-byte big-endian (RFC 2898) |
 | **GUI toolkit** | wxWidgets (86 files, ~2 MB dependency) | Native SwiftUI / standalone CLI |
-| **FUSE** | Requires macFUSE kernel extension | DarwinFUSE — built-in NFSv4 loopback, no kext needed |
+| **FUSE** | Requires macFUSE kernel extension | DarwinFUSE (macOS) / iSCSI loopback (Windows) — no kext needed |
 | **Screen capture** | Unprotected | `NSWindow.sharingType = .none` |
 | **FUSE mounts** | Default options | `nosuid,nodev` |
 | **AES on ARM** | Software T-tables (cache-timing vulnerable) | ARMv8 hardware AES (constant-time) |
@@ -64,7 +65,7 @@ choices we disagree with:
 | **Pre-compiled blobs** | DCS bootloader binaries, no reproducible builds | 100% built from source |
 | **Key derivation** | PBKDF2 (same iterations as Basalt at PIM=0) | Argon2id (memory-hard) + PBKDF2 |
 | **Argon2id parallelism** | p=1 ("consistent behavior") | p=4 / p=8 (actual GPU resistance) |
-| **FUSE dependency** | Requires macFUSE / OSXFUSE | DarwinFUSE — zero external dependencies |
+| **FUSE dependency** | Requires macFUSE / OSXFUSE | DarwinFUSE (macOS) / iSCSI (Windows) — zero external dependencies |
 
 **Why no Kuznyechik?** The S-box was designed by the FSB and claimed to be random.
 Researchers proved it contains a hidden algebraic structure — the same class of
@@ -192,19 +193,63 @@ sudo ./CLI/basalt-cli --mount /path/to/volume
 
 The Linux build produces `basalt-cli` (command-line only). The SwiftUI GUI is macOS-exclusive.
 
+### Windows
+
+Requirements: Windows Vista+ (x86_64), CMake, Visual Studio or MSVC Build Tools
+
+The Windows iSCSI Initiator service (`MSiSCSI`) is built into all editions since
+Vista. No additional drivers or FUSE installations required.
+
+```powershell
+# Build
+cmake -B build_windows -G "Visual Studio 17 2022" -A x64
+cmake --build build_windows --config Release
+
+# Mount a volume
+basalt-cli.exe volume.tc F:
+
+# List mounted volumes
+basalt-cli.exe -l
+
+# Dismount (from another terminal)
+basalt-cli.exe -d volume.tc
+```
+
+The Windows build produces `basalt-cli.exe` (command-line only, x86_64). ARM64 Windows
+is not currently supported.
+
+
+## Windows CLI
+
+The CLI runs in foreground mode — the process stays alive while the volume is
+mounted. Press Ctrl+C to dismount, or run `basalt-cli -d <volume>` from another
+terminal. This is the same behavior as `rclone mount`, `sshfs-win`, and other
+FUSE-based tools on Windows.
+
+Background/daemon mode is not supported on Windows due to the lack of POSIX
+`fork()`. For background operation, run the CLI in a minimized window or as a
+scheduled task.
+
+**How it works:** On Windows, Basalt runs a minimal iSCSI target on localhost.
+The built-in Windows iSCSI Initiator connects to it and creates a real local
+block device — no virtual filesystem layer, no kernel extension. Each drive
+letter gets its own port (F: → 3265, G: → 3266, etc.), allowing multiple
+volumes to be mounted simultaneously.
+
 
 ## Architecture
 
 ```
 Basalt.app (SwiftUI)          Native macOS UI (macOS 12+)
   TCCoreBridge.mm (ObjC++)    Bridge: Foundation <-> C++
-basalt-cli (C++)              Standalone terminal tool (macOS + Linux)
+basalt-cli (C++)              Standalone terminal tool (macOS + Linux + Windows)
   libTrueCryptCore.a          Crypto + Volume + FUSE + Platform
 ```
 
 The C++ namespace remains `TrueCrypt` for internal compatibility.
 On Linux, mounting uses libfuse + device-mapper (`dm-crypt`); on macOS it uses
-DarwinFUSE (built-in NFSv4 loopback) + `hdiutil`.
+DarwinFUSE (built-in NFSv4 loopback) + `hdiutil`; on Windows it uses a local
+iSCSI target + the built-in Windows iSCSI Initiator.
 
 
 ## DarwinFUSE

@@ -23,6 +23,7 @@
 #ifdef _WIN32
 
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,9 +78,29 @@ void iscsi_server_stop(iscsi_server_t *srv);
  */
 void iscsi_server_destroy(iscsi_server_t *srv);
 
-/* Default target IQN */
+/* Default target IQN and port */
 #define ISCSI_DEFAULT_TARGET_IQN  "iqn.2025-01.org.basalt:vol0"
 #define ISCSI_DEFAULT_PORT        3260
+#define ISCSI_BASE_PORT           3260
+
+/*
+ * Get the iSCSI port for a given slot number.
+ * Port = ISCSI_BASE_PORT + (slot - 1), so slot 1 → 3260, slot 2 → 3261, etc.
+ */
+static inline uint16_t iscsi_port_for_slot(int slot)
+{
+    return (uint16_t)(ISCSI_BASE_PORT + (slot > 0 ? slot - 1 : 0));
+}
+
+/*
+ * Build a unique IQN for a given slot number.
+ * Format: "iqn.2025-01.org.basalt:vol{slot}"
+ * Buffer must be at least 64 bytes.
+ */
+static inline void iscsi_iqn_for_slot(int slot, char *buf, size_t bufsize)
+{
+    snprintf(buf, bufsize, "iqn.2025-01.org.basalt:vol%d", slot);
+}
 
 #ifdef __cplusplus
 }

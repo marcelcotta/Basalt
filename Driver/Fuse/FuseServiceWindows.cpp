@@ -235,7 +235,7 @@ namespace TrueCrypt
 	void FuseService::Mount (shared_ptr <Volume> openVolume, VolumeSlotNumber slotNumber, const string &fuseMountPoint)
 	{
 		// On Windows, LamarckFUSE now uses iSCSI:
-		// 1. Starts iSCSI target on 127.0.0.1:3260
+		// 1. Starts iSCSI target on 127.0.0.1:<port> (port = 3260 + slot - 1)
 		// 2. Windows iSCSI Initiator connects and creates a block device
 		// 3. Drive letter assigned to the iSCSI disk
 		//
@@ -251,8 +251,8 @@ namespace TrueCrypt
 		fuse_service_oper.init = fuse_service_init;
 		fuse_service_oper.destroy = fuse_service_destroy;
 
-		// Build argc/argv for fuse_main
-		// LamarckFUSE expects: device_type mount_point
+		// Build argc/argv for fuse_main.
+		// Port and IQN are derived from the drive letter automatically.
 		const char *argv[] = { "basalt", fuseMountPoint.c_str() };
 		int argc = 2;
 

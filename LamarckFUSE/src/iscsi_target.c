@@ -282,8 +282,6 @@ static int handle_login(iscsi_server_t *srv, iscsi_session_t *sess,
     memcpy(&req_tsih, req->bhs.lun + 6, 2);
     req_tsih = ntohs(req_tsih);
 
-    /* Login PDU logging suppressed — cycling is normal Windows Initiator behavior */
-
     /* RFC 7143 §5.3.5 — Session Reinstatement:
      * If the initiator sends TSIH=0 with the same ISID as an existing session,
      * the target MUST close the old session before establishing the new one.
@@ -412,7 +410,7 @@ static int handle_login(iscsi_server_t *srv, iscsi_session_t *sess,
 static int handle_text_request(iscsi_server_t *srv, iscsi_session_t *sess,
                                 const iscsi_pdu_t *req)
 {
-    /* Text Request — SendTargets discovery (no logging, happens frequently) */
+    /* Text Request — SendTargets discovery */
 
     uint8_t resp_buf[1024];
     uint32_t resp_len = 0;

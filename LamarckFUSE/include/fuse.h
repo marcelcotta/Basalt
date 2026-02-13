@@ -163,11 +163,13 @@ struct fuse_operations {
 /*
  * Main entry point. Mounts the filesystem.
  *
- * Non-blocking. Starts iSCSI target on 127.0.0.1:3260,
+ * Non-blocking. Starts iSCSI target on 127.0.0.1:<port>,
  * connects Windows iSCSI Initiator, assigns drive letter,
  * and returns immediately. Call fuse_teardown() to unmount.
  *
  * argc/argv: typically device_type, mount_point, -o options...
+ *            Port and IQN derived from drive letter (F: → port 3265, IQN vol6).
+ *            Recognized -o options: ro
  * op:        filesystem callbacks (only init/destroy used)
  * user_data: passed to op->init
  *

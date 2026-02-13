@@ -53,6 +53,8 @@ static iscsi_server_t *g_iscsi_server = NULL;
 static HANDLE g_iscsi_thread = NULL;
 static const struct fuse_operations *g_ops = NULL;
 static void *g_init_result = NULL;
+static uint16_t g_iscsi_port = ISCSI_DEFAULT_PORT;  /* Active iSCSI port */
+static char g_iscsi_iqn[64] = ISCSI_DEFAULT_TARGET_IQN;  /* Active IQN */
 
 /* iSCSI block-I/O callbacks (defined in FuseServiceWindows.cpp) */
 extern int      basalt_iscsi_read(void *ctx, uint8_t *buf, uint64_t offset, uint32_t len);
@@ -118,14 +120,19 @@ static int run_cmd_timeout(const char *cmd, DWORD timeout_ms)
 }
 
 /*
- * Detect the iSCSI disk number by probing PhysicalDrive devices.
- * Opens \\.\PhysicalDrive1, \\.\PhysicalDrive2, etc. and checks
- * IOCTL_STORAGE_QUERY_PROPERTY for BusType == BusTypeiScsi (9).
- * Returns the disk number (>=1) or 1 as last-resort fallback.
+ * Bitmask of iSCSI disk numbers (PhysicalDrive1..15).
+ * Bit N set = PhysicalDriveN is an iSCSI disk.
  */
-static int detect_iscsi_disk_number(void)
+typedef uint16_t iscsi_disk_set_t;
+
+/*
+ * Snapshot all currently present iSCSI disks.
+ * Returns a bitmask where bit N means PhysicalDriveN has BusType == iSCSI (9).
+ * Probes disks 1..15 (skip 0 = system disk).
+ */
+static iscsi_disk_set_t snapshot_iscsi_disks(void)
 {
-    /* Try disks 1..15 (skip 0 = system disk) */
+    iscsi_disk_set_t set = 0;
     for (int i = 1; i <= 15; i++) {
         char path[64];
         snprintf(path, sizeof(path), "\\\\.\\PhysicalDrive%d", i);
@@ -135,7 +142,6 @@ static int detect_iscsi_disk_number(void)
         if (hDisk == INVALID_HANDLE_VALUE)
             continue;
 
-        /* Query storage adapter/device property for BusType */
         STORAGE_PROPERTY_QUERY query;
         memset(&query, 0, sizeof(query));
         query.PropertyId = StorageDeviceProperty;  /* 0 */
@@ -152,13 +158,25 @@ static int detect_iscsi_disk_number(void)
 
         if (ok && bytes_ret >= sizeof(STORAGE_DEVICE_DESCRIPTOR)) {
             STORAGE_DEVICE_DESCRIPTOR *desc = (STORAGE_DEVICE_DESCRIPTOR *)desc_buf;
-            /* BusTypeiScsi = 9 */
-            if (desc->BusType == 9)
-                return i;
+            if (desc->BusType == 9)  /* BusTypeiScsi */
+                set |= (1u << i);
         }
     }
+    return set;
+}
 
-    return -1;  /* Not found */
+/*
+ * Find the first iSCSI disk that is in `current` but NOT in `before`.
+ * Returns disk number (1..15) or -1 if no new disk found.
+ */
+static int find_new_iscsi_disk(iscsi_disk_set_t before, iscsi_disk_set_t current)
+{
+    iscsi_disk_set_t new_disks = current & ~before;
+    for (int i = 1; i <= 15; i++) {
+        if (new_disks & (1u << i))
+            return i;
+    }
+    return -1;
 }
 
 /* ---- iSCSI mount automation ---- */
@@ -201,10 +219,16 @@ static int iscsi_self_test(uint16_t port)
 }
 
 /*
- * Pre-cleanup: Start MSiSCSI service and remove stale portals.
- * MUST be called BEFORE the iSCSI server starts listening,
- * otherwise the service will auto-connect to our port on startup
- * and cause session storms (TSIH 1-6 before we're ready).
+ * Pre-cleanup: Start MSiSCSI service and remove our stale portal.
+ *
+ * MUST be called BEFORE our iSCSI server starts listening.
+ *
+ * After a crash, the Windows iSCSI Initiator keeps our portal persistent.
+ * On the next MSiSCSI start, it auto-reconnects, creating an orphan disk
+ * and causing "already logged in" errors on re-mount.
+ *
+ * We only remove the portal for OUR port. Stale portals on other ports
+ * will be cleaned up when those drive letters are mounted next.
  */
 static void do_pre_cleanup_iscsi(void)
 {
@@ -212,11 +236,17 @@ static void do_pre_cleanup_iscsi(void)
     run_cmd_timeout("cmd.exe /c sc start MSiSCSI >NUL 2>&1", 10000);
     Sleep(500);
 
-    /* Remove stale portal from any previous Basalt run.
-     * This must happen while our port 3260 is NOT yet open,
-     * so the service can't auto-reconnect. */
-    LFUSE_LOG("Cleaning up stale iSCSI portals...");
-    run_cmd_timeout("cmd.exe /c iscsicli RemoveTargetPortal 127.0.0.1 3260 * * >NUL 2>&1", 5000);
+    /* Remove stale portal for our port from any previous Basalt run.
+     * This must happen while our port is NOT yet open,
+     * so the Initiator can't auto-reconnect to it. */
+    LFUSE_LOG("Removing stale iSCSI portal (port %u)...", (unsigned)g_iscsi_port);
+    {
+        char cmd[256];
+        snprintf(cmd, sizeof(cmd),
+                 "cmd.exe /c iscsicli RemoveTargetPortal 127.0.0.1 %u * * >NUL 2>&1",
+                 (unsigned)g_iscsi_port);
+        run_cmd_timeout(cmd, 5000);
+    }
     Sleep(500);
 }
 
@@ -239,90 +269,124 @@ static int do_mount_iscsi(const char *mount_point)
     char target_letter = (char)toupper((unsigned char)mp[0]);
 
     /* Step 1: Self-test — verify our iSCSI server is reachable */
-    LFUSE_LOG("Verifying iSCSI server is reachable...");
-    if (iscsi_self_test(ISCSI_DEFAULT_PORT) != 0) {
+    LFUSE_LOG("Verifying iSCSI server is reachable (port %u)...", (unsigned)g_iscsi_port);
+    if (iscsi_self_test(g_iscsi_port) != 0) {
         LFUSE_ERR("iSCSI server self-test failed!");
         LFUSE_ERR("The server may not be listening, or a firewall is blocking port %u",
-                  (unsigned)ISCSI_DEFAULT_PORT);
+                  (unsigned)g_iscsi_port);
 
         /* Try adding a firewall exception */
         LFUSE_LOG("Attempting to add Windows Firewall exception...");
-        run_cmd_timeout("cmd.exe /c netsh advfirewall firewall add rule"
-                        " name=\"Basalt iSCSI\" dir=in action=allow"
-                        " protocol=tcp localport=3260"
-                        " remoteip=127.0.0.1 >NUL 2>&1", 10000);
+        {
+            char fw_cmd[512];
+            snprintf(fw_cmd, sizeof(fw_cmd),
+                     "cmd.exe /c netsh advfirewall firewall add rule"
+                     " name=\"Basalt iSCSI %u\" dir=in action=allow"
+                     " protocol=tcp localport=%u"
+                     " remoteip=127.0.0.1 >NUL 2>&1",
+                     (unsigned)g_iscsi_port, (unsigned)g_iscsi_port);
+            run_cmd_timeout(fw_cmd, 10000);
+        }
         Sleep(500);
 
         /* Retry self-test */
-        if (iscsi_self_test(ISCSI_DEFAULT_PORT) != 0) {
+        if (iscsi_self_test(g_iscsi_port) != 0) {
             LFUSE_ERR("iSCSI server still unreachable after firewall exception");
             return -1;
         }
     }
 
-    /* Step 2: Check if the Initiator already auto-connected (from persistent portal).
-     * If the iSCSI disk is already present, skip discovery + login entirely. */
-    {
-        int disk = detect_iscsi_disk_number();
-        if (disk > 0) {
-            LFUSE_LOG("iSCSI disk already present (PhysicalDrive%d) — skipping discovery", disk);
-            goto disk_ready;
-        }
-    }
+    /* Step 2: Snapshot existing iSCSI disks BEFORE login.
+     * After login, we wait for a NEW disk that wasn't in this snapshot.
+     * This is critical for multi-mount: without it, we'd pick up
+     * another process's disk and steal its drive letter. */
+    iscsi_disk_set_t disks_before = snapshot_iscsi_disks();
 
-    /* Step 3: Add target portal — triggers SendTargets discovery.
-     * Use a short timeout — if it hangs (e.g. stale state), fall back to
-     * direct LoginTarget which doesn't need a portal. */
-    LFUSE_LOG("Adding iSCSI target portal...");
+    /* Step 3: Add target portal and trigger SendTargets discovery.
+     *
+     * AddTargetPortal registers 127.0.0.1:<port> with the Initiator.
+     * RefreshTargetPortal forces a SendTargets query so the Initiator
+     * discovers our IQN.  Discovery alone does NOT log in — Step 4
+     * performs the explicit QLoginTarget / LoginTarget.
+     *
+     * Note: QAddTargetPortal doesn't accept a port argument — use full AddTargetPortal. */
+    LFUSE_LOG("Connecting iSCSI target portal (port %u)...", (unsigned)g_iscsi_port);
     {
-        int rc = run_cmd_timeout("cmd.exe /c iscsicli QAddTargetPortal 127.0.0.1 >NUL 2>&1", 8000);
-        if (rc == 0)
-            Sleep(2000);  /* Wait for SendTargets discovery */
+        char cmd[512];
+        if (g_iscsi_port == ISCSI_DEFAULT_PORT) {
+            snprintf(cmd, sizeof(cmd),
+                     "cmd.exe /c iscsicli QAddTargetPortal 127.0.0.1 >NUL 2>&1");
+        } else {
+            /* Non-default port: use full AddTargetPortal with explicit port.
+             * Syntax: AddTargetPortal <Address> <Port> + 12 wildcard params */
+            snprintf(cmd, sizeof(cmd),
+                     "cmd.exe /c iscsicli AddTargetPortal 127.0.0.1 %u * * * * * * * * * * >NUL 2>&1",
+                     (unsigned)g_iscsi_port);
+        }
+        int arc = run_cmd_timeout(cmd, 8000);
+        if (arc != 0)
+            LFUSE_LOG("  AddTargetPortal returned %d (non-zero is OK if portal exists)", arc);
+        Sleep(1000);
+
+        /* Force SendTargets discovery so the Initiator learns our IQN. */
+        LFUSE_LOG("Triggering SendTargets discovery...");
+        char refresh_cmd[256];
+        snprintf(refresh_cmd, sizeof(refresh_cmd),
+                 "cmd.exe /c iscsicli RefreshTargetPortal 127.0.0.1 %u >NUL 2>&1",
+                 (unsigned)g_iscsi_port);
+        int rrc = run_cmd_timeout(refresh_cmd, 15000);
+        if (rrc != 0)
+            LFUSE_ERR("RefreshTargetPortal failed (rc=%d)", rrc);
+        Sleep(2000);  /* Wait for discovery to complete */
     }
 
     /* Step 4: Login to target.
-     * Try QLoginTarget first (needs discovery), then full LoginTarget as fallback. */
-    LFUSE_LOG("Logging in to iSCSI target...");
+     * Discovery only registers the target — we must explicitly log in.
+     * Try QLoginTarget first (uses discovered target list),
+     * then full LoginTarget with explicit address as fallback. */
+    LFUSE_LOG("Logging in to iSCSI target (%s)...", g_iscsi_iqn);
     {
         char cmd[1024];
         snprintf(cmd, sizeof(cmd),
-                 "cmd.exe /c iscsicli QLoginTarget %s",
-                 ISCSI_DEFAULT_TARGET_IQN);
+                 "cmd.exe /c iscsicli QLoginTarget %s >NUL 2>&1",
+                 g_iscsi_iqn);
         int rc = run_cmd_timeout(cmd, 10000);
 
         if (rc != 0) {
-            /* QLoginTarget failed — try full LoginTarget with explicit address.
-             * This works even without a prior QAddTargetPortal. */
+            /* QLoginTarget failed — try full LoginTarget with explicit address */
+            LFUSE_LOG("QLoginTarget failed (rc=%d), trying LoginTarget...", rc);
             snprintf(cmd, sizeof(cmd),
                      "cmd.exe /c iscsicli LoginTarget"
-                     " %s T 127.0.0.1 3260"
-                     " * * * * * * * * * * * 0 * 0",
-                     ISCSI_DEFAULT_TARGET_IQN);
-            run_cmd_timeout(cmd, 10000);
+                     " %s T 127.0.0.1 %u"
+                     " * * * * * * * * * * * 0 * 0"
+                     " >NUL 2>&1",
+                     g_iscsi_iqn, (unsigned)g_iscsi_port);
+            rc = run_cmd_timeout(cmd, 10000);
+            if (rc != 0)
+                LFUSE_ERR("LoginTarget also failed (rc=%d)", rc);
         }
     }
 
-disk_ready:
+    LFUSE_LOG("Waiting for new iSCSI disk to appear...");
 
-    LFUSE_LOG("Waiting for iSCSI disk to appear...");
-
-    /* Poll for the iSCSI disk to appear (BusType probing).
-     * The Windows Initiator may take a few seconds to create the device. */
+    /* Poll for a NEW iSCSI disk that wasn't present before login.
+     * This ensures multi-mount works: each process finds only its own disk. */
     int iscsi_disk_num = -1;
     for (int attempt = 0; attempt < 15; attempt++) {
         Sleep(1000);
-        iscsi_disk_num = detect_iscsi_disk_number();
+        iscsi_disk_set_t disks_now = snapshot_iscsi_disks();
+        iscsi_disk_num = find_new_iscsi_disk(disks_before, disks_now);
         if (iscsi_disk_num > 0) {
-            /* Found! Wait 2 more seconds for volume to be populated */
+            /* Found new disk! Wait 2 more seconds for volume to be populated */
             Sleep(2000);
             break;
         }
     }
     if (iscsi_disk_num <= 0) {
-        LFUSE_ERR("iSCSI disk did not appear within 15 seconds");
-        iscsi_disk_num = 1; /* Last resort fallback */
+        LFUSE_ERR("New iSCSI disk did not appear within 15 seconds");
+        return -1;
     }
-    LFUSE_LOG("Using iSCSI disk number: %d", iscsi_disk_num);
+    LFUSE_LOG("New iSCSI disk: PhysicalDrive%d", iscsi_disk_num);
 
     /* Step 7: Find iSCSI volume and assign the correct drive letter.
      *
@@ -475,8 +539,14 @@ static void do_unmount_iscsi(const char *mount_point)
     /* Step 2: Remove the target portal FIRST — this tells the Windows Initiator
      * to stop reconnecting to our target. Without this, the Initiator will
      * immediately try to reconnect after we close sessions. */
-    LFUSE_LOG("Removing iSCSI target portal...");
-    run_cmd_timeout("cmd.exe /c iscsicli RemoveTargetPortal 127.0.0.1 3260 * * >NUL 2>&1", 5000);
+    LFUSE_LOG("Removing iSCSI target portal (port %u)...", (unsigned)g_iscsi_port);
+    {
+        char cmd[256];
+        snprintf(cmd, sizeof(cmd),
+                 "cmd.exe /c iscsicli RemoveTargetPortal 127.0.0.1 %u * * >NUL 2>&1",
+                 (unsigned)g_iscsi_port);
+        run_cmd_timeout(cmd, 5000);
+    }
 
     /* Step 3: Stop the iSCSI server — this closes all session sockets,
      * which forces the Windows Initiator to detect the disconnection.
@@ -503,6 +573,8 @@ static void do_unmount_iscsi(const char *mount_point)
 typedef struct {
     const char *mount_point;
     int         rdonly;
+    uint16_t    port;       /* iSCSI port (derived from drive letter) */
+    int         slot;       /* Volume slot = drive letter index (A=1..Z=26) */
 } parsed_args_t;
 
 static int parse_args(int argc, char *argv[], parsed_args_t *out)
@@ -534,6 +606,18 @@ static int parse_args(int argc, char *argv[], parsed_args_t *out)
                     out->rdonly = 1;
             }
         }
+    }
+
+    /* Derive slot and port directly from drive letter.
+     * A=1 → port 3260, B=2 → 3261, ... F=6 → 3265, ... Z=26 → 3285.
+     * Each drive letter gets a unique iSCSI port — no collisions possible. */
+    char letter = (char)toupper((unsigned char)out->mount_point[0]);
+    if (letter >= 'A' && letter <= 'Z') {
+        out->slot = letter - 'A' + 1;
+        out->port = iscsi_port_for_slot(out->slot);
+    } else {
+        out->slot = 0;
+        out->port = ISCSI_DEFAULT_PORT;
     }
 
     return 0;
@@ -575,7 +659,13 @@ int fuse_main(int argc, char *argv[],
         return -1;
     }
 
-    LFUSE_LOG("fuse_main: mount_point=%s (iSCSI mode)", args.mount_point);
+    /* Set global port and IQN — derived from drive letter */
+    g_iscsi_port = args.port;
+    if (args.slot > 0)
+        iscsi_iqn_for_slot(args.slot, g_iscsi_iqn, sizeof(g_iscsi_iqn));
+
+    LFUSE_LOG("fuse_main: mount_point=%s port=%u iqn=%s (iSCSI mode)",
+              args.mount_point, (unsigned)g_iscsi_port, g_iscsi_iqn);
 
     /* Set initial FUSE context */
     lamarckfuse_set_context(0, 0);
@@ -611,8 +701,8 @@ int fuse_main(int argc, char *argv[],
     iscsi_config.get_volume_size = basalt_iscsi_get_size;
     iscsi_config.get_sector_size = basalt_iscsi_get_sector_size;
     iscsi_config.ctx             = NULL;
-    iscsi_config.target_iqn      = ISCSI_DEFAULT_TARGET_IQN;
-    iscsi_config.port            = ISCSI_DEFAULT_PORT;
+    iscsi_config.target_iqn      = g_iscsi_iqn;
+    iscsi_config.port            = g_iscsi_port;
     iscsi_config.readonly        = args.rdonly;
 
     g_iscsi_server = iscsi_server_create(&iscsi_config);
