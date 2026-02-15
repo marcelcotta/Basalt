@@ -26,6 +26,8 @@
 	<string>NSApplication</string>
 	<key>CFBundleIconFile</key>
 	<string>Basalt</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>© 2024-2026 Marcel Cotta. All rights reserved.</string>
 	<key>LSUIElement</key>
 	<false/>
 	<key>CFBundleDocumentTypes</key>

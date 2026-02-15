@@ -24,6 +24,8 @@ targets:
         compilerFlags:
           - "-I${SRCROOT}/../src"
           - "-I${SRCROOT}/../src/Crypto"
+      - path: Credits.rtf
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.basalt.Basalt
