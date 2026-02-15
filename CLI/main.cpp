@@ -7,7 +7,7 @@
 */
 
 // Standalone CLI for Basalt — no wxWidgets dependency.
-// Links only against libTrueCryptCore.a + libfuse + system libraries.
+// Links only against libBasaltCore.a + libfuse + system libraries.
 
 #include "Core/CorePublicAPI.h"
 #ifdef TC_WINDOWS

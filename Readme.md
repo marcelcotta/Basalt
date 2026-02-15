@@ -120,6 +120,10 @@ basalt-cli (C++)              Standalone terminal tool (macOS + Linux + Windows)
 
 ## License
 
-Governed by the TrueCrypt License 3.0. See [License.txt](License.txt) for details.
+Based on [TrueCrypt](http://www.truecrypt.org/), freely available at
+http://www.truecrypt.org/.
 
-As required by the license, this derived work is not called "TrueCrypt".
+Governed by the TrueCrypt License 3.0 — see [License.txt](License.txt) for
+the full text. TrueCrypt is a trademark of the TrueCrypt Foundation. VeraCrypt
+is a trademark of IDRIX. Basalt is an independent project, not affiliated with
+or endorsed by either.
