@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Build universal (arm64 + x86_64) binaries for Basalt (macOS)
-# Produces: libTrueCryptCore.a, basalt-cli, Basalt.app
+# Produces: libBasaltCore.a, basalt-cli, Basalt.app
 #
 # Usage: ./build-universal.sh [release|debug]
 #
@@ -31,26 +31,25 @@ rm -rf "${BUILD_ROOT}"
 mkdir -p "${ARM64_DIR}" "${X86_64_DIR}" "${OUTPUT_DIR}"
 
 # ============================================================
-# Helper: build libTrueCryptCore.a for a specific architecture
+# Helper: build libBasaltCore.a for a specific architecture
 # ============================================================
 build_core_lib() {
     local ARCH="$1"
     local OUT_DIR="$2"
 
     echo ""
-    echo "=== Building libTrueCryptCore.a (${ARCH}) ==="
+    echo "=== Building libBasaltCore.a (${ARCH}) ==="
     echo ""
 
     # Clean object files from previous build
-    for DIR in Platform Volume Driver/Fuse Core; do
-        PROJ=$(echo "${DIR}" | cut -d/ -f1)
-        rm -f "${SYMLINK}/${DIR}/${PROJ}.a"
-        find "${SYMLINK}/${DIR}" -name '*.o' -delete 2>/dev/null || true
+    for DIR in Platform Volume Fuse Core; do
+        rm -f "${SYMLINK}/src/${DIR}/${DIR}.a"
+        find "${SYMLINK}/src/${DIR}" -name '*.o' -delete 2>/dev/null || true
     done
     # Also clean Crypto and Common .o files (they live outside Volume/)
-    find "${SYMLINK}/Crypto" -name '*.o' -delete 2>/dev/null || true
-    find "${SYMLINK}/Common" -name '*.o' -delete 2>/dev/null || true
-    rm -f "${SYMLINK}/libTrueCryptCore.a"
+    find "${SYMLINK}/src/Crypto" -name '*.o' -delete 2>/dev/null || true
+    find "${SYMLINK}/src/Common" -name '*.o' -delete 2>/dev/null || true
+    rm -f "${SYMLINK}/libBasaltCore.a"
 
     # Build with architecture override
     # TARGET_ARCH controls which arch-specific crypto sources are included
@@ -59,14 +58,14 @@ build_core_lib() {
         TC_EXTRA_CFLAGS="-arch ${ARCH}" \
         TC_EXTRA_CXXFLAGS="-arch ${ARCH}" \
         TC_EXTRA_LFLAGS="-arch ${ARCH}" \
-        libTrueCryptCore
+        libBasaltCore
 
     # Verify architecture
     echo "  Verifying ${ARCH}..."
-    lipo -info "${SYMLINK}/libTrueCryptCore.a" 2>/dev/null || true
+    lipo -info "${SYMLINK}/libBasaltCore.a" 2>/dev/null || true
 
     # Copy to output
-    cp "${SYMLINK}/libTrueCryptCore.a" "${OUT_DIR}/libTrueCryptCore.a"
+    cp "${SYMLINK}/libBasaltCore.a" "${OUT_DIR}/libBasaltCore.a"
 }
 
 # ============================================================
@@ -99,7 +98,7 @@ build_cli() {
 build_swiftui() {
     local ARCH="$1"
     local OUT_DIR="$2"
-    local CORE_LIB="${OUT_DIR}/libTrueCryptCore.a"
+    local CORE_LIB="${OUT_DIR}/libBasaltCore.a"
 
     echo ""
     echo "=== Building Basalt (${ARCH}) ==="
@@ -115,7 +114,7 @@ build_swiftui() {
 
     # Compiler flags
     local COMMON_FLAGS="-arch ${ARCH} -mmacosx-version-min=${MIN_MACOS} -isysroot ${SDK_PATH}"
-    local CXX_FLAGS="${COMMON_FLAGS} -std=c++14 -stdlib=libc++ -I${SYMLINK} -I${SYMLINK}/Crypto"
+    local CXX_FLAGS="${COMMON_FLAGS} -std=c++14 -stdlib=libc++ -I${SYMLINK}/src -I${SYMLINK}/src/Crypto"
     CXX_FLAGS="${CXX_FLAGS} -DTC_UNIX -DTC_BSD -DTC_MACOSX -D__STDC_WANT_LIB_EXT1__=1"
     CXX_FLAGS="${CXX_FLAGS} -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES"
     local OBJCXX_FLAGS="${CXX_FLAGS} -fobjc-arc"
@@ -219,12 +218,12 @@ echo ""
 echo "=== Creating Universal Binaries ==="
 echo ""
 
-# libTrueCryptCore.a
-echo "  libTrueCryptCore.a..."
+# libBasaltCore.a
+echo "  libBasaltCore.a..."
 lipo -create \
-    "${ARM64_DIR}/libTrueCryptCore.a" \
-    "${X86_64_DIR}/libTrueCryptCore.a" \
-    -output "${OUTPUT_DIR}/libTrueCryptCore.a"
+    "${ARM64_DIR}/libBasaltCore.a" \
+    "${X86_64_DIR}/libBasaltCore.a" \
+    -output "${OUTPUT_DIR}/libBasaltCore.a"
 
 # basalt-cli
 echo "  basalt-cli..."
@@ -280,9 +279,9 @@ echo "  Universal Build Complete"
 echo "============================================"
 echo ""
 
-echo "libTrueCryptCore.a:"
-lipo -info "${OUTPUT_DIR}/libTrueCryptCore.a"
-ls -lh "${OUTPUT_DIR}/libTrueCryptCore.a"
+echo "libBasaltCore.a:"
+lipo -info "${OUTPUT_DIR}/libBasaltCore.a"
+ls -lh "${OUTPUT_DIR}/libBasaltCore.a"
 echo ""
 
 echo "basalt-cli:"

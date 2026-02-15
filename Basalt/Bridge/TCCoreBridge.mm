@@ -14,7 +14,7 @@
 #include "Core/CorePublicAPI.h"
 #include "Core/VolumeOperations.h"
 #include "Core/Unix/CoreService.h"
-#include "Driver/Fuse/FuseService.h"
+#include "Fuse/FuseService.h"
 #include "Volume/EncryptionTest.h"
 #include "Platform/PlatformTest.h"
 #include "Platform/StringConverter.h"

@@ -350,7 +350,7 @@ SwiftUI modifier.
 
 
 ### 30. FUSE Mount Options Hardening (nosuid, nodev)
-**Files:** `Driver/Fuse/FuseService.cpp`
+**Files:** `src/Fuse/FuseService.cpp`
 **Problem:** Without explicit restrictions, a mounted TrueCrypt volume could contain
 setuid/setgid binaries or device nodes. An attacker who can place files on a volume
 (e.g., a shared volume, a volume from an untrusted source) could use setuid binaries

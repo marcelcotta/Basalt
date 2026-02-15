@@ -19,7 +19,7 @@ ln -sfn "${ROOT_DIR}" "${SYMLINK}"
 SRC_ROOT="${SYMLINK}"
 BRIDGE_DIR="${SYMLINK}/Basalt/Bridge"
 APP_DIR="${SYMLINK}/Basalt/App"
-CORE_LIB="${SYMLINK}/libTrueCryptCore.a"
+CORE_LIB="${SYMLINK}/libBasaltCore.a"
 APP_BUNDLE="${BUILD_DIR}/Basalt.app"
 
 # SDK & arch
@@ -36,13 +36,13 @@ echo ""
 
 # Step 0: Ensure libTrueCryptCore.a exists
 if [ ! -f "${CORE_LIB}" ]; then
-    echo "Building libTrueCryptCore.a first..."
-    make -C "${SYMLINK}" BASE_DIR="${SYMLINK}" NOASM=1 libTrueCryptCore
+    echo "Building libBasaltCore.a first..."
+    make -C "${SYMLINK}" BASE_DIR="${SYMLINK}" NOASM=1 libBasaltCore
 fi
 
 if [ ! -f "${CORE_LIB}" ]; then
-    echo "Error: libTrueCryptCore.a not found"
-    echo "Build it first: make BASE_DIR=/tmp/truecrypt-build NOASM=1 libTrueCryptCore"
+    echo "Error: libBasaltCore.a not found"
+    echo "Build it first: make BASE_DIR=/tmp/truecrypt-build NOASM=1 libBasaltCore"
     exit 1
 fi
 
@@ -52,7 +52,7 @@ mkdir -p "${BUILD_OBJ}"
 
 # Compiler flags (no spaces in paths now)
 COMMON_FLAGS="-arch ${ARCH} -mmacosx-version-min=${MIN_MACOS} -isysroot ${SDK_PATH}"
-CXX_FLAGS="${COMMON_FLAGS} -std=c++14 -stdlib=libc++ -I${SRC_ROOT} -I${SRC_ROOT}/Crypto"
+CXX_FLAGS="${COMMON_FLAGS} -std=c++14 -stdlib=libc++ -I${SRC_ROOT}/src -I${SRC_ROOT}/src/Crypto"
 CXX_FLAGS="${CXX_FLAGS} -DTC_UNIX -DTC_BSD -DTC_MACOSX -D__STDC_WANT_LIB_EXT1__=1"
 CXX_FLAGS="${CXX_FLAGS} -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES"
 OBJCXX_FLAGS="${CXX_FLAGS} -fobjc-arc"
@@ -65,7 +65,7 @@ else
     SWIFT_FLAGS="-Onone -g"
 fi
 
-FUSE_LIBS="${SYMLINK}/DarwinFUSE/libdarwinfuse.a"
+FUSE_LIBS="${SYMLINK}/src/DarwinFUSE/libdarwinfuse.a"
 
 # Step 1: Compile ObjC++ Bridge files
 echo "Compiling Bridge..."

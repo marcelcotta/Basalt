@@ -9,22 +9,15 @@ basalt-cli
 CLI/basalt-cli
 Basalt/build/
 build-universal/
-libTrueCryptCore.a
-
-# Generated headers
-Common/Language.xml.h
-Common/Textual_logo_96dpi.bmp.h
-Format/TrueCrypt_Wizard.bmp.h
-License.txt.h
-Mount/Drive_icon_96dpi.bmp.h
-Mount/Drive_icon_mask_96dpi.bmp.h
-Mount/Logo_96dpi.bmp.h
 
 # CMake build directories
 build_*/
 
-# Qt6 for Windows cross-compile (downloaded via aqtinstall, ~1GB)
+# Qt6 for Windows cross-compile (~1GB, downloaded via aqtinstall)
 qt6-win-mingw/
+
+# Logs
+aqtinstall.log
 
 # macOS
 .DS_Store

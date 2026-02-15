@@ -106,7 +106,7 @@ The built-in iSCSI Initiator creates a real block device per drive letter.
 Basalt.app (SwiftUI)          Native macOS UI (macOS 12+)
   TCCoreBridge.mm (ObjC++)    Bridge: Foundation ↔ C++
 basalt-cli (C++)              Standalone terminal tool (macOS + Linux + Windows)
-  libTrueCryptCore.a          Crypto + Volume + FUSE + Platform
+  libBasaltCore.a (src/)      Crypto + Volume + FUSE + Platform
 ```
 
 

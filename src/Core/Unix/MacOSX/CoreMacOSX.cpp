@@ -15,7 +15,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "CoreMacOSX.h"
-#include "Driver/Fuse/FuseService.h"
+#include "Fuse/FuseService.h"
 #include "Core/Unix/CoreServiceProxy.h"
 
 namespace Basalt

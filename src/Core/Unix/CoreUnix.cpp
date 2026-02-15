@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include "Platform/FileStream.h"
 #include "Platform/Serializer.h"
-#include "Driver/Fuse/FuseService.h"
+#include "Fuse/FuseService.h"
 
 namespace Basalt
 {

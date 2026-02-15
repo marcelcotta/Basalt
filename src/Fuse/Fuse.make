@@ -6,13 +6,13 @@
 # packages.
 #
 
-NAME := Driver
+NAME := Fuse
 
 OBJS :=
 OBJS += FuseService.o
 
 ifeq "$(shell uname -s)" "Darwin"
-    CXXFLAGS += -I$(BASE_DIR)/DarwinFUSE/include -DDARWINFUSE
+    CXXFLAGS += -I$(BASE_DIR)/src/DarwinFUSE/include -DDARWINFUSE
 else
     CXXFLAGS += $(shell pkg-config fuse --cflags)
 endif

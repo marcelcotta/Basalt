@@ -22,8 +22,8 @@ targets:
       - path: Bridge
         type: group
         compilerFlags:
-          - "-I${SRCROOT}/.."
-          - "-I${SRCROOT}/../Crypto"
+          - "-I${SRCROOT}/../src"
+          - "-I${SRCROOT}/../src/Crypto"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.basalt.Basalt
@@ -31,16 +31,16 @@ targets:
         SWIFT_OBJC_BRIDGING_HEADER: Bridge/Basalt-Bridging-Header.h
         OTHER_LDFLAGS:
           - "-L${SRCROOT}/.."
-          - "-lTrueCryptCore"
-          - "-L${SRCROOT}/../DarwinFUSE"
+          - "-lBasaltCore"
+          - "-L${SRCROOT}/../src/DarwinFUSE"
           - "-ldarwinfuse"
           - "-lc++"
           - "-framework Security"
           - "-framework AppKit"
         HEADER_SEARCH_PATHS:
-          - "${SRCROOT}/.."
-          - "${SRCROOT}/../Crypto"
-          - "${SRCROOT}/../DarwinFUSE/include"
+          - "${SRCROOT}/../src"
+          - "${SRCROOT}/../src/Crypto"
+          - "${SRCROOT}/../src/DarwinFUSE/include"
         LIBRARY_SEARCH_PATHS:
           - "${SRCROOT}/.."
     info:

@@ -12,12 +12,12 @@ OBJS :=
 OBJS += main.o
 OBJS += CLICallback.o
 
-CXXFLAGS += -I$(BASE_DIR)/CLI -I$(BASE_DIR)
+CXXFLAGS += -I$(BASE_DIR)/CLI -I$(BASE_DIR)/src -I$(BASE_DIR)/src/Crypto
 
 #------ FUSE configuration ------
 
 ifeq "$(shell uname -s)" "Darwin"
-    FUSE_LIBS = $(BASE_DIR)/DarwinFUSE/libdarwinfuse.a
+    FUSE_LIBS = $(BASE_DIR)/src/DarwinFUSE/libdarwinfuse.a
 else
     FUSE_LIBS = $(shell pkg-config fuse --libs)
 endif
@@ -32,7 +32,7 @@ endif
 
 #------ Core library ------
 
-CORE_LIB = $(BASE_DIR)/libTrueCryptCore.a
+CORE_LIB = $(BASE_DIR)/libBasaltCore.a
 
 #------ Executable ------
 

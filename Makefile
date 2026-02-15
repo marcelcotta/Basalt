@@ -17,7 +17,7 @@
 
 
 #------ Targets ------
-# libTrueCryptCore	Build the core static library (no UI dependency)
+# libBasaltCore		Build the core static library (no UI dependency)
 # cli			Build standalone command-line tool
 # gui			Build Qt6 GUI (uses CMake for Qt6 deps)
 # clean			Remove build artifacts
@@ -28,6 +28,7 @@
 export APPNAME := basalt
 export BASE_DIR := $(CURDIR)
 export BUILD_INC := $(BASE_DIR)/Build/Include
+export SRC_DIR := $(BASE_DIR)/src
 
 export AR ?= ar
 export CC ?= gcc
@@ -37,7 +38,7 @@ export RANLIB ?= ranlib
 
 export CFLAGS := -Wall
 export CXXFLAGS := -Wall -Wno-unused-parameter
-C_CXX_FLAGS := -MMD -D__STDC_WANT_LIB_EXT1__=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES -I$(BASE_DIR) -I$(BASE_DIR)/Crypto
+C_CXX_FLAGS := -MMD -D__STDC_WANT_LIB_EXT1__=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES -I$(BASE_DIR)/src -I$(BASE_DIR)/src/Crypto
 export ASFLAGS := -Ox -D __GNUC__
 export LFLAGS :=
 ifneq "$(shell uname -s)" "Darwin"
@@ -202,56 +203,55 @@ LFLAGS := $(LFLAGS) $(TC_EXTRA_LFLAGS)
 
 #------ Project build ------
 
-CORE_DIRS := Platform Volume Driver/Fuse Core
+CORE_DIRS := Platform Volume Fuse Core
 
-.PHONY: libTrueCryptCore cli gui clean darwinfuse
+.PHONY: libBasaltCore cli gui clean darwinfuse
 
 #------ DarwinFUSE (macOS only — NFSv4 FUSE replacement) ------
 
 ifeq "$(shell uname -s)" "Darwin"
-DARWINFUSE_LIB := $(BASE_DIR)/DarwinFUSE/libdarwinfuse.a
+DARWINFUSE_LIB := $(SRC_DIR)/DarwinFUSE/libdarwinfuse.a
 
 darwinfuse: $(DARWINFUSE_LIB)
 
 $(DARWINFUSE_LIB):
-	$(MAKE) -C $(BASE_DIR)/DarwinFUSE TC_BUILD_CONFIG=$(TC_BUILD_CONFIG)
+	$(MAKE) -C $(SRC_DIR)/DarwinFUSE TC_BUILD_CONFIG=$(TC_BUILD_CONFIG)
 endif
 
 #------ Core library (no UI dependency) ------
 
 CORE_ARCHIVES := \
-	$(BASE_DIR)/Platform/Platform.a \
-	$(BASE_DIR)/Volume/Volume.a \
-	$(BASE_DIR)/Driver/Fuse/Driver.a \
-	$(BASE_DIR)/Core/Core.a
+	$(SRC_DIR)/Platform/Platform.a \
+	$(SRC_DIR)/Volume/Volume.a \
+	$(SRC_DIR)/Fuse/Fuse.a \
+	$(SRC_DIR)/Core/Core.a
 
 ifeq "$(shell uname -s)" "Darwin"
-libTrueCryptCore: $(DARWINFUSE_LIB)
+libBasaltCore: $(DARWINFUSE_LIB)
 endif
 
-libTrueCryptCore:
+libBasaltCore:
 	@for DIR in $(CORE_DIRS); do \
-		PROJ=$$(echo $$DIR | cut -d/ -f1); \
-		$(MAKE) -C $$DIR -f $$PROJ.make NAME=$$PROJ || exit $$?; \
+		$(MAKE) -C $(SRC_DIR)/$$DIR -f $$DIR.make NAME=$$DIR || exit $$?; \
 	done
-	@echo "Creating libTrueCryptCore.a..."
+	@echo "Creating libBasaltCore.a..."
 ifeq "$(shell uname -s)" "Darwin"
-	libtool -static -o $(BASE_DIR)/libTrueCryptCore.a $(CORE_ARCHIVES)
+	libtool -static -o $(BASE_DIR)/libBasaltCore.a $(CORE_ARCHIVES)
 else
-	rm -f $(BASE_DIR)/libTrueCryptCore.a
+	rm -f $(BASE_DIR)/libBasaltCore.a
 	$(eval TMPDIR_AR := $(shell mktemp -d))
 	@for archive in $(CORE_ARCHIVES); do \
 		cd $(TMPDIR_AR) && $(AR) x $$archive; \
 	done
-	$(AR) rcs $(BASE_DIR)/libTrueCryptCore.a $(TMPDIR_AR)/*.o
-	$(RANLIB) $(BASE_DIR)/libTrueCryptCore.a
+	$(AR) rcs $(BASE_DIR)/libBasaltCore.a $(TMPDIR_AR)/*.o
+	$(RANLIB) $(BASE_DIR)/libBasaltCore.a
 	rm -rf $(TMPDIR_AR)
 endif
 
 
 #------ Standalone CLI (no UI dependency) ------
 
-cli: libTrueCryptCore
+cli: libBasaltCore
 	$(MAKE) -C CLI -f CLI.make APPNAME=basalt-cli
 
 
@@ -308,12 +308,11 @@ deploy-windows: gui-windows
 
 clean:
 	@for DIR in $(CORE_DIRS); do \
-		PROJ=$$(echo $$DIR | cut -d/ -f1); \
-		$(MAKE) -C $$DIR -f $$PROJ.make NAME=$$PROJ clean 2>/dev/null || true; \
+		$(MAKE) -C $(SRC_DIR)/$$DIR -f $$DIR.make NAME=$$DIR clean 2>/dev/null || true; \
 	done
 	$(MAKE) -C CLI -f CLI.make clean 2>/dev/null || true
 ifeq "$(shell uname -s)" "Darwin"
-	$(MAKE) -C $(BASE_DIR)/DarwinFUSE clean 2>/dev/null || true
+	$(MAKE) -C $(SRC_DIR)/DarwinFUSE clean 2>/dev/null || true
 endif
 	rm -rf $(BASE_DIR)/build_gui
-	rm -f $(BASE_DIR)/libTrueCryptCore.a
+	rm -f $(BASE_DIR)/libBasaltCore.a

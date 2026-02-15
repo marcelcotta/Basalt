@@ -117,6 +117,11 @@ typedef union
 #	define TC_TO_STRING(n) TC_TO_STRING2(n)
 #endif
 
+// --- Memory allocation (used by GfMul.c) ---
+#include <stdlib.h>
+#define TCalloc(size) calloc(1, (size))
+#define TCfree(ptr) free((ptr))
+
 // --- Secure memory wipe ---
 #ifdef _WIN32
 #define burn(mem,size) do { volatile char *burnm = (volatile char *)(mem); int burnc = size; RtlSecureZeroMemory (mem, size); while (burnc--) *burnm++ = 0; } while (0)
