@@ -15,7 +15,7 @@
 #include "Volume/VolumeSlot.h"
 #include "Volume/VolumePassword.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	struct MountOptions : public Serializable
 	{

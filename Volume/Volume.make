@@ -67,7 +67,6 @@ OBJS += ../Common/Endian.o
 OBJS += ../Common/GfMul.o
 OBJS += ../Common/Pkcs5.o
 OBJS += ../Common/Argon2Kdf.o
-OBJS += ../Common/SecurityToken.o
 
 VolumeLibrary: Volume.a
 

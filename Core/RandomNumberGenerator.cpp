@@ -21,7 +21,7 @@
 #include "RandomNumberGenerator.h"
 #include "Volume/Crc32.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void RandomNumberGenerator::AddSystemDataToPool (bool fast)
 	{

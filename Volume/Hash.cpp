@@ -14,7 +14,7 @@
 #include "Crypto/Whirlpool.h"
 #include "Crypto/Argon2/blake2.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	HashList Hash::GetAvailableAlgorithms ()
 	{

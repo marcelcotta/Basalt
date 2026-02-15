@@ -18,7 +18,7 @@
 #include "Platform/Serializer.h"
 #include "Driver/Fuse/FuseService.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	CoreUnix::CoreUnix ()
 	{

@@ -9,7 +9,7 @@
 #include "CoreServiceResponse.h"
 #include "Platform/SerializerFactory.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	// CheckFilesystemResponse
 	void CheckFilesystemResponse::Deserialize (shared_ptr <Stream> stream)

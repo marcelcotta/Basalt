@@ -12,7 +12,7 @@
 #include <sys/mman.h>
 #endif
 
-namespace TrueCrypt
+namespace Basalt
 {
 	Buffer::Buffer () : DataPtr (nullptr), DataSize (0)
 	{

@@ -12,7 +12,7 @@
 #include <windows.h>
 #include <winternl.h>
 
-namespace TrueCrypt
+namespace Basalt
 {
 	wstring SystemInfo::GetPlatformName ()
 	{

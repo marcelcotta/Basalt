@@ -13,8 +13,9 @@
 #include "Platform/Stream.h"
 #include "Platform/Unix/Pipe.h"
 #include "Core/Core.h"
+#include <functional>
 
-namespace TrueCrypt
+namespace Basalt
 {
 	// This service facilitates process forking and elevation of user privileges
 	class CoreService
@@ -31,6 +32,7 @@ namespace TrueCrypt
 		static shared_ptr <VolumeInfo> RequestMountVolume (MountOptions &options);
 		static void RequestSetFileOwner (const FilesystemPath &path, const UserId &owner);
 		static void SetAdminPasswordCallback (shared_ptr <GetStringFunctor> functor) { AdminPasswordCallback = functor; }
+		static void SetAdminPasswordRequestHandler (std::function <void (const string &)> handler) { AdminPasswordRequestHandler = handler; }
 		static void Start ();
 		static void Stop ();
 
@@ -40,6 +42,7 @@ namespace TrueCrypt
 		static void StartElevated (const CoreServiceRequest &request);
 
 		static shared_ptr <GetStringFunctor> AdminPasswordCallback;
+		static std::function <void (const string &)> AdminPasswordRequestHandler;
 
 		static unique_ptr <Pipe> AdminInputPipe;
 		static unique_ptr <Pipe> AdminOutputPipe;

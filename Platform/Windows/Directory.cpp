@@ -11,7 +11,7 @@
 #include "Platform/Finally.h"
 #include "Platform/SystemException.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void Directory::Create (const DirectoryPath &path)
 	{

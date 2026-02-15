@@ -12,7 +12,7 @@
 #include "Platform/Platform.h"
 #include "Platform/Serializable.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	struct HostDevice;
 	typedef list < shared_ptr <HostDevice> > HostDeviceList;

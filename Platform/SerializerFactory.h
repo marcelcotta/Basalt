@@ -13,7 +13,7 @@
 #include "PlatformBase.h"
 #include "StringConverter.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class Serializable;
 

@@ -23,16 +23,7 @@
 
 using namespace std;
 
-#if __cplusplus < 201103L
-#ifdef nullptr
-#undef nullptr
-#endif
-#if !(defined(_MSC_VER) && _MSC_VER >= 1600)
-#define nullptr 0
-#endif
-#endif
-
-namespace TrueCrypt
+namespace Basalt
 {
 #ifdef _MSC_VER
 #	ifndef TC_INT_TYPES_DEFINED

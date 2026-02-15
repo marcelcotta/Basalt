@@ -10,7 +10,7 @@
 #include "Platform/Mutex.h"
 #include "Platform/SystemException.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	Mutex::Mutex ()
 	{

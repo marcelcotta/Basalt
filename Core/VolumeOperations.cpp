@@ -16,7 +16,7 @@
 #include <unistd.h>
 #endif
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void VolumeOperations::BackupVolumeHeaders (shared_ptr <CoreBase> core, VolumeOperationCallback &cb, shared_ptr <VolumePath> volumePath)
 	{

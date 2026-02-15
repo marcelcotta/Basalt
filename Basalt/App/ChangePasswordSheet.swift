@@ -14,9 +14,15 @@ struct ChangePasswordSheet: View {
 
     @State private var volumePath = ""
     @State private var currentPassword = ""
+    @State private var currentKeyfiles: [String] = []
     @State private var newPassword = ""
     @State private var confirmPassword = ""
+    @State private var newKeyfiles: [String] = []
     @State private var selectedHash = ""
+    @FocusState private var passwordFocused: Bool
+
+    /// Optional pre-filled volume path (set from context menu)
+    var initialVolumePath: String?
 
     var passwordMismatch: Bool {
         !newPassword.isEmpty && !confirmPassword.isEmpty && newPassword != confirmPassword
@@ -45,12 +51,21 @@ struct ChangePasswordSheet: View {
 
             Divider()
 
-            // Current password
-            PasswordView("Current password", text: $currentPassword)
+            // Current credentials
+            Text("Current Credentials")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            PasswordView("Current password", text: $currentPassword, focused: $passwordFocused)
+            KeyfilePicker(label: "Current keyfiles:", keyfiles: $currentKeyfiles)
 
             Divider()
 
-            // New password
+            // New credentials
+            Text("New Credentials")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
             PasswordView("New password", text: $newPassword)
             PasswordView("Confirm new password", text: $confirmPassword)
 
@@ -59,6 +74,8 @@ struct ChangePasswordSheet: View {
                     .foregroundColor(.red)
                     .font(.caption)
             }
+
+            KeyfilePicker(label: "New keyfiles:", keyfiles: $newKeyfiles)
 
             // Hash algorithm
             Picker("PKCS-5 PRF:", selection: $selectedHash) {
@@ -79,31 +96,48 @@ struct ChangePasswordSheet: View {
             Divider()
 
             HStack {
+                if vm.isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Changing password...")
+                        .foregroundColor(.secondary)
+                }
+
                 Spacer()
 
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
+                    .disabled(vm.isLoading)
 
                 Button("Change") {
                     vm.changePassword(
                         volumePath: volumePath,
                         currentPassword: currentPassword,
-                        keyfiles: nil,
+                        keyfiles: currentKeyfiles.isEmpty ? nil : currentKeyfiles,
                         newPassword: newPassword,
-                        newKeyfiles: nil,
+                        newKeyfiles: newKeyfiles.isEmpty ? nil : newKeyfiles,
                         newHash: selectedHash.isEmpty ? nil : selectedHash
                     )
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(volumePath.isEmpty || currentPassword.isEmpty
-                          || newPassword.isEmpty || passwordMismatch)
+                          || newPassword.isEmpty || passwordMismatch || vm.isLoading)
             }
         }
         .padding(20)
-        .frame(minWidth: 420)
+        .frame(minWidth: 460)
         .screenCaptureProtection()
+        .onAppear {
+            if let path = initialVolumePath {
+                volumePath = path
+            }
+            passwordFocused = true
+        }
         .onChange(of: vm.showChangePasswordSheet) { newValue in
             if !newValue { dismiss() }
+        }
+        .onDisappear {
+            vm.errorMessage = nil
         }
     }
 }

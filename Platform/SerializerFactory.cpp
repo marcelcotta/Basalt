@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include "SerializerFactory.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void SerializerFactory::Deinitialize ()
 	{

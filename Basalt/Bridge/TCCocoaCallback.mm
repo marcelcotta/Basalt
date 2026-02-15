@@ -10,7 +10,7 @@
 #include "TCCocoaCallback.h"
 #include "Core/RandomNumberGenerator.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	NSString *CocoaOperationCallback::ToNS (const wstring &s)
 	{

@@ -18,10 +18,16 @@ struct CreateVolumeSheet: View {
     @State private var currentStep = 0
     private let totalSteps = 4
 
-    // Step 1: File & Size
+    // Step 1: File/Device & Size
+    @State private var volumeTarget = 0  // 0 = File container, 1 = Entire device
+    @State private var volumeType = 0    // 0 = Standard, 1 = Hidden
     @State private var volumePath = ""
     @State private var sizeValue = ""
     @State private var sizeUnit = "MB"
+    @State private var showDevicePicker = false
+    @State private var availableDevices: [TCHostDevice] = []
+    @State private var selectedDeviceSize: UInt64 = 0
+    @State private var loadingDevices = false
 
     // Step 2: Encryption
     @State private var selectedEncryption = "AES"
@@ -34,9 +40,15 @@ struct CreateVolumeSheet: View {
     @State private var keyfiles: [String] = []
     @FocusState private var passwordFocused: Bool
 
+    // Entropy collection (optional)
+    @State private var showEntropyPanel = false
+    @State private var entropyBytesCollected = 0
+    @State private var lastMousePosition: CGPoint = .zero
+
     // Step 4: Filesystem & Format
     @State private var filesystem: Int = 2 // 0=None, 1=FAT, 2=HFS+
     @State private var quickFormat = false
+    @State private var deviceConfirmation = "" // User must type device name to confirm
 
     // Progress
     @State private var isCreating = false
@@ -64,8 +76,22 @@ struct CreateVolumeSheet: View {
         }
     }
 
+    var isDeviceMode: Bool { volumeTarget == 1 }
+    var isHiddenVolume: Bool { volumeType == 1 }
+
+    var effectiveSize: UInt64 {
+        isDeviceMode ? selectedDeviceSize : sizeInBytes
+    }
+
     var canProceedStep1: Bool {
-        !volumePath.isEmpty && sizeInBytes >= 292864 // ~286 KB min for FAT
+        if isHiddenVolume {
+            // Hidden volume: need existing container path + size for the inner volume
+            return !volumePath.isEmpty && sizeInBytes >= 292864
+        }
+        if isDeviceMode {
+            return !volumePath.isEmpty && selectedDeviceSize > 0
+        }
+        return !volumePath.isEmpty && sizeInBytes >= 292864 // ~286 KB min for FAT
     }
 
     var canProceedStep2: Bool {
@@ -77,13 +103,16 @@ struct CreateVolumeSheet: View {
     }
 
     var canCreate: Bool {
-        canProceedStep1 && canProceedStep2 && canProceedStep3 && !isCreating
+        guard canProceedStep1 && canProceedStep2 && canProceedStep3 && !isCreating else { return false }
+        // For device mode (non-hidden): require explicit confirmation by typing the device path
+        if isDeviceMode && !isHiddenVolume { return deviceConfirmation == volumePath }
+        return true
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Title
-            Text("Create Basalt Volume")
+            Text(isHiddenVolume ? "Create Hidden Volume" : "Create Basalt Volume")
                 .font(.title2)
                 .fontWeight(.semibold)
 
@@ -169,43 +198,168 @@ struct CreateVolumeSheet: View {
 
     private var step1FileAndSize: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Choose a location and size for the new volume.")
+            Text("Choose where to create the encrypted volume.")
                 .font(.callout)
                 .foregroundColor(.secondary)
 
-            HStack {
-                TextField("Volume file path", text: $volumePath)
-                    .textFieldStyle(.roundedBorder)
+            // Volume type: Standard vs Hidden
+            Picker("Volume type:", selection: $volumeType) {
+                Text("Standard volume").tag(0)
+                Text("Hidden volume").tag(1)
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: volumeType) { _ in
+                volumePath = ""
+                selectedDeviceSize = 0
+                // Hidden volumes are always inside an existing file container
+                if isHiddenVolume { volumeTarget = 0 }
+            }
 
-                Button("Browse...") {
-                    let panel = NSSavePanel()
-                    panel.title = "Create Basalt Volume"
-                    panel.nameFieldStringValue = "volume.tc"
-                    panel.canCreateDirectories = true
-                    if panel.runModal() == .OK, let url = panel.url {
-                        volumePath = url.path
+            if isHiddenVolume {
+                // Hidden volume explanation
+                Label("A hidden volume is created inside an existing Basalt volume. It provides plausible deniability — even under coercion, the hidden volume's existence cannot be proven.", systemImage: "eye.slash")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                // Select existing outer volume
+                HStack {
+                    TextField("Existing outer volume file", text: $volumePath)
+                        .textFieldStyle(.roundedBorder)
+
+                    Button("Browse...") {
+                        let panel = NSOpenPanel()
+                        panel.canChooseFiles = true
+                        panel.canChooseDirectories = false
+                        panel.title = "Select Outer Volume"
+                        if panel.runModal() == .OK, let url = panel.url {
+                            volumePath = url.path
+                        }
+                    }
+                }
+
+                // Hidden volume size
+                HStack {
+                    Text("Hidden volume size:")
+                    TextField("Size", text: $sizeValue)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 100)
+                    Picker("", selection: $sizeUnit) {
+                        ForEach(sizeUnits, id: \.self) { Text($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 160)
+                }
+
+                if sizeInBytes > 0 {
+                    Text(formatBytes(sizeInBytes))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Label("The hidden volume must be smaller than the outer volume. Leave enough room for decoy files in the outer volume.", systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+            } else {
+                // Standard volume: File vs Device selection
+                Picker("Container:", selection: $volumeTarget) {
+                    Text("File container").tag(0)
+                    Text("Entire device / partition").tag(1)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: volumeTarget) { _ in
+                    volumePath = ""
+                    selectedDeviceSize = 0
+                }
+
+                if isDeviceMode {
+                    // Device mode
+                    HStack {
+                        TextField("Device path", text: $volumePath)
+                            .textFieldStyle(.roundedBorder)
+
+                        Button("Select Device...") {
+                            loadingDevices = true
+                            vm.getHostDevices { devices in
+                                availableDevices = devices
+                                loadingDevices = false
+                                showDevicePicker = true
+                            }
+                        }
+                        .disabled(loadingDevices)
+                        .popover(isPresented: $showDevicePicker, arrowEdge: .bottom) {
+                            DevicePickerPopover(devices: availableDevices) { path in
+                                volumePath = path
+                                selectedDeviceSize = findDeviceSize(path: path)
+                                showDevicePicker = false
+                            }
+                        }
+
+                        if loadingDevices {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                    }
+
+                    if selectedDeviceSize > 0 {
+                        Text("Device size: \(formatBytes(selectedDeviceSize))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Destruction warning
+                    if !volumePath.isEmpty {
+                        Label("All data on this device will be irrecoverably destroyed!", systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout)
+                            .foregroundColor(.red)
+                    }
+                } else {
+                    // File container mode
+                    HStack {
+                        TextField("Volume file path", text: $volumePath)
+                            .textFieldStyle(.roundedBorder)
+
+                        Button("Browse...") {
+                            let panel = NSSavePanel()
+                            panel.title = "Create Basalt Volume"
+                            panel.nameFieldStringValue = "volume.tc"
+                            panel.canCreateDirectories = true
+                            if panel.runModal() == .OK, let url = panel.url {
+                                volumePath = url.path
+                            }
+                        }
+                    }
+
+                    HStack {
+                        Text("Volume size:")
+                        TextField("Size", text: $sizeValue)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 100)
+                        Picker("", selection: $sizeUnit) {
+                            ForEach(sizeUnits, id: \.self) { Text($0) }
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 160)
+                    }
+
+                    if sizeInBytes > 0 {
+                        Text(formatBytes(sizeInBytes))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
                 }
             }
+        }
+    }
 
-            HStack {
-                Text("Volume size:")
-                TextField("Size", text: $sizeValue)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(width: 100)
-                Picker("", selection: $sizeUnit) {
-                    ForEach(sizeUnits, id: \.self) { Text($0) }
-                }
-                .pickerStyle(.segmented)
-                .frame(width: 160)
-            }
-
-            if sizeInBytes > 0 {
-                Text(formatBytes(sizeInBytes))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+    /// Find device size from the cached device list (devices + partitions)
+    private func findDeviceSize(path: String) -> UInt64 {
+        for dev in availableDevices {
+            if dev.path == path { return dev.size }
+            for part in dev.partitions {
+                if part.path == path { return part.size }
             }
         }
+        return 0
     }
 
     // MARK: - Step 2: Encryption
@@ -260,7 +414,9 @@ struct CreateVolumeSheet: View {
 
     private var step3Password: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Choose a strong password for the volume.")
+            Text(isHiddenVolume
+                 ? "Choose a password for the hidden volume. This must be different from the outer volume's password."
+                 : "Choose a strong password for the volume.")
                 .font(.callout)
                 .foregroundColor(.secondary)
 
@@ -308,6 +464,68 @@ struct CreateVolumeSheet: View {
                     Button("Clear") { keyfiles.removeAll() }
                 }
             }
+
+            // Extra entropy (optional)
+            Divider()
+            entropyPanel
+        }
+    }
+
+    // MARK: - Extra Entropy (optional)
+
+    private var entropyPanel: some View {
+        DisclosureGroup(isExpanded: $showEntropyPanel) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Move your mouse randomly over the area below to add extra entropy to the random number generator.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.secondary.opacity(0.08))
+                        .frame(height: 80)
+
+                    if entropyBytesCollected == 0 {
+                        Text("Move the mouse here...")
+                            .font(.caption)
+                            .foregroundColor(.secondary.opacity(0.5))
+                    } else {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text("\(entropyBytesCollected) bytes collected")
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .overlay(MouseTrackingView { location in
+                    let dx = abs(location.x - lastMousePosition.x)
+                    let dy = abs(location.y - lastMousePosition.y)
+                    guard dx > 1 || dy > 1 else { return }
+                    lastMousePosition = location
+
+                    var x = Float32(location.x)
+                    var y = Float32(location.y)
+                    var t = UInt32(mach_absolute_time() & 0xFFFFFFFF)
+                    var bytes = Data()
+                    bytes.append(Data(bytes: &x, count: 4))
+                    bytes.append(Data(bytes: &y, count: 4))
+                    bytes.append(Data(bytes: &t, count: 4))
+
+                    TCCoreBridge.shared().addUserEntropy(bytes)
+                    entropyBytesCollected += bytes.count
+                })
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "dice")
+                Text("Extra entropy")
+                    .font(.callout)
+                Text("(optional)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
@@ -316,7 +534,9 @@ struct CreateVolumeSheet: View {
     private var step4FilesystemAndFormat: some View {
         VStack(alignment: .leading, spacing: 12) {
             if !isCreating && !creationDone {
-                Text("Choose a filesystem and start formatting.")
+                Text(isHiddenVolume
+                     ? "Choose a filesystem for the hidden volume and start formatting."
+                     : "Choose a filesystem and start formatting.")
                     .font(.callout)
                     .foregroundColor(.secondary)
 
@@ -327,7 +547,7 @@ struct CreateVolumeSheet: View {
                 }
                 .pickerStyle(.menu)
 
-                if filesystem == 1 && sizeInBytes > 4_294_967_295 { // FAT 4 GB limit
+                if filesystem == 1 && effectiveSize > 4_294_967_295 { // FAT 4 GB limit
                     Label("FAT does not support files larger than 4 GB. Consider Mac OS Extended for larger files.", systemImage: "exclamationmark.triangle")
                         .font(.caption)
                         .foregroundColor(.orange)
@@ -340,9 +560,32 @@ struct CreateVolumeSheet: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+
+                // Device confirmation: user must type the device path to prevent accidents
+                if isDeviceMode {
+                    Divider()
+
+                    Label("ALL DATA on \(volumePath) will be permanently destroyed!", systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout.weight(.medium))
+                        .foregroundColor(.red)
+
+                    Text("Type the device path to confirm:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    TextField(volumePath, text: $deviceConfirmation)
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(.body, design: .monospaced))
+
+                    if !deviceConfirmation.isEmpty && deviceConfirmation != volumePath {
+                        Text("Does not match. Please type exactly: \(volumePath)")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    }
+                }
             } else if isCreating {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Creating volume...")
+                    Text(isHiddenVolume ? "Creating hidden volume..." : "Creating volume...")
                         .font(.callout)
                         .fontWeight(.medium)
 
@@ -352,20 +595,29 @@ struct CreateVolumeSheet: View {
                             .monospacedDigit()
                     }
 
-                    Text(formatBytes(UInt64(creationProgress * Double(sizeInBytes))) + " / " + formatBytes(sizeInBytes))
+                    Text(formatBytes(UInt64(creationProgress * Double(effectiveSize))) + " / " + formatBytes(effectiveSize))
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .monospacedDigit()
                 }
             } else if creationDone {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("Volume created successfully!", systemImage: "checkmark.circle.fill")
+                    Label(isHiddenVolume
+                          ? "Hidden volume created successfully!"
+                          : "Volume created successfully!",
+                          systemImage: "checkmark.circle.fill")
                         .font(.callout)
                         .foregroundColor(.green)
 
                     Text(volumePath)
                         .font(.caption)
                         .foregroundColor(.secondary)
+
+                    if isHiddenVolume {
+                        Label("To mount the hidden volume, use the hidden volume's password when mounting the outer container.", systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
         }
@@ -431,8 +683,8 @@ struct CreateVolumeSheet: View {
 
         let options = TCVolumeCreationOptions()
         options.path = volumePath
-        options.volumeType = .normal
-        options.size = sizeInBytes
+        options.volumeType = isHiddenVolume ? .hidden : .normal
+        options.size = isHiddenVolume ? sizeInBytes : (isDeviceMode ? 0 : sizeInBytes)  // 0 = use device's actual size
         options.password = password
         if !keyfiles.isEmpty { options.keyfilePaths = keyfiles }
         options.encryptionAlgorithm = selectedEncryption
@@ -465,5 +717,44 @@ struct CreateVolumeSheet: View {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         return formatter.string(fromByteCount: Int64(bytes))
+    }
+}
+
+// MARK: - Mouse Tracking (NSViewRepresentable, macOS 12+)
+
+/// Transparent NSView overlay that reports mouse-moved events via a callback.
+struct MouseTrackingView: NSViewRepresentable {
+    var onMouseMoved: (CGPoint) -> Void
+
+    func makeNSView(context: Context) -> TrackingNSView {
+        let view = TrackingNSView()
+        view.onMouseMoved = onMouseMoved
+        return view
+    }
+
+    func updateNSView(_ nsView: TrackingNSView, context: Context) {
+        nsView.onMouseMoved = onMouseMoved
+    }
+
+    class TrackingNSView: NSView {
+        var onMouseMoved: ((CGPoint) -> Void)?
+        private var trackingArea: NSTrackingArea?
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            if let existing = trackingArea { removeTrackingArea(existing) }
+            trackingArea = NSTrackingArea(
+                rect: bounds,
+                options: [.mouseMoved, .activeInKeyWindow, .inVisibleRect],
+                owner: self,
+                userInfo: nil
+            )
+            addTrackingArea(trackingArea!)
+        }
+
+        override func mouseMoved(with event: NSEvent) {
+            let location = convert(event.locationInWindow, from: nil)
+            onMouseMoved?(location)
+        }
     }
 }

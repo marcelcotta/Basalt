@@ -8,7 +8,7 @@
 
 #include "TextReader.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	TextReader::TextReader (const FilePath &path)
 	{

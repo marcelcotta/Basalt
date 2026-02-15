@@ -12,7 +12,7 @@
 #include "Platform/Platform.h"
 #include "Common/Crc.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class Crc32
 	{

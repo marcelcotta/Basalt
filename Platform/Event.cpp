@@ -8,7 +8,7 @@
 
 #include "Event.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void Event::Connect (const EventConnectorBase &connector)
 	{

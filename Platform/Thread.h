@@ -21,7 +21,7 @@
 #include "SharedPtr.h"
 #include "SyncEvent.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class Thread
 	{

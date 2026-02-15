@@ -10,7 +10,7 @@
 #include "Platform/SystemInfo.h"
 #include <sys/utsname.h>
 
-namespace TrueCrypt
+namespace Basalt
 {
 	wstring SystemInfo::GetPlatformName ()
 	{

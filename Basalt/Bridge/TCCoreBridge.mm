@@ -23,7 +23,7 @@
 #include <string>
 #include <memory>
 
-using namespace TrueCrypt;
+using namespace Basalt;
 
 NSErrorDomain const TCErrorDomain = @"com.truecrypt.core";
 
@@ -192,8 +192,8 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         _encryptionModeName = ToNS (info->EncryptionModeName);
         _pkcs5PrfName = ToNS (info->Pkcs5PrfName);
         _pkcs5IterationCount = info->Pkcs5IterationCount;
-        _isHiddenVolume = (info->Type == TrueCrypt::VolumeType::Hidden);
-        _isReadOnly = (info->Protection == TrueCrypt::VolumeProtection::ReadOnly);
+        _isHiddenVolume = (info->Type == Basalt::VolumeType::Hidden);
+        _isReadOnly = (info->Protection == Basalt::VolumeProtection::ReadOnly);
         _hiddenVolumeProtectionTriggered = info->HiddenVolumeProtectionTriggered;
         _systemEncryption = info->SystemEncryption;
         _totalDataRead = info->TotalDataRead;
@@ -270,11 +270,11 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         opts.SlotNumber = (VolumeSlotNumber) self.slotNumber;
 
     if (self.readOnly)
-        opts.Protection = TrueCrypt::VolumeProtection::ReadOnly;
+        opts.Protection = Basalt::VolumeProtection::ReadOnly;
 
     if (self.protectHiddenVolume)
     {
-        opts.Protection = TrueCrypt::VolumeProtection::HiddenVolumeReadOnly;
+        opts.Protection = Basalt::VolumeProtection::HiddenVolumeReadOnly;
         if (self.protectionPassword)
             opts.ProtectionPassword = make_shared <VolumePassword> (ToWide (self.protectionPassword));
         opts.ProtectionKeyfiles = ToKeyfileList (self.protectionKeyfilePaths);
@@ -405,6 +405,37 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     try
     {
         MountOptions cppOpts = [options toCpp];
+
+        // Auto-dismount device filesystems before mounting an encrypted device.
+        // The existing filesystem must be unmounted so Basalt can open it exclusively.
+#ifdef TC_MACOSX
+        if (cppOpts.Path && cppOpts.Path->IsDevice ())
+        {
+            // Convert raw device path to the whole-disk non-raw path for diskutil.
+            // e.g. /dev/rdisk2s1 → /dev/disk2, /dev/rdisk2 → /dev/disk2
+            string devPath = StringConverter::ToSingle (wstring (*cppOpts.Path));
+            string diskutilPath = devPath;
+
+            // Strip "r" from /dev/rdiskN → /dev/diskN
+            size_t rdiskPos = diskutilPath.find ("/dev/rdisk");
+            if (rdiskPos == 0)
+                diskutilPath = "/dev/disk" + diskutilPath.substr (10);
+
+            // Strip partition suffix (e.g. /dev/disk2s1 → /dev/disk2)
+            size_t sPos = diskutilPath.find ('s', strlen ("/dev/disk"));
+            if (sPos != string::npos && sPos > strlen ("/dev/disk"))
+                diskutilPath = diskutilPath.substr (0, sPos);
+
+            list <string> args;
+            args.push_back ("unmountDisk");
+            args.push_back ("force");
+            args.push_back (diskutilPath);
+
+            try { Process::Execute ("/usr/sbin/diskutil", args); }
+            catch (...) { }
+        }
+#endif
+
         shared_ptr <VolumeInfo> vol = Core->MountVolume (cppOpts);
 
         // Offer KDF upgrade for legacy volumes (iteration count < 10000)
@@ -669,7 +700,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         shared_ptr <Pkcs5Kdf> newKdf;
         if (hashName)
         {
-            for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+            for (const auto &h : Basalt::Hash::GetAvailableAlgorithms ())
             {
                 if ([ToNS (h->GetName ()) caseInsensitiveCompare:hashName] == NSOrderedSame)
                 {
@@ -728,7 +759,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 - (NSArray<NSString *> *)availableEncryptionAlgorithms
 {
     NSMutableArray *result = [NSMutableArray array];
-    for (const auto &ea : TrueCrypt::EncryptionAlgorithm::GetAvailableAlgorithms ())
+    for (const auto &ea : Basalt::EncryptionAlgorithm::GetAvailableAlgorithms ())
     {
         if (!ea->IsDeprecated ())
             [result addObject:ToNS (ea->GetName ())];
@@ -739,12 +770,23 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 - (NSArray<NSString *> *)availableHashAlgorithms
 {
     NSMutableArray *result = [NSMutableArray array];
-    for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+    for (const auto &h : Basalt::Hash::GetAvailableAlgorithms ())
     {
         if (!h->IsDeprecated ())
             [result addObject:ToNS (h->GetName ())];
     }
     return [result copy];
+}
+
+// ---- User Entropy ----
+
+- (void)addUserEntropy:(NSData *)data
+{
+    if (data.length == 0) return;
+    if (!RandomNumberGenerator::IsRunning ())
+        RandomNumberGenerator::Start ();
+    RandomNumberGenerator::AddToPool (ConstBufferPtr (
+        reinterpret_cast <const byte *> (data.bytes), data.length));
 }
 
 // ---- Volume Creation ----
@@ -755,7 +797,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     {
         auto cppOpts = make_shared <VolumeCreationOptions> ();
         cppOpts->Path = VolumePath (ToWide (options.path));
-        cppOpts->Type = (options.volumeType == TCVolumeTypeHidden) ? TrueCrypt::VolumeType::Hidden : TrueCrypt::VolumeType::Normal;
+        cppOpts->Type = (options.volumeType == TCVolumeTypeHidden) ? Basalt::VolumeType::Hidden : Basalt::VolumeType::Normal;
         cppOpts->Size = options.size;
 
         if (options.password)
@@ -781,7 +823,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         // Encryption algorithm
         if (options.encryptionAlgorithm)
         {
-            for (const auto &ea : TrueCrypt::EncryptionAlgorithm::GetAvailableAlgorithms ())
+            for (const auto &ea : Basalt::EncryptionAlgorithm::GetAvailableAlgorithms ())
             {
                 if (!ea->IsDeprecated () && [ToNS (ea->GetName ()) caseInsensitiveCompare:options.encryptionAlgorithm] == NSOrderedSame)
                 {
@@ -794,7 +836,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         // Hash / KDF
         if (options.hashAlgorithm)
         {
-            for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+            for (const auto &h : Basalt::Hash::GetAvailableAlgorithms ())
             {
                 if (!h->IsDeprecated () && [ToNS (h->GetName ()) caseInsensitiveCompare:options.hashAlgorithm] == NSOrderedSame)
                 {
@@ -816,6 +858,37 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         }
 
         RandomNumberGenerator::Start ();
+
+        // Auto-dismount device filesystems before creation.
+        // A mounted device cannot be opened exclusively — unmount all its
+        // partitions first (like TrueCrypt/VeraCrypt do).
+#ifdef TC_MACOSX
+        if (cppOpts->Path.IsDevice ())
+        {
+            // Convert raw device path to the whole-disk non-raw path for diskutil.
+            // e.g. /dev/rdisk2s1 → /dev/disk2, /dev/rdisk2 → /dev/disk2
+            string devPath = StringConverter::ToSingle (wstring (cppOpts->Path));
+            string diskutilPath = devPath;
+
+            // Strip "r" from /dev/rdiskN → /dev/diskN
+            size_t rdiskPos = diskutilPath.find ("/dev/rdisk");
+            if (rdiskPos == 0)
+                diskutilPath = "/dev/disk" + diskutilPath.substr (10);
+
+            // Strip partition suffix (e.g. /dev/disk2s1 → /dev/disk2)
+            size_t sPos = diskutilPath.find ('s', strlen ("/dev/disk"));
+            if (sPos != string::npos && sPos > strlen ("/dev/disk"))
+                diskutilPath = diskutilPath.substr (0, sPos);
+
+            list <string> args;
+            args.push_back ("unmountDisk");
+            args.push_back ("force");
+            args.push_back (diskutilPath);
+
+            try { Process::Execute ("/usr/sbin/diskutil", args); }
+            catch (...) { /* best effort — creation will fail with EBUSY if still mounted */ }
+        }
+#endif
 
         _creator = make_shared <VolumeCreator> ();
         _creator->CreateVolume (cppOpts);
@@ -871,15 +944,44 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         if (virtualDev.empty ())
             throw ParameterIncorrect (SRC_POS);
 
-        // 3. Run newfs_hfs on the virtual block device
+        // 3. Format the virtual device with HFS+.
+        //    Use diskutil instead of newfs_hfs because the latter requires
+        //    root privileges on the block device while diskutil handles
+        //    authorization itself.  Retry a few times in case hdiutil has
+        //    not finished configuring the device node yet.
         list <string> args;
-        args.push_back ("-v");
+        args.push_back ("eraseVolume");
+        args.push_back ("HFS+");
         args.push_back ("Basalt");
         args.push_back (virtualDev);
 
         try
         {
-            Process::Execute ("/sbin/newfs_hfs", args);
+            int retries = 5;
+            while (true)
+            {
+                try
+                {
+                    Process::Execute ("/usr/sbin/diskutil", args);
+                    break;
+                }
+                catch (...)
+                {
+                    if (--retries <= 0)
+                        throw;
+                    Thread::Sleep (500);
+                }
+            }
+
+            // diskutil eraseVolume auto-mounts the new filesystem (e.g. on
+            // /Volumes/Basalt).  Unmount it before we dismount the Basalt
+            // FUSE volume, otherwise hdiutil detach will fail with EBUSY.
+            list <string> umArgs;
+            umArgs.push_back ("unmount");
+            umArgs.push_back ("force");
+            umArgs.push_back (virtualDev);
+            try { Process::Execute ("/usr/sbin/diskutil", umArgs); }
+            catch (...) { }
         }
         catch (...)
         {
@@ -900,4 +1002,331 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     }
 }
 
+// ---- Volume Header Backup ----
+
+- (BOOL)backupVolumeHeaders:(NSString *)volumePath
+                   password:(NSString *)password
+                   keyfiles:(nullable NSArray<NSString *> *)keyfilePaths
+             hiddenPassword:(nullable NSString *)hiddenPassword
+             hiddenKeyfiles:(nullable NSArray<NSString *> *)hiddenKeyfilePaths
+               backupToFile:(NSString *)backupFilePath
+                      error:(NSError **)error
+{
+    try
+    {
+        auto path = make_shared <VolumePath> (ToWide (volumePath));
+        auto pw = make_shared <VolumePassword> (ToWide (password));
+        auto kf = ToKeyfileList (keyfilePaths);
+
+#ifdef TC_UNIX
+        // Temporarily take ownership of a device if the user is not an administrator
+        UserId origDeviceOwner ((uid_t) -1);
+
+        if (!Core->HasAdminPrivileges () && path->IsDevice ())
+        {
+            origDeviceOwner = FilesystemPath (wstring (*path)).GetOwner ();
+            Core->SetFileOwner (*path, UserId (getuid ()));
+        }
+
+        finally_do_arg2 (FilesystemPath, *path, UserId, origDeviceOwner,
+        {
+            if (finally_arg2.SystemId != (uid_t) -1)
+                Core->SetFileOwner (finally_arg, finally_arg2);
+        });
+#endif
+
+        // Open normal volume
+        shared_ptr <Volume> normalVolume = Core->OpenVolume (
+            path,
+            true, // preserveTimestamps
+            pw,
+            kf,
+            VolumeProtection::None,
+            shared_ptr <VolumePassword> (),
+            shared_ptr <KeyfileList> (),
+            true, // sharedAccessAllowed
+            Basalt::VolumeType::Normal,
+            false  // useBackupHeaders
+        );
+
+        // Open hidden volume if credentials provided
+        shared_ptr <Volume> hiddenVolume;
+        shared_ptr <VolumePassword> hidPw;
+        shared_ptr <KeyfileList> hidKf;
+
+        if (hiddenPassword)
+        {
+            hidPw = make_shared <VolumePassword> (ToWide (hiddenPassword));
+            hidKf = ToKeyfileList (hiddenKeyfilePaths);
+
+            hiddenVolume = Core->OpenVolume (
+                path,
+                true,
+                hidPw,
+                hidKf,
+                VolumeProtection::None,
+                shared_ptr <VolumePassword> (),
+                shared_ptr <KeyfileList> (),
+                true,
+                Basalt::VolumeType::Hidden,
+                false
+            );
+        }
+
+        // Verify layout compatibility
+        if (hiddenVolume)
+        {
+            if (typeid (*normalVolume->GetLayout()) == typeid (VolumeLayoutV1Normal) && typeid (*hiddenVolume->GetLayout()) != typeid (VolumeLayoutV1Hidden))
+                throw ParameterIncorrect (SRC_POS);
+
+            if (typeid (*normalVolume->GetLayout()) == typeid (VolumeLayoutV2Normal) && typeid (*hiddenVolume->GetLayout()) != typeid (VolumeLayoutV2Hidden))
+                throw ParameterIncorrect (SRC_POS);
+        }
+
+        File backupFile;
+        backupFile.Open (FilePath (ToWide (backupFilePath)), File::CreateWrite);
+
+        RandomNumberGenerator::Start ();
+
+        // Re-encrypt normal volume header with new salt
+        SecureBuffer newHeaderBuffer (normalVolume->GetLayout()->GetHeaderSize());
+        Core->ReEncryptVolumeHeaderWithNewSalt (newHeaderBuffer, normalVolume->GetHeader(), pw, kf);
+        backupFile.Write (newHeaderBuffer);
+
+        if (hiddenVolume)
+        {
+            // Re-encrypt hidden volume header
+            Core->ReEncryptVolumeHeaderWithNewSalt (newHeaderBuffer, hiddenVolume->GetHeader(), hidPw, hidKf);
+        }
+        else
+        {
+            // Store random data in place of hidden volume header
+            shared_ptr <Basalt::EncryptionAlgorithm> ea = normalVolume->GetEncryptionAlgorithm ();
+            Core->RandomizeEncryptionAlgorithmKey (ea);
+            ea->Encrypt (newHeaderBuffer.GetRange (0, newHeaderBuffer.Size ()));
+        }
+
+        backupFile.Write (newHeaderBuffer);
+
+        return YES;
+    }
+    catch (const std::exception &e)
+    {
+        if (error) *error = ExceptionToError (e);
+        return NO;
+    }
+}
+
+// ---- Volume Header Restore (Internal Backup) ----
+
+- (BOOL)restoreVolumeHeadersFromInternalBackup:(NSString *)volumePath
+                                      password:(NSString *)password
+                                      keyfiles:(nullable NSArray<NSString *> *)keyfilePaths
+                                         error:(NSError **)error
+{
+    try
+    {
+        auto path = make_shared <VolumePath> (ToWide (volumePath));
+        auto pw = make_shared <VolumePassword> (ToWide (password));
+        auto kf = ToKeyfileList (keyfilePaths);
+
+#ifdef TC_UNIX
+        UserId origDeviceOwner ((uid_t) -1);
+
+        if (!Core->HasAdminPrivileges () && path->IsDevice ())
+        {
+            origDeviceOwner = FilesystemPath (wstring (*path)).GetOwner ();
+            Core->SetFileOwner (*path, UserId (getuid ()));
+        }
+
+        finally_do_arg2 (FilesystemPath, *path, UserId, origDeviceOwner,
+        {
+            if (finally_arg2.SystemId != (uid_t) -1)
+                Core->SetFileOwner (finally_arg, finally_arg2);
+        });
+#endif
+
+        // Open volume using backup headers
+        shared_ptr <Volume> volume = Core->OpenVolume (
+            path,
+            true, // preserveTimestamps
+            pw,
+            kf,
+            VolumeProtection::None,
+            shared_ptr <VolumePassword> (),
+            shared_ptr <KeyfileList> (),
+            false, // sharedAccessAllowed
+            Basalt::VolumeType::Unknown,
+            true   // useBackupHeaders
+        );
+
+        shared_ptr <VolumeLayout> layout = volume->GetLayout ();
+        if (typeid (*layout) == typeid (VolumeLayoutV1Normal) || typeid (*layout) == typeid (VolumeLayoutV1Hidden))
+        {
+            if (error)
+                *error = [NSError errorWithDomain:TCErrorDomain code:-1
+                    userInfo:@{NSLocalizedDescriptionKey: @"This volume format does not contain a backup header."}];
+            return NO;
+        }
+
+        RandomNumberGenerator::Start ();
+
+        // Re-encrypt volume header with new salt
+        SecureBuffer newHeaderBuffer (layout->GetHeaderSize());
+        Core->ReEncryptVolumeHeaderWithNewSalt (newHeaderBuffer, volume->GetHeader(), pw, kf);
+
+        // Write to primary header location
+        int headerOffset = layout->GetHeaderOffset ();
+        shared_ptr <File> volumeFile = volume->GetFile ();
+
+        if (headerOffset >= 0)
+            volumeFile->SeekAt (headerOffset);
+        else
+            volumeFile->SeekEnd (headerOffset);
+
+        volumeFile->Write (newHeaderBuffer);
+
+        return YES;
+    }
+    catch (const std::exception &e)
+    {
+        if (error) *error = ExceptionToError (e);
+        return NO;
+    }
+}
+
+// ---- Volume Header Restore (External Backup File) ----
+
+- (BOOL)restoreVolumeHeadersFromFile:(NSString *)volumePath
+                          backupFile:(NSString *)backupFilePath
+                            password:(NSString *)password
+                            keyfiles:(nullable NSArray<NSString *> *)keyfilePaths
+                               error:(NSError **)error
+{
+    try
+    {
+        auto path = make_shared <VolumePath> (ToWide (volumePath));
+        auto pw = make_shared <VolumePassword> (ToWide (password));
+        auto kf = ToKeyfileList (keyfilePaths);
+
+#ifdef TC_UNIX
+        UserId origDeviceOwner ((uid_t) -1);
+
+        if (!Core->HasAdminPrivileges () && path->IsDevice ())
+        {
+            origDeviceOwner = FilesystemPath (wstring (*path)).GetOwner ();
+            Core->SetFileOwner (*path, UserId (getuid ()));
+        }
+
+        finally_do_arg2 (FilesystemPath, *path, UserId, origDeviceOwner,
+        {
+            if (finally_arg2.SystemId != (uid_t) -1)
+                Core->SetFileOwner (finally_arg, finally_arg2);
+        });
+#endif
+
+        File backupFileObj;
+        backupFileObj.Open (FilePath (ToWide (backupFilePath)), File::OpenRead);
+
+        bool legacyBackup;
+        switch (backupFileObj.Length ())
+        {
+        case TC_VOLUME_HEADER_GROUP_SIZE:
+            legacyBackup = false;
+            break;
+
+        case TC_VOLUME_HEADER_SIZE_LEGACY * 2:
+            legacyBackup = true;
+            break;
+
+        default:
+            if (error)
+                *error = [NSError errorWithDomain:TCErrorDomain code:-1
+                    userInfo:@{NSLocalizedDescriptionKey: @"The backup file size is incorrect. This may not be a valid volume header backup."}];
+            return NO;
+        }
+
+        // Decrypt the backup header
+        shared_ptr <VolumeLayout> decryptedLayout;
+        shared_ptr <VolumePassword> passwordKey = Keyfile::ApplyListToPassword (kf, pw);
+
+        for (const auto &layout : VolumeLayout::GetAvailableLayouts ())
+        {
+            if (layout->HasDriveHeader ())
+                continue;
+
+            if (!legacyBackup && (typeid (*layout) == typeid (VolumeLayoutV1Normal) || typeid (*layout) == typeid (VolumeLayoutV1Hidden)))
+                continue;
+
+            if (legacyBackup && (typeid (*layout) == typeid (VolumeLayoutV2Normal) || typeid (*layout) == typeid (VolumeLayoutV2Hidden)))
+                continue;
+
+            SecureBuffer headerBuffer (layout->GetHeaderSize ());
+            backupFileObj.ReadAt (headerBuffer, layout->GetType () == Basalt::VolumeType::Hidden ? layout->GetHeaderSize () : 0);
+
+            if (layout->GetHeader ()->Decrypt (headerBuffer, *passwordKey, layout->GetSupportedKeyDerivationFunctions (), layout->GetSupportedEncryptionAlgorithms (), layout->GetSupportedEncryptionModes ()))
+            {
+                decryptedLayout = layout;
+                break;
+            }
+        }
+
+        if (!decryptedLayout)
+            throw PasswordIncorrect (SRC_POS);
+
+        File volumeFile;
+        volumeFile.Open (*path, File::OpenReadWrite, File::ShareNone, File::PreserveTimestamps);
+
+        RandomNumberGenerator::Start ();
+
+        // Re-encrypt and write primary header
+        SecureBuffer newHeaderBuffer (decryptedLayout->GetHeaderSize ());
+        Core->ReEncryptVolumeHeaderWithNewSalt (newHeaderBuffer, decryptedLayout->GetHeader (), pw, kf);
+
+        int headerOffset = decryptedLayout->GetHeaderOffset ();
+        if (headerOffset >= 0)
+            volumeFile.SeekAt (headerOffset);
+        else
+            volumeFile.SeekEnd (headerOffset);
+
+        volumeFile.Write (newHeaderBuffer);
+
+        // Write backup header too if the layout supports it
+        if (decryptedLayout->HasBackupHeader ())
+        {
+            Core->ReEncryptVolumeHeaderWithNewSalt (newHeaderBuffer, decryptedLayout->GetHeader (), pw, kf);
+
+            headerOffset = decryptedLayout->GetBackupHeaderOffset ();
+            if (headerOffset >= 0)
+                volumeFile.SeekAt (headerOffset);
+            else
+                volumeFile.SeekEnd (headerOffset);
+
+            volumeFile.Write (newHeaderBuffer);
+        }
+
+        return YES;
+    }
+    catch (const std::exception &e)
+    {
+        if (error) *error = ExceptionToError (e);
+        return NO;
+    }
+}
+
 @end
+
+// ---- Elevated service entry point ----
+
+extern "C" BOOL TCHandleCoreServiceArgument (int argc, char * _Nullable * _Nonnull argv)
+{
+    if (argc < 2 || strcmp (argv[1], TC_CORE_SERVICE_CMDLINE_OPTION) != 0)
+        return NO;
+
+    try
+    {
+        CoreService::ProcessElevatedRequests ();
+    }
+    catch (...) { }
+    return YES;
+}

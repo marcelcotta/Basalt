@@ -11,7 +11,7 @@
 #include "Pkcs5Kdf.h"
 #include "VolumePassword.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	Pkcs5Kdf::Pkcs5Kdf ()
 	{

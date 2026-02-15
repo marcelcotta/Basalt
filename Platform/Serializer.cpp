@@ -10,7 +10,7 @@
 #include "Memory.h"
 #include "Serializer.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	template <typename T>
 	T Serializer::Deserialize ()

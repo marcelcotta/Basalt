@@ -22,7 +22,7 @@
 
 // For specifications of the volume header see Common/Volumes.c
 
-namespace TrueCrypt
+namespace Basalt
 {
 	typedef uint64 VolumeTime;
 

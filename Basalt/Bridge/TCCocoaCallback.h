@@ -18,7 +18,7 @@
 
 #include "Core/VolumeOperations.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class CocoaOperationCallback : public VolumeOperationCallback
 	{

@@ -50,6 +50,9 @@ class VolumeManager: ObservableObject {
     // Inactivity tracking: slot -> (lastDataRead + lastDataWritten, lastActivityDate)
     private var lastIOActivity: [Int: (total: UInt64, date: Date)] = [:]
 
+    // Track which volumes already triggered a protection warning (avoid repeated alerts)
+    private var protectionAlertShown: Set<Int> = []
+
     // MARK: - Init
 
     init() {
@@ -93,7 +96,27 @@ class VolumeManager: ObservableObject {
 
     func refreshVolumes() {
         mountedVolumes = bridge.mountedVolumes()
+        checkProtectionTriggered()
         checkInactivity()
+    }
+
+    // MARK: - Hidden Volume Protection Alert
+
+    private func checkProtectionTriggered() {
+        for vol in mountedVolumes {
+            let slot = vol.slotNumber
+            if vol.hiddenVolumeProtectionTriggered && !protectionAlertShown.contains(slot) {
+                protectionAlertShown.insert(slot)
+                errorMessage = "Hidden volume protection triggered!\n\n"
+                    + "A write operation attempted to overwrite the hidden volume area. "
+                    + "The write was blocked and the hidden volume is safe, but the outer "
+                    + "volume's filesystem may be corrupted.\n\n"
+                    + "Dismount this volume immediately. Do not write any more data to it."
+            }
+        }
+        // Clean up stale entries for dismounted volumes
+        let activeSlots = Set(mountedVolumes.map(\.slotNumber))
+        protectionAlertShown.formIntersection(activeSlots)
     }
 
     // MARK: - Inactivity Tracking
@@ -146,7 +169,10 @@ class VolumeManager: ObservableObject {
 
     func mountVolume(path: String, password: String, keyfiles: [String] = [],
                      mountPoint: String? = nil, readOnly: Bool = false,
-                     useBackupHeaders: Bool = false) {
+                     useBackupHeaders: Bool = false,
+                     protectHiddenVolume: Bool = false,
+                     hiddenVolumePassword: String? = nil,
+                     hiddenVolumeKeyfiles: [String]? = nil) {
         isLoading = true
         loadingStatus = "Mounting..."
         errorMessage = nil
@@ -158,6 +184,9 @@ class VolumeManager: ObservableObject {
         if let mp = mountPoint { options.mountPoint = mp }
         options.readOnly = readOnly
         options.useBackupHeaders = useBackupHeaders
+        options.protectHiddenVolume = protectHiddenVolume
+        if let hvp = hiddenVolumePassword { options.protectionPassword = hvp }
+        if let hvk = hiddenVolumeKeyfiles, !hvk.isEmpty { options.protectionKeyfilePaths = hvk }
         preferences?.applyToMountOptions(options)
         // Explicit user choices override defaults
         if readOnly { options.readOnly = true }
@@ -428,6 +457,122 @@ class VolumeManager: ObservableObject {
 
     var availableHashAlgorithms: [String] {
         bridge.availableHashAlgorithms()
+    }
+
+    // MARK: - Backup Volume Headers
+
+    func backupVolumeHeaders(volumePath: String, password: String,
+                             keyfiles: [String]?,
+                             hiddenPassword: String?,
+                             hiddenKeyfiles: [String]?,
+                             backupFilePath: String) {
+        isLoading = true
+        errorMessage = nil
+
+        Task.detached { [bridge] in
+            var errMsg: String?
+
+            do {
+                try bridge.backupVolumeHeaders(
+                    volumePath,
+                    password: password,
+                    keyfiles: keyfiles,
+                    hiddenPassword: hiddenPassword,
+                    hiddenKeyfiles: hiddenKeyfiles,
+                    backupToFile: backupFilePath
+                )
+            } catch {
+                errMsg = error.localizedDescription
+            }
+
+            let resultErr = errMsg
+            await MainActor.run { [weak self] in
+                self?.isLoading = false
+                if resultErr == nil {
+                    self?.showBackupSheet = false
+                    self?.infoMessage = "Volume headers backed up successfully."
+                } else {
+                    self?.errorMessage = resultErr
+                }
+            }
+        }
+    }
+
+    // MARK: - Restore Volume Headers
+
+    func restoreVolumeHeadersFromInternal(volumePath: String, password: String,
+                                          keyfiles: [String]?) {
+        isLoading = true
+        errorMessage = nil
+
+        Task.detached { [bridge] in
+            var errMsg: String?
+
+            do {
+                try bridge.restoreVolumeHeaders(fromInternalBackup: volumePath,
+                                                password: password,
+                                                keyfiles: keyfiles)
+            } catch {
+                errMsg = error.localizedDescription
+            }
+
+            let resultErr = errMsg
+            await MainActor.run { [weak self] in
+                self?.isLoading = false
+                if resultErr == nil {
+                    self?.showRestoreSheet = false
+                    self?.infoMessage = "Volume headers restored successfully from internal backup."
+                } else {
+                    self?.errorMessage = resultErr
+                }
+            }
+        }
+    }
+
+    func restoreVolumeHeadersFromFile(volumePath: String, backupFilePath: String,
+                                      password: String, keyfiles: [String]?) {
+        isLoading = true
+        errorMessage = nil
+
+        Task.detached { [bridge] in
+            var errMsg: String?
+
+            do {
+                try bridge.restoreVolumeHeaders(fromFile: volumePath,
+                                                backupFile: backupFilePath,
+                                                password: password,
+                                                keyfiles: keyfiles)
+            } catch {
+                errMsg = error.localizedDescription
+            }
+
+            let resultErr = errMsg
+            await MainActor.run { [weak self] in
+                self?.isLoading = false
+                if resultErr == nil {
+                    self?.showRestoreSheet = false
+                    self?.infoMessage = "Volume headers restored successfully from backup file."
+                } else {
+                    self?.errorMessage = resultErr
+                }
+            }
+        }
+    }
+
+    // MARK: - Host Devices
+
+    /// Fetches host devices (disks and partitions) asynchronously on a background thread.
+    /// Requires admin privileges on macOS; returns empty array on failure.
+    /// The CoreService IPC can block for several seconds (device enumeration + admin elevation),
+    /// so this must never run on the main thread.
+    func getHostDevices(completion: @escaping ([TCHostDevice]) -> Void) {
+        Task.detached { [bridge] in
+            var error: NSError?
+            let devices = bridge.hostDevices(&error)
+            await MainActor.run {
+                completion(devices)
+            }
+        }
     }
 
 }

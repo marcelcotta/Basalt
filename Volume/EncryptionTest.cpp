@@ -18,7 +18,7 @@
 #include "EncryptionTest.h"
 #include "Pkcs5Kdf.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void EncryptionTest::TestAll ()
 	{

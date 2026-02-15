@@ -19,7 +19,7 @@
 #include "Thread.h"
 #include "Common/Tcdefs.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	// make_shared_auto, File, Stream, MemoryStream, Endian, Serializer, Serializable
 	void PlatformTest::SerializerTest ()

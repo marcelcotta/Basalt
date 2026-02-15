@@ -19,7 +19,7 @@
 #include <string>
 #include <sstream>
 
-namespace TrueCrypt
+namespace Basalt
 {
 	wstring CLICallback::ReadLine () const
 	{
@@ -180,22 +180,126 @@ namespace TrueCrypt
 		std::wcerr << L"Error: " << message << std::endl;
 	}
 
+	// ANSI color helpers (detect TTY once)
+	static bool IsTTY ()
+	{
+#ifdef TC_UNIX
+		return isatty (STDERR_FILENO) != 0;
+#else
+		return false;
+#endif
+	}
+
 	void CLICallback::EnrichRandomPool (shared_ptr <Hash> hash)
 	{
-		if (NonInteractive)
-		{
-			RandomNumberGenerator::Start ();
-			if (hash)
-				RandomNumberGenerator::SetHash (hash);
-			return;
-		}
-
 		RandomNumberGenerator::Start ();
 		if (hash)
 			RandomNumberGenerator::SetHash (hash);
 
-		std::wcerr << L"Please type at least 320 random characters and then press Enter:" << std::endl;
+		if (NonInteractive)
+			return;
 
+		const int goal = 64;  // recommended character count
+		bool colorEnabled = IsTTY ();
+
+		std::cerr << "Type random characters to add extra entropy, or press Enter to skip" << std::endl;
+		std::cerr << "(system entropy from the OS is already sufficient)" << std::endl;
+
+		if (colorEnabled)
+			std::cerr << "\033[2m" << "  [" << goal << " chars recommended]" << "\033[0m" << std::endl;
+
+		std::cerr << "  ";
+
+		// Draw initial counter
+		if (colorEnabled)
+			std::cerr << "\033[31m" << "0/" << goal << "\033[0m" << " " << std::flush;
+
+#ifdef TC_UNIX
+		// Raw terminal mode: read one char at a time, no echo, no line buffering
+		struct termios origTios, rawTios;
+		bool tiosOk = (tcgetattr (STDIN_FILENO, &origTios) == 0);
+		if (tiosOk)
+		{
+			rawTios = origTios;
+			rawTios.c_lflag &= ~(ECHO | ICANON);  // no echo, no canonical mode
+			rawTios.c_cc[VMIN] = 1;                 // read 1 byte at a time
+			rawTios.c_cc[VTIME] = 0;                // no timeout
+			tcsetattr (STDIN_FILENO, TCSADRAIN, &rawTios);
+		}
+
+		string collected;
+		while (true)
+		{
+			char ch;
+			ssize_t n = read (STDIN_FILENO, &ch, 1);
+			if (n <= 0)
+				break;
+
+			// Enter = done
+			if (ch == '\n' || ch == '\r')
+				break;
+
+			// Backspace handling (don't accumulate control chars)
+			if (ch == 127 || ch == '\b')
+			{
+				if (!collected.empty ())
+					collected.pop_back ();
+			}
+			else if (ch >= 32)  // printable only
+			{
+				collected += ch;
+			}
+
+			// Update live counter with color gradient
+			if (colorEnabled)
+			{
+				int count = (int) collected.size ();
+				int pct = std::min (count * 100 / goal, 100);
+
+				// Color: red (0%) → yellow (50%) → green (100%)
+				const char *color;
+				if (pct < 33)
+					color = "\033[31m";       // red
+				else if (pct < 66)
+					color = "\033[33m";       // yellow
+				else if (pct < 100)
+					color = "\033[32m";       // green
+				else
+					color = "\033[32m\033[1m"; // bright green (goal reached)
+
+				// Build mini-bar: 10 segments
+				const int barWidth = 10;
+				int filled = std::min (count * barWidth / goal, barWidth);
+				std::string bar;
+				for (int i = 0; i < barWidth; ++i)
+					bar += (i < filled) ? "\xe2\x96\x88" : "\xe2\x96\x91";
+
+				std::cerr << "\r  " << color << bar << " " << count << "/" << goal;
+				if (count >= goal)
+					std::cerr << " \xe2\x9c\x93";
+				std::cerr << "\033[0m" << "   " << std::flush;
+			}
+		}
+
+		// Restore terminal
+		if (tiosOk)
+			tcsetattr (STDIN_FILENO, TCSADRAIN, &origTios);
+
+		std::cerr << std::endl;
+
+		if (!collected.empty ())
+		{
+			RandomNumberGenerator::AddToPool (ConstBufferPtr (
+				reinterpret_cast <const byte *> (collected.data ()), collected.size ()));
+
+			if (colorEnabled)
+				std::cerr << "\033[32m" << "\xe2\x9c\x93 " << "\033[0m"
+				          << "Added " << collected.size () << " bytes of user entropy." << std::endl;
+			else
+				std::cerr << "Added " << collected.size () << " bytes of user entropy." << std::endl;
+		}
+#else
+		// Windows fallback: simple line-based input (no raw mode)
 		SetTerminalEcho (false);
 		wstring input = ReadLine ();
 		SetTerminalEcho (true);
@@ -205,6 +309,12 @@ namespace TrueCrypt
 			string utf8 = StringConverter::ToSingle (input);
 			RandomNumberGenerator::AddToPool (ConstBufferPtr (
 				reinterpret_cast <const byte *> (utf8.data ()), utf8.size ()));
+			std::cerr << "Added " << utf8.size () << " bytes of user entropy." << std::endl;
 		}
+		else
+		{
+			std::cerr << std::endl;
+		}
+#endif
 	}
 }

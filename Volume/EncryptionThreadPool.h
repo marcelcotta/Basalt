@@ -12,7 +12,7 @@
 #include "Platform/Platform.h"
 #include "EncryptionMode.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class EncryptionThreadPool
 	{

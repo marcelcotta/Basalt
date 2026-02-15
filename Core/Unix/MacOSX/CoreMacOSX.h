@@ -12,7 +12,7 @@
 #include "System.h"
 #include "Core/Unix/FreeBSD/CoreFreeBSD.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class CoreMacOSX : public CoreFreeBSD
 	{

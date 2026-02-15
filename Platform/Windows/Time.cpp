@@ -9,7 +9,7 @@
 #include "Platform/Time.h"
 #include <windows.h>
 
-namespace TrueCrypt
+namespace Basalt
 {
 	uint64 Time::GetCurrent ()
 	{

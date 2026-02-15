@@ -44,8 +44,6 @@ Requirements for Building TrueCrypt for Windows:
 - Microsoft Visual C++ 1.52 (available from MSDN Subscriber Downloads)
 - Microsoft Windows SDK for Windows 7 (configured for Visual C++)
 - Microsoft Windows Driver Kit 7.1.0 (build 7600.16385.1)
-- RSA Security Inc. PKCS #11 Cryptographic Token Interface (Cryptoki) 2.20
-  header files (available at ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-11/v2-20)
 - NASM assembler 2.08 or compatible
 - gzip compressor
 
@@ -84,15 +82,11 @@ Instructions for Building TrueCrypt for Windows:
    directory than '%SYSTEMDRIVE%\WinDDK', create an environment variable
    'WINDDK_ROOT' pointing to the DDK installation directory.
 
-3) Copy the PKCS #11 header files to a standard include path or create an
-   environment variable 'PKCS11_INC' pointing to the directory where
-   the PKCS #11 header files are installed.
+3) Open the solution file 'TrueCrypt.sln' in Microsoft Visual Studio 2008.
 
-4) Open the solution file 'TrueCrypt.sln' in Microsoft Visual Studio 2008.
+4) Select 'All' as the active solution configuration.
 
-5) Select 'All' as the active solution configuration.
-
-6) Build the solution.
+5) Build the solution.
 
 7) If successful, there should be newly built TrueCrypt binaries in the
    'Release' folder.
@@ -114,10 +108,6 @@ Requirements for Building TrueCrypt for Linux and Mac OS X:
   wxWidgets 2.8 library source code (available at http://www.wxwidgets.org)
 - FUSE library and header files (available at http://fuse.sourceforge.net
   and http://code.google.com/p/macfuse)
-- RSA Security Inc. PKCS #11 Cryptographic Token Interface (Cryptoki) 2.20
-  header files (available at ftp://ftp.rsasecurity.com/pub/pkcs/pkcs-11/v2-20)
-  located in a standard include path or in a directory defined by the
-  environment variable 'PKCS11_INC'.
 
 
 Instructions for Building TrueCrypt for Linux and Mac OS X:

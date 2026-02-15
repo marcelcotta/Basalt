@@ -7,6 +7,7 @@
 */
 
 #include <fstream>
+#include <set>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/param.h>
@@ -15,8 +16,11 @@
 #include <sys/wait.h>
 #include "CoreFreeBSD.h"
 #include "Core/Unix/CoreServiceProxy.h"
+#ifdef TC_MACOSX
+#include "Platform/Unix/Process.h"
+#endif
 
-namespace TrueCrypt
+namespace Basalt
 {
 	CoreFreeBSD::CoreFreeBSD ()
 	{
@@ -142,6 +146,64 @@ namespace TrueCrypt
 				}
 			}
 		}
+
+#ifdef TC_MACOSX
+		// Mark external/removable devices using diskutil.
+		// A single "diskutil list -plist external" call returns all external
+		// disk identifiers (e.g. "disk4", "disk6s1").  We collect them in a
+		// set and match against our enumerated rdiskN / rdiskNsM paths.
+		if (!pathListOnly)
+		{
+			try
+			{
+				set <string> externalIds;
+				list <string> args;
+				args.push_back ("list");
+				args.push_back ("-plist");
+				args.push_back ("external");
+				string xml = Process::Execute ("/usr/sbin/diskutil", args);
+
+				// Parse simple plist: extract <string>diskN</string> entries
+				// inside the <key>AllDisks</key> array.
+				size_t pos = xml.find ("<key>AllDisks</key>");
+				if (pos != string::npos)
+				{
+					size_t arrayEnd = xml.find ("</array>", pos);
+					while (pos < arrayEnd)
+					{
+						pos = xml.find ("<string>", pos);
+						if (pos == string::npos || pos >= arrayEnd)
+							break;
+						pos += 8;
+						size_t end = xml.find ("</string>", pos);
+						if (end == string::npos)
+							break;
+						externalIds.insert (xml.substr (pos, end - pos));
+						pos = end + 9;
+					}
+				}
+
+				for (auto &dev : devices)
+				{
+					// dev->Path is e.g. "/dev/rdisk4" — extract "disk4"
+					string id = StringConverter::ToSingle (wstring (dev->Path));
+					size_t slash = id.rfind ('/');
+					if (slash != string::npos)
+						id = id.substr (slash + 1);
+					if (id.size () > 0 && id[0] == 'r')
+						id = id.substr (1);
+
+					if (externalIds.count (id))
+					{
+						dev->Removable = true;
+						for (auto &part : dev->Partitions)
+							part->Removable = true;
+					}
+				}
+			}
+			catch (...) { }
+		}
+#endif
 
 		return devices;
 	}

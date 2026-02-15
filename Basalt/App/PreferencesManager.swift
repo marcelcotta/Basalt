@@ -81,7 +81,7 @@ class PreferencesManager: ObservableObject {
             "maxIdleMinutes": 60,
             "defaultPreserveTimestamps": true,
             "defaultReadOnly": false,
-            "openFinderAfterMount": false,
+            "openFinderAfterMount": true,
             "closeFinderOnDismount": true,
         ])
 

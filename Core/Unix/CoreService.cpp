@@ -20,7 +20,7 @@
 #include "CoreServiceRequest.h"
 #include "CoreServiceResponse.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	template <class T>
 	unique_ptr <T> CoreService::GetResponse ()
@@ -56,11 +56,11 @@ namespace TrueCrypt
 					throw_sys_if (read (STDIN_FILENO, &b, 1) != 1);
 					if (b != 0x00)
 						continue;
-					
+
 					throw_sys_if (read (STDIN_FILENO, &b, 1) != 1);
 					if (b != 0x11)
 						continue;
-					
+
 					throw_sys_if (read (STDIN_FILENO, &b, 1) != 1);
 					if (b == 0x22)
 						break;
@@ -76,7 +76,7 @@ namespace TrueCrypt
 				SystemLog::WriteException (e);
 #endif
 			}
-			catch (...)	{ }
+			catch (...) { }
 			_exit (1);
 		}
 	}
@@ -109,7 +109,7 @@ namespace TrueCrypt
 						if (!ElevatedServiceAvailable)
 						{
 							finally_do_arg (string *, &request->AdminPassword, { StringConverter::Erase (*finally_arg); });
-							
+
 							CoreService::StartElevated (*request);
 							ElevatedServiceAvailable = true;
 						}
@@ -281,6 +281,9 @@ namespace TrueCrypt
 			request.FastElevation = !ElevatedServiceAvailable;
 			request.ApplicationExecutablePath = Core->GetApplicationExecutablePath();
 
+			int elevationAttempts = 0;
+			const int maxElevationAttempts = 3;
+
 			while (!ElevatedServiceAvailable)
 			{
 				try
@@ -294,8 +297,21 @@ namespace TrueCrypt
 				{
 					if (!request.FastElevation)
 					{
+						elevationAttempts++;
+
 						ExceptionEventArgs args (e);
 						Core->WarningEvent.Raise (args);
+
+						string errOut = e.GetErrorOutput ();
+
+						if (elevationAttempts >= maxElevationAttempts)
+						{
+							string errMsg = !errOut.empty () ? errOut : "incorrect password or sudo not configured";
+							throw ElevationFailed (SRC_POS, "sudo", e.GetExitCode (), errMsg);
+						}
+
+						if (AdminPasswordRequestHandler)
+							AdminPasswordRequestHandler (errOut);
 					}
 
 					request.FastElevation = false;
@@ -493,6 +509,7 @@ namespace TrueCrypt
 
 		throw_sys_if (waitRes == -1);
 		exitCode = (WIFEXITED (status) ? WEXITSTATUS (status) : 1);
+
 		if (exitCode != 0)
 		{
 			string strErrOutput;
@@ -527,6 +544,7 @@ namespace TrueCrypt
 	}
 	
 	shared_ptr <GetStringFunctor> CoreService::AdminPasswordCallback;
+	std::function <void (const string &)> CoreService::AdminPasswordRequestHandler;
 
 	unique_ptr <Pipe> CoreService::AdminInputPipe;
 	unique_ptr <Pipe> CoreService::AdminOutputPipe;

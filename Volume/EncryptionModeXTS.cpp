@@ -10,7 +10,7 @@
 #include "Common/Crypto.h"
 #include "Platform/Memory.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void EncryptionModeXTS::Encrypt (byte *data, uint64 length) const
 	{

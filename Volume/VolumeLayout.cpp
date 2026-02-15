@@ -11,9 +11,8 @@
 #include "Volume/EncryptionModeLRW.h"
 #include "Volume/EncryptionModeXTS.h"
 #include "VolumeLayout.h"
-#include "Boot/Windows/BootCommon.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	VolumeLayout::VolumeLayout ()
 	{

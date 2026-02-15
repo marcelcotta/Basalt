@@ -20,7 +20,7 @@
 #include "Platform/Unix/Pipe.h"
 #include "Platform/Unix/Poller.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	string Process::Execute (const string &processName, const list <string> &arguments, int timeOut, ProcessExecFunctor *execFunctor, const Buffer *inputData)
 	{

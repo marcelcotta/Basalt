@@ -13,7 +13,7 @@
 #include "PlatformBase.h"
 #include "Serializable.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 #define TC_SERIALIZABLE_EXCEPTION(TYPE) TC_SERIALIZABLE (TYPE); \
 	virtual Exception *CloneNew () { return new TYPE (*this); } \

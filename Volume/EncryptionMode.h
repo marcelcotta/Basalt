@@ -13,7 +13,7 @@
 #include "Common/Crypto.h"
 #include "Cipher.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class EncryptionMode;
 	typedef list < shared_ptr <EncryptionMode> > EncryptionModeList;

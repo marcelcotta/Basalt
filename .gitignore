@@ -20,6 +20,12 @@ Mount/Drive_icon_96dpi.bmp.h
 Mount/Drive_icon_mask_96dpi.bmp.h
 Mount/Logo_96dpi.bmp.h
 
+# CMake build directories
+build_*/
+
+# Qt6 for Windows cross-compile (downloaded via aqtinstall, ~1GB)
+qt6-win-mingw/
+
 # macOS
 .DS_Store
 *.swp

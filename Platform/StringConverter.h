@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include "PlatformBase.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class StringConverter
 	{

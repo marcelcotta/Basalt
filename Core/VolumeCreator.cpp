@@ -19,7 +19,7 @@
 #include "VolumeCreator.h"
 #include "FatFormatter.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	VolumeCreator::VolumeCreator ()
 		: SizeDone (0)
@@ -202,6 +202,11 @@ namespace TrueCrypt
 				File::ShareNone);
 
 			HostSize = VolumeFile->Length();
+
+			// For device-hosted volumes: if caller passed Size == 0, use the
+			// full device capacity.  The GUI/CLI set Size=0 to mean "use device size".
+			if (options->Path.IsDevice() && options->Size == 0)
+				options->Size = HostSize;
 		}
 
 		try
@@ -310,6 +315,7 @@ namespace TrueCrypt
 			AbortRequested = false;
 
 			mProgressInfo.CreationInProgress = true;
+			mProgressInfo.TotalSize = options->Size;
 
 			struct ThreadFunctor : public Functor
 			{

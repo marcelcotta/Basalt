@@ -12,7 +12,7 @@
 #include "PlatformBase.h"
 #include "Stream.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class MemoryStream : public Stream
 	{

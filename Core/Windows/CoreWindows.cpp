@@ -25,7 +25,7 @@ extern "C" {
 #include "fuse.h"
 }
 
-namespace TrueCrypt
+namespace Basalt
 {
 	// ---- Mount Registry ----
 	// Cross-process volume discovery via %LOCALAPPDATA%/Basalt/mounts/
@@ -342,7 +342,7 @@ namespace TrueCrypt
 	{
 		HostDeviceList devices;
 
-		// Enumerate physical drives (\\.\PhysicalDriveN)
+		// Enumerate physical drives (\\.\PhysicalDriveN) and their partitions
 		for (int i = 0; i < 32; i++)
 		{
 			stringstream path;
@@ -357,6 +357,7 @@ namespace TrueCrypt
 			{
 				shared_ptr <HostDevice> device (new HostDevice);
 				device->Path = StringConverter::ToWide (path.str());
+				device->SystemNumber = (uint32) i;
 				device->Removable = false;
 
 				if (!pathListOnly)
@@ -368,6 +369,40 @@ namespace TrueCrypt
 					{
 						device->Size = (uint64) dg.Cylinders.QuadPart * dg.TracksPerCylinder *
 							dg.SectorsPerTrack * dg.BytesPerSector;
+						device->Removable = (dg.MediaType == RemovableMedia);
+					}
+
+					// Enumerate partitions via IOCTL_DISK_GET_DRIVE_LAYOUT_EX
+					uint8_t layoutBuf[4096];
+					if (DeviceIoControl (hDrive, IOCTL_DISK_GET_DRIVE_LAYOUT_EX,
+						NULL, 0, layoutBuf, sizeof (layoutBuf), &bytesReturned, NULL))
+					{
+						DRIVE_LAYOUT_INFORMATION_EX *layout = (DRIVE_LAYOUT_INFORMATION_EX *) layoutBuf;
+
+						for (DWORD p = 0; p < layout->PartitionCount; p++)
+						{
+							PARTITION_INFORMATION_EX &part = layout->PartitionEntry[p];
+							if (part.PartitionLength.QuadPart == 0)
+								continue;
+
+							// Skip container/extended partitions (MBR type 0x05/0x0F)
+							if (part.PartitionStyle == PARTITION_STYLE_MBR &&
+								(part.Mbr.PartitionType == PARTITION_EXTENDED ||
+								 part.Mbr.PartitionType == PARTITION_XINT13_EXTENDED))
+								continue;
+
+							shared_ptr <HostDevice> partition (new HostDevice);
+
+							// Windows partition path: \\.\HarddiskNPartitionM (1-based)
+							stringstream partPath;
+							partPath << "\\\\.\\Harddisk" << i << "Partition" << (part.PartitionNumber);
+							partition->Path = StringConverter::ToWide (partPath.str());
+							partition->Size = (uint64) part.PartitionLength.QuadPart;
+							partition->Removable = device->Removable;
+							partition->SystemNumber = part.PartitionNumber;
+
+							device->Partitions.push_back (partition);
+						}
 					}
 				}
 
@@ -618,7 +653,10 @@ namespace TrueCrypt
 		return wstring (1, letter) + L":";
 	}
 
-	// Global Core singletons — Windows does not need CoreServiceProxy
-	shared_ptr <CoreBase> Core (new CoreWindows);
-	shared_ptr <CoreBase> CoreDirect (new CoreWindows);
+	// Global Core singletons — initialized by CoreBridge::Initialize() in the GUI,
+	// or by CLI main() before use.  Default-constructed (null) to avoid creating
+	// heavyweight CoreWindows instances during static initialization, which can
+	// conflict with Qt's event loop setup.
+	shared_ptr <CoreBase> Core;
+	shared_ptr <CoreBase> CoreDirect;
 }

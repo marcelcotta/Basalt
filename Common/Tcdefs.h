@@ -31,9 +31,7 @@
 #define BYTES_PER_TB                    1099511627776LL
 #define BYTES_PER_PB                    1125899906842624LL
 
-/* GUI/driver errors */
-
-#define WIDE(x) (LPWSTR)L##x
+// --- Integer types ---
 
 #ifdef _MSC_VER
 
@@ -44,13 +42,9 @@ typedef unsigned __int8 byte;
 typedef unsigned __int16 uint16;
 typedef unsigned __int32 uint32;
 
-#ifdef TC_NO_COMPILER_INT64
-typedef unsigned __int32	TC_LARGEST_COMPILER_UINT;
-#else
 typedef unsigned __int64	TC_LARGEST_COMPILER_UINT;
 typedef __int64 int64;
 typedef unsigned __int64 uint64;
-#endif
 
 #else // !_MSC_VER
 
@@ -101,123 +95,29 @@ typedef uint64 TC_LARGEST_COMPILER_UINT;
 typedef unsigned __int8 uint_8t;
 typedef unsigned __int16 uint_16t;
 typedef unsigned __int32 uint_32t;
-#ifndef TC_NO_COMPILER_INT64
 typedef uint64 uint_64t;
-#endif
 
-typedef union 
+typedef union
 {
-	struct 
+	struct
 	{
 		unsigned __int32 LowPart;
 		unsigned __int32 HighPart;
 	};
-#ifndef TC_NO_COMPILER_INT64
 	uint64 Value;
-#endif
 
 } UINT64_STRUCT;
 
-#ifdef TC_WINDOWS_BOOT
+// --- Fatal exception (null-pointer dereference for crash dump) ---
+#define TC_THROW_FATAL_EXCEPTION	*(char *) 0 = 0
 
-#	ifdef  __cplusplus
-extern "C"
-#	endif
-void ThrowFatalException (int line);
-
-#	define TC_THROW_FATAL_EXCEPTION	ThrowFatalException (__LINE__)
-#elif defined (TC_WINDOWS_DRIVER)
-#	define TC_THROW_FATAL_EXCEPTION KeBugCheckEx (SECURITY_SYSTEM, __LINE__, 0, 0, 'TC')
-#else
-#	define TC_THROW_FATAL_EXCEPTION	*(char *) 0 = 0
-#endif
-
-#ifdef TC_WINDOWS_DRIVER
-
-#include <ntifs.h>
-#include <ntddk.h>		/* Standard header file for nt drivers */
-#include <ntdddisk.h>		/* Standard I/O control codes  */
-
-#define TCalloc(size) ((void *) ExAllocatePoolWithTag( NonPagedPool, size, 'MMCT' ))
-#define TCfree(memblock) ExFreePoolWithTag( memblock, 'MMCT' )
-
-#define DEVICE_DRIVER
-
-#ifndef BOOL
-typedef int BOOL;
-#endif
-
-#ifndef TRUE
-#define TRUE 1
-#endif
-
-#ifndef FALSE
-#define FALSE !TRUE
-#endif
-
-#else				/* !TC_WINDOWS_DRIVER */
-
-#define TCalloc malloc
-#define TCfree free
-
-#ifdef _WIN32
-
-#ifndef TC_LOCAL_WIN32_WINNT_OVERRIDE
-#	undef _WIN32_WINNT
-#	define	_WIN32_WINNT 0x0501	/* Does not apply to the driver */
-#endif
-
-#include <windows.h>		/* Windows header */
-#include <commctrl.h>		/* The common controls */
-#include <process.h>		/* Process control */
-#include <winioctl.h>
-#include <stdio.h>		/* For sprintf */
-
-#endif				/* _WIN32 */
-
-#endif				/* !TC_WINDOWS_DRIVER */
-
+// --- Stringification ---
 #ifndef TC_TO_STRING
 #	define TC_TO_STRING2(n) #n
 #	define TC_TO_STRING(n) TC_TO_STRING2(n)
 #endif
 
-#ifdef DEVICE_DRIVER
-#	if defined (DEBUG) || 0
-#		if 1 // DbgPrintEx is not available on Windows 2000
-#			define Dump DbgPrint
-#		else
-#			define Dump(...) DbgPrintEx (DPFLTR_IHVDRIVER_ID, DPFLTR_ERROR_LEVEL, __VA_ARGS__)
-#		endif
-#		define DumpMem(...) DumpMemory (__VA_ARGS__)
-#	else
-#		define Dump(...)
-#		define DumpMem(...)
-#	endif
-#endif
-
-#if !defined (trace_msg) && !defined (TC_WINDOWS_BOOT)
-#	ifdef DEBUG
-#		ifdef DEVICE_DRIVER
-#			define trace_msg Dump
-#		elif defined (_WIN32)
-#			define trace_msg(...) do { char msg[2048]; _snprintf (msg, sizeof (msg), __VA_ARGS__); OutputDebugString (msg); } while (0)
-#		endif
-#		define trace_point trace_msg (__FUNCTION__ ":" TC_TO_STRING(__LINE__) "\n")
-#	else
-#		define trace_msg(...)
-#		define trace_point
-#	endif
-#endif
-
-#ifdef DEVICE_DRIVER
-#	define TC_EVENT KEVENT
-#	define TC_WAIT_EVENT(EVENT) KeWaitForSingleObject (&EVENT, Executive, KernelMode, FALSE, NULL)
-#elif defined (_WIN32)
-#	define TC_EVENT HANDLE
-#	define TC_WAIT_EVENT(EVENT) WaitForSingleObject (EVENT, INFINITE)
-#endif
-
+// --- Secure memory wipe ---
 #ifdef _WIN32
 #define burn(mem,size) do { volatile char *burnm = (volatile char *)(mem); int burnc = size; RtlSecureZeroMemory (mem, size); while (burnc--) *burnm++ = 0; } while (0)
 #else
@@ -230,41 +130,10 @@ typedef int BOOL;
 #define burn(mem,size) memset_s((mem), (size), 0, (size))
 #endif
 
-// The size of the memory area to wipe is in bytes and it must be a multiple of 8.
-// SECURITY: FAST_ERASE64 now delegates to burn() which uses memset_s().
-// The previous volatile-pointer loop was not guaranteed by the C/C++ standards
-// to survive compiler optimization for stack-allocated buffers about to go out
-// of scope. memset_s() (C11 Annex K) is the only standards-compliant way to
+// SECURITY: FAST_ERASE64 delegates to burn() which uses memset_s().
+// memset_s() (C11 Annex K) is the only standards-compliant way to
 // ensure the wipe is not optimized away.
 #define FAST_ERASE64(mem,size) burn((mem),(size))
-
-#ifdef TC_WINDOWS_BOOT
-#	ifndef max
-#		define max(a,b) (((a) > (b)) ? (a) : (b))
-#	endif
-
-#	ifdef  __cplusplus
-extern "C"
-#	endif
-void EraseMemory (void *memory, int size);
-
-#	undef burn
-#	define burn EraseMemory
-#endif
-
-#ifdef MAX_PATH
-#define TC_MAX_PATH		MAX_PATH
-#else
-#define TC_MAX_PATH		260	/* Includes the null terminator */
-#endif
-
-#define TC_STR_RELEASED_BY "Released by TrueCrypt Foundation on " TC_STR_RELEASE_DATE
-
-#define MAX_URL_LENGTH	2084 /* Internet Explorer limit. Includes the terminating null character. */
-
-#define TC_HOMEPAGE "http://www.truecrypt.org/"
-#define TC_APPLINK "http://www.truecrypt.org/applink?version=" VERSION_STRING
-#define TC_APPLINK_SECURE "https://www.truecrypt.org/applink?version=" VERSION_STRING
 
 // Avoid conflict with macOS <mach/error.h> which #defines ERR_SUCCESS
 #ifdef ERR_SUCCESS
@@ -274,9 +143,7 @@ void EraseMemory (void *memory, int size);
 enum
 {
 	/* WARNING: ADD ANY NEW CODES AT THE END (DO NOT INSERT THEM BETWEEN EXISTING). DO *NOT* DELETE ANY
-	EXISTING CODES! Changing these values or their meanings may cause incompatibility with other versions
-	(for example, if a new version of the TrueCrypt installer receives an error code from an installed
-	driver whose version is lower, it will report and interpret the error incorrectly). */
+	EXISTING CODES! Changing these values or their meanings may cause incompatibility with other versions. */
 
 	ERR_SUCCESS								= 0,
 	ERR_OS_ERROR							= 1,

@@ -17,7 +17,6 @@
 #include "File.h"
 #include "FilesystemPath.h"
 #include "Finally.h"
-#include "ForEach.h"
 #include "Functor.h"
 #include "Memory.h"
 #include "Mutex.h"

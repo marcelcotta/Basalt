@@ -19,6 +19,7 @@
 #------ Targets ------
 # libTrueCryptCore	Build the core static library (no UI dependency)
 # cli			Build standalone command-line tool
+# gui			Build Qt6 GUI (uses CMake for Qt6 deps)
 # clean			Remove build artifacts
 
 
@@ -54,10 +55,6 @@ ifeq "$(origin DEBUG)" "command line"
 	ifneq "$(DEBUG)" "0"
 		TC_BUILD_CONFIG := Debug
 	endif
-endif
-
-ifdef PKCS11_INC
-	C_CXX_FLAGS += -I$(PKCS11_INC)
 endif
 
 ifneq "$(origin VERBOSE)" "command line"
@@ -207,7 +204,7 @@ LFLAGS := $(LFLAGS) $(TC_EXTRA_LFLAGS)
 
 CORE_DIRS := Platform Volume Driver/Fuse Core
 
-.PHONY: libTrueCryptCore cli clean darwinfuse
+.PHONY: libTrueCryptCore cli gui clean darwinfuse
 
 #------ DarwinFUSE (macOS only — NFSv4 FUSE replacement) ------
 
@@ -258,6 +255,55 @@ cli: libTrueCryptCore
 	$(MAKE) -C CLI -f CLI.make APPNAME=basalt-cli
 
 
+#------ Qt6 GUI (uses CMake — handles Qt6 dependency) ------
+
+gui:
+	@echo "Building Basalt Qt6 GUI via CMake..."
+ifeq "$(TC_BUILD_CONFIG)" "Release"
+	cmake -B build_gui -DCMAKE_BUILD_TYPE=Release -DBASALT_BUILD_GUI=ON 2>&1 | tail -5
+else
+	cmake -B build_gui -DCMAKE_BUILD_TYPE=Debug -DBASALT_BUILD_GUI=ON 2>&1 | tail -5
+endif
+	cmake --build build_gui --target basalt-gui -- -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+	@echo "GUI binary: build_gui/bin/basalt-gui"
+
+
+#------ Qt6 GUI for Windows (cross-compile from macOS via MinGW + aqtinstall) ------
+
+gui-windows:
+	@echo "Cross-compiling Basalt Qt6 GUI for Windows..."
+	@if [ ! -d qt6-win-mingw ]; then \
+		echo "ERROR: Qt6 for Windows/MinGW not found."; \
+		echo "  Install: pip install aqtinstall"; \
+		echo "  Then:    aqt install-qt windows desktop 6.10.2 win64_mingw --outputdir qt6-win-mingw"; \
+		exit 1; \
+	fi
+ifeq "$(TC_BUILD_CONFIG)" "Release"
+	cmake -B build_wingui -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-qt6.cmake -DBASALT_BUILD_GUI=ON -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -5
+else
+	cmake -B build_wingui -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-qt6.cmake -DBASALT_BUILD_GUI=ON -DCMAKE_BUILD_TYPE=Debug 2>&1 | tail -5
+endif
+	cmake --build build_wingui --target basalt-gui -- -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+	@echo "Windows GUI binary: build_wingui/bin/basalt-gui.exe"
+	@echo "Run 'make deploy-windows' to create a distributable folder with all DLLs."
+
+deploy-windows: gui-windows
+	@echo "Packaging Basalt for Windows..."
+	@QT_DIR=$$(find qt6-win-mingw -path "*/mingw_64" -type d | head -1) && \
+	rm -rf dist/windows && mkdir -p dist/windows/platforms && \
+	cp build_wingui/bin/basalt-gui.exe dist/windows/ && \
+	cp build_wingui/bin/basalt-cli.exe dist/windows/ 2>/dev/null; \
+	cp "$$QT_DIR/bin/Qt6Core.dll" dist/windows/ && \
+	cp "$$QT_DIR/bin/Qt6Gui.dll" dist/windows/ && \
+	cp "$$QT_DIR/bin/Qt6Widgets.dll" dist/windows/ && \
+	cp "$$QT_DIR/bin/libgcc_s_seh-1.dll" dist/windows/ && \
+	cp "$$QT_DIR/bin/libstdc++-6.dll" dist/windows/ && \
+	cp "$$QT_DIR/bin/libwinpthread-1.dll" dist/windows/ && \
+	cp "$$QT_DIR/plugins/platforms/qwindows.dll" dist/windows/platforms/ && \
+	echo "Done: dist/windows/ ($$(ls dist/windows/*.{exe,dll} 2>/dev/null | wc -l | tr -d ' ') files)" && \
+	du -sh dist/windows/
+
+
 #------ Clean ------
 
 clean:
@@ -269,4 +315,5 @@ clean:
 ifeq "$(shell uname -s)" "Darwin"
 	$(MAKE) -C $(BASE_DIR)/DarwinFUSE clean 2>/dev/null || true
 endif
+	rm -rf $(BASE_DIR)/build_gui
 	rm -f $(BASE_DIR)/libTrueCryptCore.a

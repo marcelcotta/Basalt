@@ -14,7 +14,7 @@
 #include "SharedPtr.h"
 #include "Stream.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class FileStream : public Stream
 	{

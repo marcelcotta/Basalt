@@ -17,7 +17,7 @@
 #include <vector>
 #include <iostream>
 
-namespace TrueCrypt
+namespace Basalt
 {
 	// VolumeOperationCallback implementation using pure POSIX terminal I/O.
 	// No wxWidgets dependency.

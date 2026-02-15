@@ -11,7 +11,7 @@
 
 #include "CoreService.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	template <class T>
 	class CoreServiceProxy : public T

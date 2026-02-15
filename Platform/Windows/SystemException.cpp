@@ -11,7 +11,7 @@
 #include "Platform/SystemException.h"
 #include "Platform/StringConverter.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	SystemException::SystemException ()
 		: ErrorCode ((int64) GetLastError ())

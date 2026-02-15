@@ -9,7 +9,7 @@
 #include "Exception.h"
 #include "MemoryStream.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	MemoryStream::MemoryStream (const ConstBufferPtr &data) :
 		ReadPosition (0)

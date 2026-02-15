@@ -10,7 +10,7 @@
 #include "VolumeInfo.h"
 #include "Platform/SerializerFactory.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void VolumeInfo::Deserialize (shared_ptr <Stream> stream)
 	{

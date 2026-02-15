@@ -12,7 +12,7 @@
 #include "Platform/Platform.h"
 
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class Cipher;
 	typedef vector < shared_ptr <Cipher> > CipherList;

@@ -33,7 +33,7 @@ extern "C" {
 #include "fuse.h"
 }
 
-namespace TrueCrypt
+namespace Basalt
 {
 	// ---- iSCSI Block-I/O Wrappers (C-callable) ----
 	// These bridge the C iSCSI target to the C++ FuseService crypto layer.

@@ -21,7 +21,7 @@
 #include "HostDevice.h"
 #include "MountOptions.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class CoreBase
 	{

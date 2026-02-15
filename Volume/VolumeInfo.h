@@ -14,7 +14,7 @@
 #include "Volume/Volume.h"
 #include "Volume/VolumeSlot.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class VolumeInfo;
 	typedef list < shared_ptr <VolumeInfo> > VolumeInfoList;

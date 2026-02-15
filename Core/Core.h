@@ -11,7 +11,7 @@
 
 #include "CoreBase.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	extern shared_ptr <CoreBase> Core;
 	extern shared_ptr <CoreBase> CoreDirect;

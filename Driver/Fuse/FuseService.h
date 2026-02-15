@@ -17,7 +17,7 @@
 #include "Volume/VolumeInfo.h"
 #include "Volume/Volume.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 
 	class FuseService

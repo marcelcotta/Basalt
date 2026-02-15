@@ -11,9 +11,18 @@
 
 #include "Platform/Platform.h"
 #include "Volume/Hash.h"
-#include "Common/Random.h"
+#include "Common/Crypto.h"
 
-namespace TrueCrypt
+// RNG pool size — must be divisible by the digest size of each hash function
+#define RNG_POOL_SIZE	320
+#if RNG_POOL_SIZE % SHA512_DIGESTSIZE || RNG_POOL_SIZE % WHIRLPOOL_DIGESTSIZE || RNG_POOL_SIZE % RIPEMD160_DIGESTSIZE
+#error RNG_POOL_SIZE must be divisible by the size of the output of each of the implemented hash functions.
+#endif
+
+// After every RANDMIX_BYTE_INTERVAL-th byte written to the pool, mix the entire pool
+#define RANDMIX_BYTE_INTERVAL	16
+
+namespace Basalt
 {
 	class RandomNumberGenerator
 	{

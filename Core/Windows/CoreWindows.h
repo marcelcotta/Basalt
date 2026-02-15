@@ -11,7 +11,7 @@
 
 #include "Core/CoreBase.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class CoreWindows : public CoreBase
 	{
@@ -30,6 +30,7 @@ namespace TrueCrypt
 		virtual int GetOSMinorVersion () const;
 		virtual HostDeviceList GetHostDevices (bool pathListOnly = false) const;
 		virtual VolumeInfoList GetMountedVolumes (const VolumePath &volumePath = VolumePath()) const;
+		virtual VolumeSlotNumber GetFirstSlotNumber () const { return 4; }  // D: — skip A:/B:/C:
 		virtual bool HasAdminPrivileges () const { return false; }  // No UAC needed
 		virtual bool IsDevicePresent (const DevicePath &device) const;
 		virtual bool IsInPortableMode () const { return false; }

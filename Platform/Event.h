@@ -10,11 +10,10 @@
 #define TC_HEADER_Platform_Event
 
 #include "PlatformBase.h"
-#include "ForEach.h"
 #include "Mutex.h"
 #include "SharedPtr.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	struct EventArgs
 	{

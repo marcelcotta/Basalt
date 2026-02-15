@@ -14,7 +14,7 @@
 #include "Serializer.h"
 #include "SerializerFactory.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class Serializable
 	{

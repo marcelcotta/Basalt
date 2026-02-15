@@ -7,7 +7,6 @@
   Native SwiftUI app &middot; Argon2id key derivation &middot; DarwinFUSE (no kext) &middot; Universal Binary (arm64 + x86_64)
 </p>
 <p align="center">
-  <img src="https://img.shields.io/badge/version-1.0-blue" alt="Version 1.0">
   <img src="https://img.shields.io/badge/macOS-12%2B-blue" alt="macOS 12+">
   <img src="https://img.shields.io/badge/Linux-CLI-green" alt="Linux CLI">
   <img src="https://img.shields.io/badge/Windows-CLI-green" alt="Windows CLI">
@@ -23,260 +22,100 @@ Basalt takes a different path: fix what's broken, remove what shouldn't be there
 and build a native macOS app from scratch. No wxWidgets, no password cache, no
 window dressing — just solid encryption with modern key derivation.
 
+<p align="center">
+  <img src="docs/screenshots/main-window.png" width="720" alt="Basalt main window with mounted volumes">
+</p>
 
-## What Basalt Does Differently
-
-### Compared to TrueCrypt 7.1a
-
-TrueCrypt's crypto was audited and found sound. Its implementation had issues:
-
-| Area | TrueCrypt 7.1a | Basalt |
-|------|---------------|--------|
-| **Key derivation** | PBKDF2, 1,000–2,000 iterations | Argon2id-Max (1 GB, p=8) default + PBKDF2 at 500,000 iterations |
-| **Memory erasure** | `volatile` pointer trick (can be optimized away) | `memset_s()` (C11, guaranteed) |
-| **RNG pool mixing** | Addition (`+=`, accumulates bias) | XOR (`^=`, entropy-neutral) |
-| **Password cache** | Plaintext passwords kept in heap | Removed entirely |
-| **Entropy source** | `/dev/urandom` file I/O | `getentropy()` kernel syscall |
-| **Key comparison** | `memcmp()` (timing side-channel) | Constant-time comparison |
-| **XTS keys** | No validation | Rejects identical key pairs |
-| **PBKDF2 block counter** | Single byte (RFC non-compliant) | 4-byte big-endian (RFC 2898) |
-| **GUI toolkit** | wxWidgets (86 files, ~2 MB dependency) | Native SwiftUI / standalone CLI |
-| **FUSE** | Requires macFUSE kernel extension | DarwinFUSE (macOS) / iSCSI loopback (Windows) — no kext needed |
-| **Screen capture** | Unprotected | `NSWindow.sharingType = .none` |
-| **FUSE mounts** | Default options | `nosuid,nodev` |
-| **AES on ARM** | Software T-tables (cache-timing vulnerable) | ARMv8 hardware AES (constant-time) |
-| **Mount points** | No validation | System directories blocked |
-| **Volume creation** | GUI only | GUI + CLI (`basalt-cli --create`) |
+<p align="center">
+  <img src="docs/screenshots/mount-dialog.png" width="720" alt="Mount volume dialog">
+  <img src="docs/screenshots/create-encryption.png" width="720" alt="Volume creation — encryption settings with Argon2id-Max">
+</p>
 
 
-### Compared to VeraCrypt
+## Key Features
 
-VeraCrypt fixed many of the same issues. Basalt diverges where VeraCrypt made
-choices we disagree with:
+- **Argon2id key derivation** — 1 GB memory cost, 8 threads. GPU-resistant by design.
+- **Opens TrueCrypt & VeraCrypt volumes** — plus automatic KDF upgrade prompt for legacy iterations.
+- **Hidden volumes** — create and mount with plausible deniability, with write protection for the outer volume.
+- **Native SwiftUI app** — no wxWidgets, no Qt on macOS. Clean, dark-mode interface.
+- **Cross-platform CLI** — `basalt-cli` on macOS, Linux, and Windows.
+- **DarwinFUSE built-in** — no macFUSE, no kernel extension, no SIP changes.
+- **Zero-state design** — no password cache, no favorites, no history. Forensic analysis reveals nothing.
+- **Auto-dismount** — on inactivity, screen lock, sleep, quit, and logout.
+- **Screen capture protection** — the entire app is invisible to screenshots, screen recording, and AirPlay.
+- **~60,000 lines of attack surface removed** — boot loader, kernel driver, PKCS#11, wxWidgets all deleted.
 
-| Area | VeraCrypt | Basalt |
-|------|-----------|--------|
-| **Ciphers** | AES, Serpent, Twofish + Camellia + **Kuznyechik** | AES, Serpent, Twofish only |
-| **Kuznyechik** | Included despite S-box concerns (Perrin & Udovenko 2019) | Excluded — unexplained algebraic structure from FSB |
-| **PIM** | User-tunable iterations (can weaken to ~2,000) | Fixed high iterations (500,000) — no user footgun |
-| **Password cache** | Still caches plaintext passwords in memory | Removed entirely |
-| **Force dismount** | Off by default | On by default |
-| **Bootloader** | UEFI DcsBoot signed by Microsoft UEFI CA 2011 | No bootloader — no third-party trust chain |
-| **Pre-compiled blobs** | DCS bootloader binaries, no reproducible builds | 100% built from source |
-| **Key derivation** | PBKDF2 (same iterations as Basalt at PIM=0) | Argon2id (memory-hard) + PBKDF2 |
-| **Argon2id parallelism** | p=1 ("consistent behavior") | p=4 / p=8 (actual GPU resistance) |
-| **FUSE dependency** | Requires macFUSE / OSXFUSE | DarwinFUSE (macOS) / iSCSI (Windows) — zero external dependencies |
-
-**Why no Kuznyechik?** The S-box was designed by the FSB and claimed to be random.
-Researchers proved it contains a hidden algebraic structure — the same class of
-"nothing up my sleeve" violation that made Dual_EC_DRBG a scandal.
-
-**Why no PIM?** PIM provides ~10 bits of entropy (values 1–999) while allowing
-users to set dangerously low iterations. Adding 2–3 characters to your password
-gives the same brute-force resistance without the risk.
+<details>
+<summary><strong>More screenshots</strong></summary>
+<br>
+<p align="center">
+  <img src="docs/screenshots/create-location.png" width="720" alt="Volume creation — location and size">
+  <img src="docs/screenshots/create-password.png" width="720" alt="Volume creation — password and keyfiles">
+  <img src="docs/screenshots/create-format.png" width="720" alt="Volume creation — filesystem format">
+  <img src="docs/screenshots/protection-triggered.png" width="720" alt="Hidden volume protection triggered warning">
+</p>
+</details>
 
 
 ## Volume Compatibility
 
-Basalt opens volumes from all three ecosystems. Magic bytes are encrypted inside
-the header — a Basalt volume on disk is indistinguishable from random data.
+| Format | Mount | Create |
+|--------|:-----:|:------:|
+| Basalt | ✓ | ✓ |
+| TrueCrypt 7.1a | ✓ | ✓ (legacy mode) |
+| VeraCrypt | ✓ | — |
 
-| Magic | Format | Mount | Create |
-|-------|--------|:-----:|:------:|
-| `BSLT` | Basalt | ✓ | ✓ |
-| `TRUE` | TrueCrypt 7.1a | ✓ | ✓ (legacy mode) |
-| `VERA` | VeraCrypt | ✓ | — |
-
-- **TrueCrypt 7.1a volumes**: Mount without delay (legacy KDFs tried first). Automatic upgrade prompt for iteration counts.
-- **VeraCrypt volumes**: AES, Serpent, Twofish and their cascades. Camellia/Kuznyechik volumes are not supported.
-- **Basalt volumes**: Argon2id or hardened PBKDF2. Cannot be opened by TrueCrypt or VeraCrypt.
-
-
-## Zero-State Design
-
-Basalt remembers nothing.
-
-- **No password cache** — enter your password every time
-- **No favorites, no history** — no record of which containers exist or when they were used
-- **No default keyfiles** — keyfile selection is explicit, per-operation
-- **No window state** — nothing persisted to disk
-- **Screen capture blocked** — the entire app window is invisible to screenshots, screen recording, and AirPlay
-
-Forensic analysis of the application reveals nothing about your volumes.
-
-
-## Auto-Dismount
-
-Volumes are automatically closed when you're not there:
-
-- **Inactivity timeout** — per-volume I/O tracking (5/10/30/60/120 min)
-- **Screen saver** — volumes close when the screen locks
-- **System sleep** — volumes close before the machine sleeps
-- **App quit** — async dismount before exit
-- **Logout / shutdown** — volumes close on system power events
-
-Force dismount is on by default — volumes close even when processes hold open handles.
-
-
-## Security Hardening Summary
-
-34 security measures across 9 waves. Full details in [SECURITY.md](SECURITY.md).
-
-**Critical fixes**: `memset_s()` for memory erasure, XOR-based RNG mixing, PBKDF2
-RFC compliance, constant-time key comparison, XTS key validation, stack password wipe.
-
-**Structural**: `mlock()` for key memory, password cache removal, 500x PBKDF2 iteration
-increase, Argon2id with 512 MB / 1 GB memory cost.
-
-**Platform**: ARMv8 hardware AES (cache-timing immune), `getentropy()` syscall,
-screen capture protection, FUSE `nosuid,nodev`, mount point validation.
-
-**CVE fixes**: CVE-2025-23021 (mount point traversal), CVE-2024-54187 (PATH hijacking).
-
-
-## Brute-Force Resistance
-
-Real-world attack costs on a single RTX 4090 (24 GB VRAM):
-
-| Configuration | Attempts/sec | Time for 50-bit key |
-|---------------|-------------:|---------------------:|
-| TrueCrypt 7.1a (PBKDF2, 1,000 iter) | ~500,000 | **2 seconds** |
-| VeraCrypt (PBKDF2, 500,000 iter) | ~1,000 | ~19 minutes |
-| VeraCrypt (Argon2id, 96 MB, p=1) | ~250 | ~75 minutes |
-| **Basalt Standard** (Argon2id, 512 MB, p=4) | ~48 | ~6.5 hours |
-| **Basalt Maximum** (Argon2id, 1 GB, p=8) | ~24 | ~13 hours |
-
-For a 60-bit password (4 random words), multiply by 1,000.
-For a 70-bit password (5 random words), multiply by 1,000,000.
-
-The memory cost is the key: A 4090 with 24 GB VRAM can run ~24 parallel
-1 GB Argon2id instances. A CPU attacker with 1 TB RAM could run 1,000 —
-but costs $50,000+ instead of $1,600.
+Existing volumes just work. Legacy TrueCrypt volumes get an automatic upgrade
+prompt for modern key derivation.
 
 
 ## Building
 
 ### macOS
 
-Requirements: macOS 12+, Xcode Command Line Tools, pkg-config
-
-No external FUSE installation required — DarwinFUSE is built-in.
+Requirements: macOS 12+, Xcode Command Line Tools, pkg-config.
+No external FUSE installation required.
 
 ```sh
-# Universal binary (arm64 + x86_64) — recommended
 bash build-universal.sh release
-
-# Or build components individually:
-make BASE_DIR=/tmp/truecrypt-build NOASM=1 libTrueCryptCore   # Core library
-make BASE_DIR=/tmp/truecrypt-build NOASM=1 cli                 # CLI tool
-cd Basalt && bash build.sh debug                               # SwiftUI app
 ```
 
 ### Linux
 
-Requirements: g++ (5+), make, pkg-config, libfuse-dev, dm-crypt kernel module
-
 ```sh
-# Debian/Ubuntu
-sudo apt install build-essential pkg-config libfuse-dev
-
-# Fedora/RHEL
-sudo dnf install gcc-c++ make pkgconfig fuse-devel
-
-# Build and test
+sudo apt install build-essential pkg-config libfuse-dev   # Debian/Ubuntu
 make NOASM=1 cli
-./CLI/basalt-cli --test
-
-# Mount a volume
 sudo ./CLI/basalt-cli --mount /path/to/volume
 ```
 
-The Linux build produces `basalt-cli` (command-line only). The SwiftUI GUI is macOS-exclusive.
-
 ### Windows
 
-Requirements: Windows Vista+ (x86_64), CMake, Visual Studio or MSVC Build Tools
-
-The Windows iSCSI Initiator service (`MSiSCSI`) is built into all editions since
-Vista. No additional drivers or FUSE installations required.
-
 ```powershell
-# Build
 cmake -B build_windows -G "Visual Studio 17 2022" -A x64
 cmake --build build_windows --config Release
-
-# Mount a volume
 basalt-cli.exe volume.tc F:
-
-# List mounted volumes
-basalt-cli.exe -l
-
-# Dismount (from another terminal)
-basalt-cli.exe -d volume.tc
 ```
 
-The Windows build produces `basalt-cli.exe` (command-line only, x86_64). ARM64 Windows
-is not currently supported.
-
-
-## Windows CLI
-
-The CLI runs in foreground mode — the process stays alive while the volume is
-mounted. Press Ctrl+C to dismount, or run `basalt-cli -d <volume>` from another
-terminal. This is the same behavior as `rclone mount`, `sshfs-win`, and other
-FUSE-based tools on Windows.
-
-Background/daemon mode is not supported on Windows due to the lack of POSIX
-`fork()`. For background operation, run the CLI in a minimized window or as a
-scheduled task.
-
-**How it works:** On Windows, Basalt runs a minimal iSCSI target on localhost.
-The built-in Windows iSCSI Initiator connects to it and creates a real local
-block device — no virtual filesystem layer, no kernel extension. Each drive
-letter gets its own port (F: → 3265, G: → 3266, etc.), allowing multiple
-volumes to be mounted simultaneously.
+On Windows, Basalt uses a local iSCSI target — no FUSE, no kernel driver.
+The built-in iSCSI Initiator creates a real block device per drive letter.
 
 
 ## Architecture
 
 ```
 Basalt.app (SwiftUI)          Native macOS UI (macOS 12+)
-  TCCoreBridge.mm (ObjC++)    Bridge: Foundation <-> C++
+  TCCoreBridge.mm (ObjC++)    Bridge: Foundation ↔ C++
 basalt-cli (C++)              Standalone terminal tool (macOS + Linux + Windows)
   libTrueCryptCore.a          Crypto + Volume + FUSE + Platform
 ```
 
-The C++ namespace remains `TrueCrypt` for internal compatibility.
-On Linux, mounting uses libfuse + device-mapper (`dm-crypt`); on macOS it uses
-DarwinFUSE (built-in NFSv4 loopback) + `hdiutil`; on Windows it uses a local
-iSCSI target + the built-in Windows iSCSI Initiator.
 
+## Documentation
 
-## DarwinFUSE
-
-Basalt includes DarwinFUSE, an open-source userspace filesystem layer for macOS
-using NFSv4 loopback. No kernel extension, no System Extension, no SIP changes,
-no Recovery Mode.
-
-DarwinFUSE implements the standard FUSE API (v26) and can serve as a drop-in
-replacement for macFUSE in other projects.
-
-
-## Design Decisions
-
-Some things Basalt deliberately doesn't do:
-
-- **No full disk encryption** — Container-based only. FDE requires a bootloader, and bootloaders require trusting Microsoft or building your own pre-boot environment. Use FileVault (macOS) or LUKS (Linux) for system encryption.
-- **Not notarized** — No Apple in the trust chain. Approve manually in System Settings → Privacy & Security.
-- **Legacy hash algorithms maintained** — SHA-1 and RIPEMD-160 exist for opening old volumes, not for creating new ones. Argon2id-Max is the default.
-
-
-## Actual Limitations
-
-Things we'd fix if we could:
-
-- **No authenticated encryption** — XTS mode doesn't detect tampering. AES-GCM would, but requires a format change.
-- **Serpent/Twofish are software-only** — No hardware acceleration exists for these ciphers on any platform. AES with ARMv8 extensions is faster and constant-time; cascades trade speed for defense-in-depth.
+| Document | Contents |
+|----------|----------|
+| **[SECURITY.md](SECURITY.md)** | All 34 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
+| **[License.txt](License.txt)** | TrueCrypt License 3.0 |
 
 
 ## License

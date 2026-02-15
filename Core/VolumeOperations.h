@@ -19,7 +19,7 @@
 #include "Core/MountOptions.h"
 #include "Core/RandomNumberGenerator.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	// Abstract callback interface for user interaction during volume operations.
 	// No UI dependency. Each UI layer (SwiftUI, CLI) provides its own implementation.

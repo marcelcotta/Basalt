@@ -12,7 +12,7 @@
 #include "Platform/Platform.h"
 #include "Platform/Serializable.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class VolumePassword : public Serializable
 	{

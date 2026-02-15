@@ -16,7 +16,7 @@
 #endif
 #include "PlatformBase.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	class Mutex
 	{

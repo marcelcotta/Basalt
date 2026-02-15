@@ -18,7 +18,7 @@
 #include "Driver/Fuse/FuseService.h"
 #include "Core/Unix/CoreServiceProxy.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	CoreMacOSX::CoreMacOSX ()
 	{
@@ -121,7 +121,7 @@ namespace TrueCrypt
 		if (!options.NoFilesystem && options.MountPoint && !options.MountPoint->IsEmpty())
 		{
 			args.push_back ("-mount");
-			args.push_back ("required");
+			args.push_back ("optional");
 
 			// Let the system specify mount point except when the user specified a non-default one
 			if (string (*options.MountPoint).find (GetDefaultMountPointPrefix()) != 0)

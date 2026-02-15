@@ -31,20 +31,23 @@
 #else
 #include <getopt.h>
 #endif
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <clocale>
 #include <signal.h>
 #include <list>
 
 #ifdef TC_UNIX
+#include <termios.h>
 #include <unistd.h>
 #endif
 #ifdef TC_WINDOWS
 #include <io.h>
 #endif
 
-using namespace TrueCrypt;
+using namespace Basalt;
 
 // ---- Command IDs ----
 
@@ -60,6 +63,7 @@ enum CLICommand
 	CmdRestoreHeaders,
 	CmdChangePassword,
 	CmdCreateKeyfile,
+	CmdListDevices,
 	CmdVersion,
 	CmdHelp
 };
@@ -71,6 +75,81 @@ static volatile sig_atomic_t TerminationRequested = 0;
 static void OnSignal (int sig)
 {
 	TerminationRequested = 1;
+}
+
+// ---- ANSI color helpers ----
+
+#ifdef TC_WINDOWS
+static bool SupportsColor () { return false; }  // TODO: detect Windows 10+ VT100 support
+#else
+static bool SupportsColor () { return isatty (STDERR_FILENO); }
+#endif
+
+// ANSI escapes — narrow strings only.  std::wcerr on macOS breaks on
+// non-ASCII wchar_t (e.g. ✓), so ALL output uses narrow std::cerr/cout
+// with UTF-8 byte sequences and StringConverter::ToSingle() for wstrings.
+static const char *ansiReset   = "";
+static const char *ansiRed     = "";
+static const char *ansiGreen   = "";
+static const char *ansiYellow  = "";
+static const char *ansiCyan    = "";
+static const char *ansiBold    = "";
+static const char *ansiDim     = "";
+
+static void InitColors ()
+{
+	if (SupportsColor ())
+	{
+		ansiReset  = "\033[0m";
+		ansiRed    = "\033[31m";
+		ansiGreen  = "\033[32m";
+		ansiYellow = "\033[33m";
+		ansiCyan   = "\033[36m";
+		ansiBold   = "\033[1m";
+		ansiDim    = "\033[2m";
+	}
+}
+
+static wstring FormatSize (uint64 size);  // forward declaration
+
+// Shorthand for converting wstring to narrow UTF-8 for std::cerr/cout output
+static inline string W (const wstring &ws) { return StringConverter::ToSingle (ws); }
+
+// ---- Progress bar ----
+
+static void DrawProgressBar (uint64 done, uint64 total, double elapsedSec)
+{
+	if (total == 0) return;
+	int pct = (int) (done * 100 / total);
+	const int barWidth = 30;
+	int filled = (int) (done * barWidth / total);
+
+	std::string bar;
+	for (int i = 0; i < barWidth; ++i)
+		bar += (i < filled) ? "\xe2\x96\x88" : "\xe2\x96\x91";  // █ and ░
+
+	std::cerr << "\r  " << ansiCyan << bar << ansiReset
+	          << "  " << ansiBold << pct << "%" << ansiReset
+	          << "  " << ansiDim;
+
+	// Size progress
+	std::cerr << W (FormatSize (done)) << " / " << W (FormatSize (total));
+
+	// ETA
+	if (elapsedSec > 1.0 && done > 0)
+	{
+		double bytesPerSec = done / elapsedSec;
+		uint64 remaining = total - done;
+		int etaSec = (int) (remaining / bytesPerSec);
+		int etaMin = etaSec / 60;
+		etaSec %= 60;
+		if (etaMin > 0)
+			std::cerr << "  ETA " << etaMin << "m " << etaSec << "s";
+		else
+			std::cerr << "  ETA " << etaSec << "s";
+	}
+
+	std::cerr << ansiReset << "   " << std::flush;
 }
 
 // ---- Size formatting ----
@@ -113,7 +192,7 @@ static uint64 ParseSize (const string &s)
 			val *= 1024ULL * 1024 * 1024;
 		else
 		{
-			std::wcerr << L"Invalid size suffix: " << suffix << std::endl;
+			std::cerr << ansiRed << "Invalid size suffix: " << suffix << ansiReset << std::endl;
 			throw ParameterIncorrect (SRC_POS);
 		}
 	}
@@ -145,15 +224,40 @@ static void FormatHfsPlus (const string &volumePath, shared_ptr <VolumePassword>
 		throw ParameterIncorrect (SRC_POS);
 	}
 
-	// Run newfs_hfs
+	// Format with HFS+ via diskutil (does not require root, unlike newfs_hfs)
 	list <string> args;
-	args.push_back ("-v");
+	args.push_back ("eraseVolume");
+	args.push_back ("HFS+");
 	args.push_back ("Basalt");
 	args.push_back (virtualDev);
 
 	try
 	{
-		Process::Execute ("/sbin/newfs_hfs", args);
+		int retries = 5;
+		while (true)
+		{
+			try
+			{
+				Process::Execute ("/usr/sbin/diskutil", args);
+				break;
+			}
+			catch (...)
+			{
+				if (--retries <= 0)
+					throw;
+				Thread::Sleep (500);
+			}
+		}
+
+		// diskutil eraseVolume auto-mounts the new filesystem (e.g. on
+		// /Volumes/Basalt).  Unmount it before we dismount the Basalt
+		// FUSE volume, otherwise hdiutil detach will fail with EBUSY.
+		list <string> umArgs;
+		umArgs.push_back ("unmount");
+		umArgs.push_back ("force");
+		umArgs.push_back (virtualDev);
+		try { Process::Execute ("/usr/sbin/diskutil", umArgs); }
+		catch (...) { }
 	}
 	catch (...)
 	{
@@ -183,14 +287,41 @@ static bool TerminalSupportsColor ()
 		mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
 		SetConsoleMode (hOut, mode);
 	}
+	// Set console output codepage to UTF-8 so box-drawing characters
+	// (██, ╔, ╗, ║, ╚, ╝, ═) render correctly instead of showing
+	// garbled CP437 sequences like â-^â-^â.
+	SetConsoleOutputCP (65001);  // CP_UTF8
 	return true;
 #else
 	return isatty (fileno (stderr)) != 0;
 #endif
 }
 
+// Write a UTF-8 string directly to the Windows console, bypassing the
+// C/C++ runtime's locale-dependent conversion.  After SetConsoleOutputCP(65001),
+// WriteConsoleA interprets the bytes as UTF-8 and renders them correctly —
+// std::cerr / printf do not, because MinGW's C runtime still uses the
+// process locale (typically CP1252 or the system ANSI codepage).
+#ifdef TC_WINDOWS
+static void WriteStderr (const char *utf8)
+{
+	HANDLE hErr = GetStdHandle (STD_ERROR_HANDLE);
+	if (hErr != INVALID_HANDLE_VALUE)
+	{
+		DWORD written = 0;
+		WriteConsoleA (hErr, utf8, (DWORD)strlen (utf8), &written, nullptr);
+	}
+}
+#endif
+
 static void ShowBanner ()
 {
+#ifdef TC_WINDOWS
+	// Ensure UTF-8 output codepage even when TerminalSupportsColor() wasn't
+	// called yet (e.g. plain-text fallback path).  Safe to call multiple times.
+	SetConsoleOutputCP (65001);  // CP_UTF8
+#endif
+
 	// Block-letter "BASALT" in ANSI Shadow style (figlet).
 	// Two-tone per line: solid blocks (██) in lighter anthracite,
 	// box-drawing shadow chars (╔╗╚╝═║) in darker anthracite.
@@ -207,7 +338,7 @@ static void ShowBanner ()
 	if (!TerminalSupportsColor ())
 	{
 		// Plain-text fallback for pipes / dumb terminals
-		std::cerr <<
+		const char *plain =
 			"\n"
 			u8" ██████╗  █████╗ ███████╗ █████╗ ██╗  ████████╗\n"
 			u8" ██╔══██╗██╔══██╗██╔════╝██╔══██╗██║  ╚══██╔══╝\n"
@@ -216,10 +347,15 @@ static void ShowBanner ()
 			u8" ██████╔╝██║  ██║███████║██║  ██║███████╗██║\n"
 			u8" ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝\n"
 			"\n";
+#ifdef TC_WINDOWS
+		WriteStderr (plain);
+#else
+		std::cerr << plain;
+#endif
 		return;
 	}
 
-	std::cerr <<
+	const char *colored =
 		"\n"
 		"\033[38;5;245m ██████\033[38;5;241m╗\033[38;5;245m  █████\033[38;5;241m╗\033[38;5;245m ███████\033[38;5;241m╗\033[38;5;245m █████\033[38;5;241m╗\033[38;5;245m ██\033[38;5;241m╗\033[38;5;245m  ████████\033[38;5;241m╗\033[0m\n"
 		"\033[38;5;243m ██\033[38;5;240m╔══\033[38;5;243m██\033[38;5;240m╗\033[38;5;243m██\033[38;5;240m╔══\033[38;5;243m██\033[38;5;240m╗\033[38;5;243m██\033[38;5;240m╔════╝\033[38;5;243m██\033[38;5;240m╔══\033[38;5;243m██\033[38;5;240m╗\033[38;5;243m██\033[38;5;240m║\033[38;5;243m  \033[38;5;240m╚══\033[38;5;243m██\033[38;5;240m╔══╝\033[0m\n"
@@ -229,6 +365,12 @@ static void ShowBanner ()
 		"\033[38;5;238m \033[38;5;236m╚═════╝\033[38;5;238m \033[38;5;236m╚═╝\033[38;5;238m  \033[38;5;236m╚═╝╚══════╝╚═╝\033[38;5;238m  \033[38;5;236m╚═╝╚══════╝╚═╝\033[0m\n"
 		"\033[38;5;99m  encrypted volume management\033[0m\n"
 		"\n";
+
+#ifdef TC_WINDOWS
+	WriteStderr (colored);
+#else
+	std::cerr << colored;
+#endif
 }
 
 // ---- Help text ----
@@ -248,6 +390,7 @@ static void ShowHelp (const char *argv0)
 		"  --restore-headers PATH   Restore volume headers\n"
 		"  --change, -C PATH        Change password/keyfiles\n"
 		"  --create-keyfile PATH    Create a new keyfile\n"
+		"  --list-devices           List available devices/partitions\n"
 		"  --test                   Run self-tests\n"
 		"  --version                Display version\n"
 		"  --help, -h               Display this help\n"
@@ -259,11 +402,11 @@ static void ShowHelp (const char *argv0)
 		"  --encryption=ALG         Encryption algorithm (default: AES)\n"
 		"  --hash=HASH              Hash algorithm (default: Argon2id-Max)\n"
 		"  --filesystem=TYPE        Filesystem: fat, hfs, none (default: hfs on macOS)\n"
+		"  --hidden                 Create a hidden volume inside an existing container\n"
 		"  --quick                  Quick format (skip random data fill)\n"
 		"  --new-password=PASS      New password (for --change)\n"
 		"  --new-keyfiles=K1[,K2]   New keyfiles (for --change)\n"
 		"  --mount-options=OPTS     Mount options (readonly,headerbak,nokernelcrypto,timestamp)\n"
-		"  --slot=N                 Volume slot number (1-64)\n"
 		"  --force                  Force mount/dismount\n"
 		"  --non-interactive        No user interaction\n"
 		"  --verbose, -v            Verbose output\n"
@@ -284,8 +427,17 @@ static void ShowHelp (const char *argv0)
 #else
 		"  " << argv0 << " volume.tc /mnt/tc\n"
 #endif
+		"  " << argv0 << " -c volume.tc --hidden --size=50M --password=hidden_pass\n"
 		"  " << argv0 << " -d volume.tc\n"
 		"  " << argv0 << " -l\n"
+		"  " << argv0 << " --list-devices\n"
+#ifdef TC_WINDOWS
+		"  " << argv0 << " -c \\\\.\\PhysicalDrive2 --password=secret    Create on device\n"
+		"  " << argv0 << " \\\\.\\PhysicalDrive2 F:                      Mount device\n"
+#else
+		"  " << argv0 << " -c /dev/disk2 --password=secret              Create on device\n"
+		"  " << argv0 << " /dev/disk2 /mnt/tc                           Mount device\n"
+#endif
 		"  " << argv0 << " --test\n"
 		;
 }
@@ -356,7 +508,7 @@ static void ParseMountOptions (MountOptions &options, const string &arg)
 			options.PreserveTimestamps = false;
 		else
 		{
-			std::wcerr << L"Unknown mount option: " << StringConverter::ToWide (token) << std::endl;
+			std::cerr << ansiRed << "Unknown mount option: " << token << ansiReset << std::endl;
 			exit (1);
 		}
 	}
@@ -370,60 +522,124 @@ static void ListMountedVolumes (bool verbose)
 
 	if (volumes.empty ())
 	{
-		std::wcout << L"No volumes mounted." << std::endl;
+		std::cerr << ansiDim << "No volumes mounted." << ansiReset << std::endl;
 		return;
 	}
 
-	for (const auto &vol : volumes)
+	if (!verbose)
 	{
-		std::wcout << vol->SlotNumber << L": " << wstring (vol->Path);
-
-		if (!vol->VirtualDevice.IsEmpty ())
-			std::wcout << L" " << wstring (vol->VirtualDevice);
-
-		if (!vol->MountPoint.IsEmpty ())
-			std::wcout << L" " << wstring (vol->MountPoint);
-
-		std::wcout << std::endl;
-
-		if (verbose)
+		// Compact table: Slot  Volume  Mount Point  Size  Encryption
+		// First pass: compute column widths
+		size_t wSlot = 4, wPath = 6, wMount = 11, wSize = 4, wEnc = 10;
+		for (const auto &vol : volumes)
 		{
-			std::wcout << L"  Type:           " << (vol->HiddenVolumeProtectionTriggered ? L"Hidden (protection triggered)" : (vol->Type == VolumeType::Hidden ? L"Hidden" : L"Normal")) << std::endl;
-			std::wcout << L"  Size:           " << FormatSize (vol->Size) << std::endl;
-			std::wcout << L"  Encryption:     " << vol->EncryptionAlgorithmName << std::endl;
-			std::wcout << L"  PKCS-5 PRF:     " << vol->Pkcs5PrfName << std::endl;
-			std::wcout << L"  Read-only:      " << (vol->Protection == VolumeProtection::ReadOnly ? L"Yes" : L"No") << std::endl;
-			std::wcout << std::endl;
+			wPath  = std::max (wPath,  wstring (vol->Path).size ());
+			wMount = std::max (wMount, wstring (vol->MountPoint).size ());
+			wSize  = std::max (wSize,  FormatSize (vol->Size).size ());
+			wEnc   = std::max (wEnc,   wstring (vol->EncryptionAlgorithmName).size ());
+		}
+
+		// Header
+		std::cerr << ansiBold;
+		string hSlot = "Slot";   while (hSlot.size () < wSlot) hSlot += ' ';
+		string hPath = "Volume"; while (hPath.size () < wPath) hPath += ' ';
+		string hMount = "Mount Point"; while (hMount.size () < wMount) hMount += ' ';
+		string hSize = "Size"; while (hSize.size () < wSize) hSize += ' ';
+		string hEnc  = "Encryption";
+		std::cerr << "  " << hSlot << "  " << hPath << "  " << hMount << "  " << hSize << "  " << hEnc << ansiReset << std::endl;
+
+		// Separator
+		std::cerr << ansiDim << "  ";
+		for (size_t i = 0; i < wSlot; ++i) std::cerr << "\xe2\x94\x80";
+		std::cerr << "  ";
+		for (size_t i = 0; i < wPath; ++i) std::cerr << "\xe2\x94\x80";
+		std::cerr << "  ";
+		for (size_t i = 0; i < wMount; ++i) std::cerr << "\xe2\x94\x80";
+		std::cerr << "  ";
+		for (size_t i = 0; i < wSize; ++i) std::cerr << "\xe2\x94\x80";
+		std::cerr << "  ";
+		for (size_t i = 0; i < wEnc; ++i) std::cerr << "\xe2\x94\x80";
+		std::cerr << ansiReset << std::endl;
+
+		// Rows
+		for (const auto &vol : volumes)
+		{
+			stringstream slotStr;
+			slotStr << vol->SlotNumber;
+			string sSlot = slotStr.str ();
+			while (sSlot.size () < wSlot) sSlot += ' ';
+
+			string sPath = W (wstring (vol->Path));
+			while (sPath.size () < wPath) sPath += ' ';
+
+			string sMount = W (wstring (vol->MountPoint));
+			while (sMount.size () < wMount) sMount += ' ';
+
+			string sSize = W (FormatSize (vol->Size));
+			while (sSize.size () < wSize) sSize += ' ';
+
+			string sEnc = W (vol->EncryptionAlgorithmName);
+
+			std::cout << "  " << ansiDim << sSlot << ansiReset
+			           << "  " << ansiBold << sPath << ansiReset
+			           << "  " << ansiCyan << sMount << ansiReset
+			           << "  " << sSize
+			           << "  " << ansiDim << sEnc << ansiReset
+			           << std::endl;
+
+			if (vol->HiddenVolumeProtectionTriggered)
+				std::cerr << "  " << ansiRed << ansiBold << "\xe2\x9a\xa0 PROTECTION TRIGGERED"
+				           << ansiReset << " \xe2\x80\x94 hidden volume safe, outer filesystem may be corrupted" << std::endl;
 		}
 	}
-}
-
-// ---- Volume properties ----
-
-static void DisplayVolumeProperties (const VolumePath &path)
-{
-	shared_ptr <VolumeInfo> vol = Core->GetMountedVolume (path);
-	if (!vol)
+	else
 	{
-		std::wcerr << L"Volume is not mounted." << std::endl;
-		exit (1);
+		// Verbose: detailed per-volume output
+		for (const auto &vol : volumes)
+		{
+			std::cout << ansiBold << ansiCyan << "\xe2\x96\x88 " << W (wstring (vol->Path)) << ansiReset << std::endl;
+			std::cout << ansiDim << "  Slot:       " << ansiReset << vol->SlotNumber << std::endl;
+			std::cout << ansiDim << "  Mount:      " << ansiReset << ansiCyan << W (wstring (vol->MountPoint)) << ansiReset << std::endl;
+			std::cout << ansiDim << "  Device:     " << ansiReset << W (wstring (vol->VirtualDevice)) << std::endl;
+			std::cout << ansiDim << "  Type:       " << ansiReset
+			           << (vol->HiddenVolumeProtectionTriggered
+			               ? (string (ansiRed) + ansiBold + "\xe2\x9a\xa0 PROTECTION TRIGGERED"
+			                  + ansiReset + " \xe2\x80\x94 hidden volume safe, outer filesystem may be corrupted")
+			               : (vol->Type == VolumeType::Hidden ? string ("Hidden") : string ("Normal"))) << std::endl;
+			std::cout << ansiDim << "  Size:       " << ansiReset << W (FormatSize (vol->Size)) << std::endl;
+			std::cout << ansiDim << "  Encryption: " << ansiReset << W (vol->EncryptionAlgorithmName) << std::endl;
+			std::cout << ansiDim << "  KDF:        " << ansiReset << W (vol->Pkcs5PrfName) << std::endl;
+			std::cout << ansiDim << "  Read-only:  " << ansiReset
+			           << (vol->Protection == VolumeProtection::ReadOnly ? "Yes" : "No") << std::endl;
+			std::cout << std::endl;
+		}
 	}
-
-	std::wcout << L"Slot:             " << vol->SlotNumber << std::endl;
-	std::wcout << L"Volume:           " << wstring (vol->Path) << std::endl;
-	std::wcout << L"Virtual Device:   " << wstring (vol->VirtualDevice) << std::endl;
-	std::wcout << L"Mount Directory:  " << wstring (vol->MountPoint) << std::endl;
-	std::wcout << L"Size:             " << FormatSize (vol->Size) << std::endl;
-	std::wcout << L"Type:             " << (vol->Type == VolumeType::Hidden ? L"Hidden" : L"Normal") << std::endl;
-	std::wcout << L"Encryption:       " << vol->EncryptionAlgorithmName << std::endl;
-	std::wcout << L"PKCS-5 PRF:       " << vol->Pkcs5PrfName << std::endl;
-	std::wcout << L"Protection:       " << (vol->Protection == VolumeProtection::ReadOnly ? L"Read-Only" : (vol->Protection == VolumeProtection::HiddenVolumeReadOnly ? L"Hidden Volume (read-only)" : L"None")) << std::endl;
 }
 
 // ---- Main ----
 
 int main (int argc, char *argv[])
 {
+	// Use system locale for correct UTF-8 handling of passwords and paths
+	std::setlocale (LC_ALL, "");
+	InitColors ();
+
+#ifdef TC_UNIX
+	// Elevated service mode — invoked by sudo from CoreService::StartElevated().
+	// Must be checked before anything else (signal handlers, option parsing, etc.)
+	// to avoid initializing the normal application when running as a privileged helper.
+	if (argc > 1 && strcmp (argv[1], TC_CORE_SERVICE_CMDLINE_OPTION) == 0)
+	{
+		try
+		{
+			CoreService::ProcessElevatedRequests ();
+			return 0;
+		}
+		catch (...) { }
+		return 1;
+	}
+#endif
+
 	// Signal handlers
 	signal (SIGINT, OnSignal);
 	signal (SIGTERM, OnSignal);
@@ -445,8 +661,10 @@ int main (int argc, char *argv[])
 		{ "force",           no_argument,       nullptr, 'f' },
 		{ "hash",            required_argument, nullptr, 'H' },
 		{ "help",            no_argument,       nullptr, 'h' },
+		{ "hidden",          no_argument,       nullptr, 'W' },
 		{ "keyfiles",        required_argument, nullptr, 'k' },
 		{ "list",            no_argument,       nullptr, 'l' },
+		{ "list-devices",    no_argument,       nullptr, 'D' },
 		{ "mount",           no_argument,       nullptr, 'm' },
 		{ "mount-options",   required_argument, nullptr, 'M' },
 		{ "new-keyfiles",    required_argument, nullptr, 'N' },
@@ -456,7 +674,6 @@ int main (int argc, char *argv[])
 		{ "quick",           no_argument,       nullptr, 'Q' },
 		{ "restore-headers", required_argument, nullptr, 'R' },
 		{ "size",            required_argument, nullptr, 'Z' },
-		{ "slot",            required_argument, nullptr, 'S' },
 		{ "test",            no_argument,       nullptr, 'T' },
 		{ "verbose",         no_argument,       nullptr, 'v' },
 		{ "version",         no_argument,       nullptr, 'V' },
@@ -480,6 +697,7 @@ int main (int argc, char *argv[])
 	bool force = false;
 	bool nonInteractive = false;
 	bool quickFormat = false;
+	bool hiddenVolume = false;
 
 	int opt;
 	int optIndex = 0;
@@ -544,6 +762,10 @@ int main (int argc, char *argv[])
 			nonInteractive = true;
 			break;
 
+		case 'W':  // --hidden
+			hiddenVolume = true;
+			break;
+
 		case 'k':  // --keyfiles
 			argKeyfiles = optarg;
 			break;
@@ -555,6 +777,10 @@ int main (int argc, char *argv[])
 
 		case 'l':  // --list
 			command = CmdList;
+			break;
+
+		case 'D':  // --list-devices
+			command = CmdListDevices;
 			break;
 
 		case 'm':  // --mount
@@ -584,19 +810,6 @@ int main (int argc, char *argv[])
 		case 'R':  // --restore-headers
 			command = CmdRestoreHeaders;
 			argVolumePath = optarg;
-			break;
-
-		case 'S':  // --slot
-			{
-				int slot = std::atoi (optarg);
-				if (slot >= 1 && slot <= 64)
-					mountOptions.SlotNumber = slot;
-				else
-				{
-					std::cerr << "Invalid slot number: " << optarg << std::endl;
-					return 1;
-				}
-			}
 			break;
 
 		case 'T':  // --test
@@ -651,6 +864,28 @@ int main (int argc, char *argv[])
 		return 0;
 	}
 
+	if (command == CmdTest)
+	{
+		try
+		{
+			std::cerr << ansiDim << "Testing encryption algorithms..." << ansiReset << std::endl;
+			EncryptionTest::TestAll ();
+			std::cerr << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Encryption tests passed." << std::endl;
+
+			std::cerr << ansiDim << "Testing platform..." << ansiReset << std::endl;
+			PlatformTest::TestAll ();
+			std::cerr << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Platform tests passed." << std::endl;
+
+			std::cerr << ansiGreen << ansiBold << "\xe2\x9c\x93 Self-test passed." << ansiReset << std::endl;
+		}
+		catch (exception &e)
+		{
+			std::cerr << ansiRed << "Test failed: " << ansiReset << W (StringConverter::ToExceptionString (e)) << std::endl;
+			return 1;
+		}
+		return 0;
+	}
+
 	if (command == CmdNone)
 	{
 		ShowBanner ();
@@ -664,6 +899,13 @@ int main (int argc, char *argv[])
 	{
 #ifdef TC_WINDOWS
 		// On Windows, CoreWindows is used directly — no privilege elevation needed.
+		// Global Core/CoreDirect are default-constructed (null) to avoid static
+		// init ordering issues with the GUI.  Create them here for the CLI.
+		if (!Core)
+		{
+			Core.reset (new CoreWindows ());
+			CoreDirect = Core;
+		}
 		Core->Init ();
 #else
 		// Admin password callback for elevated operations
@@ -676,17 +918,48 @@ int main (int argc, char *argv[])
 				if (nonInteractive)
 					throw UserAbort (SRC_POS);
 
-				std::wcerr << L"Enter admin password: ";
-				wstring wpass;
-				std::getline (std::wcin, wpass);
-				if (std::wcin.fail ())
+				std::cerr << "Enter admin password (empty to cancel): ";
+
+				// Disable terminal echo for password input
+				struct termios origTios, noEchoTios;
+				bool tiosOk = (tcgetattr (STDIN_FILENO, &origTios) == 0);
+				if (tiosOk)
+				{
+					noEchoTios = origTios;
+					noEchoTios.c_lflag &= ~ECHO;
+					tcsetattr (STDIN_FILENO, TCSADRAIN, &noEchoTios);
+				}
+
+				// Read password as raw bytes (std::cin) to preserve UTF-8 encoding.
+				// Using std::wcin would mangle multi-byte characters depending on locale.
+				std::getline (std::cin, password);
+
+				if (tiosOk)
+					tcsetattr (STDIN_FILENO, TCSADRAIN, &origTios);
+				std::cerr << std::endl;
+
+				if (std::cin.fail () || std::cin.eof () || password.empty ())
 					throw UserAbort (SRC_POS);
-				password = StringConverter::ToSingle (wpass);
 			}
 		};
 
 		CoreService::SetAdminPasswordCallback (
 			shared_ptr <GetStringFunctor> (new CLIAdminPasswordFunctor (nonInteractive)));
+
+		// Handler to display elevation errors to the user
+		CoreService::SetAdminPasswordRequestHandler ([] (const string &errOutput) {
+			if (!errOutput.empty ())
+				std::cerr << ansiRed << "Elevation failed: " << ansiReset << errOutput << std::endl;
+			else
+				std::cerr << ansiRed << "Incorrect password or elevation failed." << ansiReset << std::endl;
+		});
+
+		// Set executable path so CoreService can re-exec via sudo for elevation
+		{
+			char resolvedPath[PATH_MAX] = {};
+			if (realpath (argv[0], resolvedPath))
+				Core->SetApplicationExecutablePath (FilePath (StringConverter::ToWide (resolvedPath)));
+		}
 
 		CoreService::Start ();
 		Core->Init ();
@@ -717,7 +990,7 @@ int main (int argc, char *argv[])
 			{
 				if (!mountOptions.Path && !nonInteractive)
 				{
-					std::wcerr << L"Enter volume path: ";
+					std::cerr << "Enter volume path: ";
 					wstring path = cb.AskFilePath ();
 					mountOptions.Path = make_shared <VolumePath> (wstring (path));
 				}
@@ -725,25 +998,55 @@ int main (int argc, char *argv[])
 				if (!mountOptions.Path)
 					throw ParameterIncorrect (SRC_POS);
 
-				// Check that the volume file exists before asking for password
+				// Check that the volume file or device exists before asking for password
 				{
 					FilesystemPath volumeFilePath (wstring (*mountOptions.Path));
-					if (!volumeFilePath.IsFile ())
+					if (!volumeFilePath.IsFile () && !volumeFilePath.IsDevice ())
 					{
-						std::wcerr << L"No such volume: " << wstring (*mountOptions.Path) << std::endl;
+						std::cerr << ansiRed << "No such volume or device: " << ansiReset << W (wstring (*mountOptions.Path)) << std::endl;
 						return 1;
 					}
+
 				}
 
 				if (!mountOptions.Password)
 					mountOptions.Password = cb.AskPassword ();
 
+#if defined (TC_MACOSX)
+				// Auto-dismount device filesystems before mounting.
+				// macOS keeps devices busy while their filesystem is mounted.
+				if (mountOptions.Path->IsDevice ())
+				{
+					string devPath = StringConverter::ToSingle (wstring (*mountOptions.Path));
+					string diskutilPath = devPath;
+
+					// Strip "r" from /dev/rdiskN → /dev/diskN
+					if (diskutilPath.find ("/dev/rdisk") == 0)
+						diskutilPath = "/dev/disk" + diskutilPath.substr (10);
+
+					// Strip partition suffix (e.g. /dev/disk2s1 → /dev/disk2)
+					size_t sPos = diskutilPath.find ('s', strlen ("/dev/disk"));
+					if (sPos != string::npos && sPos > strlen ("/dev/disk"))
+						diskutilPath = diskutilPath.substr (0, sPos);
+
+					list <string> args;
+					args.push_back ("unmountDisk");
+					args.push_back ("force");
+					args.push_back (diskutilPath);
+
+					try { Process::Execute ("/usr/sbin/diskutil", args); }
+					catch (...) { }
+				}
+#endif
+
 				shared_ptr <VolumeInfo> volume = Core->MountVolume (mountOptions);
 
 				if (volume)
 				{
-					std::wcout << L"Volume \"" << wstring (volume->Path) << L"\" mounted at "
-						<< wstring (volume->MountPoint) << L" (slot " << volume->SlotNumber << L")" << std::endl;
+					std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset
+						<< "Volume \"" << ansiBold << W (wstring (volume->Path)) << ansiReset << "\" mounted at "
+						<< ansiCyan << W (wstring (volume->MountPoint)) << ansiReset
+						<< ansiDim << " (slot " << volume->SlotNumber << ")" << ansiReset << std::endl;
 				}
 
 				// Offer KDF upgrade for legacy volumes (low iteration count)
@@ -766,8 +1069,8 @@ int main (int argc, char *argv[])
 					          (unsigned)volume->SlotNumber);
 					HANDLE hDismountEvent = CreateEventA (NULL, TRUE, FALSE, eventName);
 
-					std::wcout << L"To dismount: basalt-cli -d "
-					           << wstring (volume->Path) << std::endl;
+					std::cout << "To dismount: basalt-cli -d "
+					           << W (wstring (volume->Path)) << std::endl;
 
 					// Wait for dismount signal or Ctrl+C
 					while (!TerminationRequested)
@@ -784,17 +1087,17 @@ int main (int argc, char *argv[])
 						}
 					}
 
-					std::wcout << L"Dismounting..." << std::endl;
+					std::cout << ansiDim << "Dismounting..." << ansiReset << std::endl;
 
 					try
 					{
 						Core->DismountVolume (volume, true);
-						std::wcout << L"Volume dismounted." << std::endl;
+						std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Volume dismounted." << std::endl;
 					}
 					catch (exception &ex)
 					{
-						std::wcerr << L"Dismount error: "
-						           << StringConverter::ToExceptionString (ex) << std::endl;
+						std::cerr << ansiRed << "Dismount error: " << ansiReset
+						           << W (StringConverter::ToExceptionString (ex)) << std::endl;
 					}
 
 					if (hDismountEvent)
@@ -814,7 +1117,7 @@ int main (int argc, char *argv[])
 					{
 						Core->DismountVolume (v, force);
 						if (verbose)
-							std::wcout << L"Volume \"" << wstring (v->Path) << L"\" dismounted." << std::endl;
+							std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Volume \"" << W (wstring (v->Path)) << "\" dismounted." << std::endl;
 					}
 				}
 				else
@@ -822,12 +1125,12 @@ int main (int argc, char *argv[])
 					shared_ptr <VolumeInfo> volume = Core->GetMountedVolume (VolumePath (StringConverter::ToWide (argVolumePath)));
 					if (!volume)
 					{
-						std::wcerr << L"No such volume is mounted." << std::endl;
+						std::cerr << ansiRed << "No such volume is mounted." << ansiReset << std::endl;
 						return 1;
 					}
 					Core->DismountVolume (volume, force);
 					if (verbose)
-						std::wcout << L"Volume \"" << wstring (volume->Path) << L"\" dismounted." << std::endl;
+						std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Volume \"" << W (wstring (volume->Path)) << "\" dismounted." << std::endl;
 				}
 			}
 			break;
@@ -836,17 +1139,54 @@ int main (int argc, char *argv[])
 			ListMountedVolumes (verbose);
 			break;
 
-		case CmdTest:
+		case CmdListDevices:
 			{
-				std::wcout << L"Testing encryption algorithms..." << std::endl;
-				EncryptionTest::TestAll ();
-				std::wcout << L"Encryption tests passed." << std::endl;
+				HostDeviceList devices = Core->GetHostDevices ();
 
-				std::wcout << L"Testing platform..." << std::endl;
-				PlatformTest::TestAll ();
-				std::wcout << L"Platform tests passed." << std::endl;
+				if (devices.empty ())
+				{
+					std::cerr << ansiDim << "No devices found." << ansiReset << std::endl;
+				}
+				else
+				{
+					std::cerr << ansiBold
+					           << "  Device                         Size        Removable"
+					           << ansiReset << std::endl;
+					std::cerr << ansiDim
+					           << "  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80  \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80"
+					           << ansiReset << std::endl;
 
-				std::wcout << L"Self-test passed." << std::endl;
+					for (const auto &dev : devices)
+					{
+						string path = W (wstring (dev->Path));
+						while (path.size () < 30) path += ' ';
+
+						string sizeStr = W (FormatSize (dev->Size));
+						while (sizeStr.size () < 12) sizeStr += ' ';
+
+						std::cout << "  " << ansiBold << path << ansiReset << " " << sizeStr
+						           << (dev->Removable ? "Yes" : "No ");
+						if (!wstring (dev->MountPoint).empty ())
+							std::cout << "  " << ansiCyan << W (wstring (dev->MountPoint)) << ansiReset;
+						std::cout << std::endl;
+
+						// Partitions (indented)
+						for (const auto &part : dev->Partitions)
+						{
+							string ppath = "  " + W (wstring (part->Path));
+							while (ppath.size () < 30) ppath += ' ';
+
+							string psizeStr = W (FormatSize (part->Size));
+							while (psizeStr.size () < 12) psizeStr += ' ';
+
+							std::cout << "  " << ansiDim << ppath << ansiReset << " " << psizeStr
+							           << (part->Removable ? "Yes" : "No ");
+							if (!wstring (part->MountPoint).empty ())
+								std::cout << "  " << ansiCyan << W (wstring (part->MountPoint)) << ansiReset;
+							std::cout << std::endl;
+						}
+					}
+				}
 			}
 			break;
 
@@ -896,7 +1236,7 @@ int main (int argc, char *argv[])
 				shared_ptr <Pkcs5Kdf> newKdf;
 				if (!argHash.empty ())
 				{
-					for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+					for (const auto &h : Basalt::Hash::GetAvailableAlgorithms ())
 					{
 						if (StringConverter::ToSingle (h->GetName ()) == argHash)
 						{
@@ -911,7 +1251,7 @@ int main (int argc, char *argv[])
 
 				Core->ChangePassword (path, true, password, keyfiles, newPassword, newKeyfiles, newKdf);
 
-				std::wcout << L"Password changed successfully." << std::endl;
+				std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Password changed successfully." << std::endl;
 			}
 			break;
 
@@ -919,20 +1259,56 @@ int main (int argc, char *argv[])
 			{
 				if (argVolumePath.empty ())
 					throw ParameterIncorrect (SRC_POS);
-				if (argSize.empty ())
+
+				// Detect device-hosted creation (e.g. /dev/disk2, \\.\PhysicalDrive1)
+				FilesystemPath createPath (StringConverter::ToWide (argVolumePath));
+				bool isDeviceCreate = createPath.IsDevice ();
+
+				if (hiddenVolume)
 				{
-					std::wcerr << L"Error: --size is required for --create" << std::endl;
+					// Hidden volumes always require an explicit size
+					if (argSize.empty ())
+					{
+						std::cerr << ansiRed << "Error: " << ansiReset << "--size is required for hidden volumes" << std::endl;
+						std::cerr << ansiDim << "  The hidden volume must fit inside the outer volume's free space." << ansiReset << std::endl;
+						return 1;
+					}
+				}
+				else if (argSize.empty () && !isDeviceCreate)
+				{
+					std::cerr << ansiRed << "Error: " << ansiReset << "--size is required for file containers" << std::endl;
+					std::cerr << ansiDim << "  (not needed when creating on a device)" << ansiReset << std::endl;
 					return 1;
 				}
 
-				uint64 volumeSize;
-				try { volumeSize = ParseSize (argSize); }
-				catch (...)
+				// Safety confirmation for device creation — all data will be destroyed
+				if (isDeviceCreate && !hiddenVolume && !nonInteractive)
 				{
-					std::wcerr << L"Error: Invalid size: " << StringConverter::ToWide (argSize) << std::endl;
-					std::wcerr << L"  Use e.g. 10M, 1G, 500K, or size in bytes" << std::endl;
-					return 1;
+					std::cerr << ansiYellow << ansiBold << "WARNING: " << ansiReset << ansiYellow
+					           << "All data on " << argVolumePath
+					           << " will be irrecoverably overwritten!" << ansiReset << std::endl;
+					std::cerr << "Type \"yes\" to continue: ";
+					string confirm;
+					std::getline (std::cin, confirm);
+					if (confirm != "yes")
+					{
+						std::cerr << ansiYellow << "Aborted." << ansiReset << std::endl;
+						return 1;
+					}
 				}
+
+				uint64 volumeSize = 0;
+				if (!argSize.empty ())
+				{
+					try { volumeSize = ParseSize (argSize); }
+					catch (...)
+					{
+						std::cerr << ansiRed << "Error: " << ansiReset << "Invalid size: " << argSize << std::endl;
+						std::cerr << ansiDim << "  Use e.g. 10M, 1G, 500K, or size in bytes" << ansiReset << std::endl;
+						return 1;
+					}
+				}
+				// For devices: volumeSize stays 0 — VolumeCreator uses the device's actual size
 
 				// Password
 				shared_ptr <VolumePassword> password;
@@ -948,8 +1324,8 @@ int main (int argc, char *argv[])
 
 				// Encryption algorithm (default: AES)
 				string encName = argEncryption.empty () ? "AES" : argEncryption;
-				shared_ptr <TrueCrypt::EncryptionAlgorithm> ea;
-				for (const auto &a : TrueCrypt::EncryptionAlgorithm::GetAvailableAlgorithms ())
+				shared_ptr <Basalt::EncryptionAlgorithm> ea;
+				for (const auto &a : Basalt::EncryptionAlgorithm::GetAvailableAlgorithms ())
 				{
 					if (!a->IsDeprecated () && StringConverter::ToSingle (a->GetName ()) == encName)
 					{
@@ -959,19 +1335,19 @@ int main (int argc, char *argv[])
 				}
 				if (!ea)
 				{
-					std::wcerr << L"Unknown encryption algorithm: " << StringConverter::ToWide (encName) << std::endl;
-					std::wcerr << L"Available: ";
-					for (const auto &a : TrueCrypt::EncryptionAlgorithm::GetAvailableAlgorithms ())
+					std::cerr << ansiRed << "Unknown encryption algorithm: " << ansiReset << encName << std::endl;
+					std::cerr << ansiDim << "Available: ";
+					for (const auto &a : Basalt::EncryptionAlgorithm::GetAvailableAlgorithms ())
 						if (!a->IsDeprecated ())
-							std::wcerr << a->GetName () << L"  ";
-					std::wcerr << std::endl;
+							std::cerr << W (a->GetName ()) << "  ";
+					std::cerr << ansiReset << std::endl;
 					return 1;
 				}
 
 				// Hash / KDF (default: Argon2id-Max)
 				string hashName = argHash.empty () ? "Argon2id-Max" : argHash;
-				shared_ptr <TrueCrypt::Hash> hash;
-				for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+				shared_ptr <Basalt::Hash> hash;
+				for (const auto &h : Basalt::Hash::GetAvailableAlgorithms ())
 				{
 					if (!h->IsDeprecated () && StringConverter::ToSingle (h->GetName ()) == hashName)
 					{
@@ -981,12 +1357,12 @@ int main (int argc, char *argv[])
 				}
 				if (!hash)
 				{
-					std::wcerr << L"Unknown hash algorithm: " << StringConverter::ToWide (hashName) << std::endl;
-					std::wcerr << L"Available: ";
-					for (const auto &h : TrueCrypt::Hash::GetAvailableAlgorithms ())
+					std::cerr << ansiRed << "Unknown hash algorithm: " << ansiReset << hashName << std::endl;
+					std::cerr << ansiDim << "Available: ";
+					for (const auto &h : Basalt::Hash::GetAvailableAlgorithms ())
 						if (!h->IsDeprecated ())
-							std::wcerr << h->GetName () << L"  ";
-					std::wcerr << std::endl;
+							std::cerr << W (h->GetName ()) << "  ";
+					std::cerr << ansiReset << std::endl;
 					return 1;
 				}
 
@@ -1010,7 +1386,7 @@ int main (int argc, char *argv[])
 #endif
 					else
 					{
-						std::wcerr << L"Unknown filesystem: " << StringConverter::ToWide (argFilesystem) << std::endl;
+						std::cerr << ansiRed << "Unknown filesystem: " << ansiReset << argFilesystem << std::endl;
 						return 1;
 					}
 				}
@@ -1029,7 +1405,7 @@ int main (int argc, char *argv[])
 				// Build creation options
 				auto options = make_shared <VolumeCreationOptions> ();
 				options->Path = VolumePath (StringConverter::ToWide (argVolumePath));
-				options->Type = VolumeType::Normal;
+				options->Type = hiddenVolume ? VolumeType::Hidden : VolumeType::Normal;
 				options->Size = volumeSize;
 				options->Password = password;
 				options->Keyfiles = keyfiles;
@@ -1042,37 +1418,68 @@ int main (int argc, char *argv[])
 
 				if (verbose)
 				{
-					std::wcout << L"Creating volume: " << StringConverter::ToWide (argVolumePath) << std::endl;
-					std::wcout << L"  Size:       " << FormatSize (volumeSize) << std::endl;
-					std::wcout << L"  Encryption: " << ea->GetName () << std::endl;
-					std::wcout << L"  Hash:       " << hash->GetName () << std::endl;
-					std::wcout << L"  Filesystem: " << (fsType == VolumeCreationOptions::FilesystemType::FAT ? L"FAT" :
-						(fsType == VolumeCreationOptions::FilesystemType::MacOsExt ? L"HFS+" : L"None")) << std::endl;
-					std::wcout << L"  Quick:      " << (quickFormat ? L"Yes" : L"No") << std::endl;
+					std::cout << "Creating volume: " << argVolumePath << std::endl;
+					std::cout << "  Type:       " << (hiddenVolume ? "Hidden" : (isDeviceCreate ? "Device" : "File container")) << std::endl;
+					if (volumeSize > 0)
+						std::cout << "  Size:       " << W (FormatSize (volumeSize)) << std::endl;
+					else
+						std::cout << "  Size:       (device size, determined at creation)" << std::endl;
+					std::cout << "  Encryption: " << W (ea->GetName ()) << std::endl;
+					std::cout << "  Hash:       " << W (hash->GetName ()) << std::endl;
+					std::cout << "  Filesystem: " << (fsType == VolumeCreationOptions::FilesystemType::FAT ? "FAT" :
+						(fsType == VolumeCreationOptions::FilesystemType::MacOsExt ? "HFS+" : "None")) << std::endl;
+					std::cout << "  Quick:      " << (quickFormat ? "Yes" : "No") << std::endl;
 				}
+
+				// Auto-dismount device filesystems before creation
+#if defined (TC_MACOSX)
+				if (isDeviceCreate)
+				{
+					string diskutilPath = argVolumePath;
+
+					// Strip "r" from /dev/rdiskN → /dev/diskN
+					if (diskutilPath.find ("/dev/rdisk") == 0)
+						diskutilPath = "/dev/disk" + diskutilPath.substr (10);
+
+					// Strip partition suffix (e.g. /dev/disk2s1 → /dev/disk2)
+					size_t sPos = diskutilPath.find ('s', strlen ("/dev/disk"));
+					if (sPos != string::npos && sPos > strlen ("/dev/disk"))
+						diskutilPath = diskutilPath.substr (0, sPos);
+
+					list <string> dmArgs;
+					dmArgs.push_back ("unmountDisk");
+					dmArgs.push_back ("force");
+					dmArgs.push_back (diskutilPath);
+
+					try { Process::Execute ("/usr/sbin/diskutil", dmArgs); }
+					catch (...) { }
+				}
+#endif
 
 				// Start creation (spawns background thread)
 				VolumeCreator creator;
 				creator.CreateVolume (options);
 
-				// Poll progress
+				// Poll progress with visual bar
 				VolumeCreator::ProgressInfo progress;
+				auto startTime = std::chrono::steady_clock::now ();
 				while (true)
 				{
 					progress = creator.GetProgressInfo ();
 					if (!progress.CreationInProgress)
 						break;
 
-					if (progress.TotalSize > 0)
+					if (progress.TotalSize > 0 && progress.SizeDone > 0)
 					{
-						int pct = (int) (progress.SizeDone * 100 / progress.TotalSize);
-						std::wcerr << L"\rCreating... " << pct << L"%" << std::flush;
+						auto elapsed = std::chrono::steady_clock::now () - startTime;
+						double elapsedSec = std::chrono::duration <double> (elapsed).count ();
+						DrawProgressBar (progress.SizeDone, progress.TotalSize, elapsedSec);
 					}
 
 					if (TerminationRequested)
 					{
 						creator.Abort ();
-						std::wcerr << std::endl << L"Aborted." << std::endl;
+						std::cerr << std::endl << ansiYellow << "Aborted." << ansiReset << std::endl;
 						break;
 					}
 
@@ -1083,7 +1490,8 @@ int main (int argc, char *argv[])
 #endif
 				}
 
-				std::wcerr << L"\r                     \r" << std::flush;
+				// Clear the progress bar line
+				std::cerr << "\r\033[K" << std::flush;
 
 				// Check for errors from the creation thread
 				creator.CheckResult ();
@@ -1096,12 +1504,20 @@ int main (int argc, char *argv[])
 				if (fsType == VolumeCreationOptions::FilesystemType::MacOsExt)
 				{
 					if (verbose)
-						std::wcout << L"Formatting as HFS+..." << std::endl;
+						std::cout << "Formatting as HFS+..." << std::endl;
 					FormatHfsPlus (argVolumePath, password, keyfiles);
 				}
 #endif
 
-				std::wcout << L"Volume created: " << StringConverter::ToWide (argVolumePath) << std::endl;
+				if (hiddenVolume)
+				{
+					std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Hidden volume created inside: "
+					           << ansiBold << argVolumePath << ansiReset << std::endl;
+					std::cout << ansiDim << "  Use the hidden volume's password to mount it." << ansiReset << std::endl;
+				}
+				else
+					std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Volume created: "
+					           << ansiBold << argVolumePath << ansiReset << std::endl;
 			}
 			break;
 
@@ -1109,7 +1525,7 @@ int main (int argc, char *argv[])
 			{
 				FilePath keyfilePath (StringConverter::ToWide (argFilePath));
 				Core->CreateKeyfile (keyfilePath);
-				std::wcout << L"Keyfile created: " << StringConverter::ToWide (argFilePath) << std::endl;
+				std::cout << ansiGreen << "\xe2\x9c\x93 " << ansiReset << "Keyfile created: " << argFilePath << std::endl;
 			}
 			break;
 
@@ -1127,17 +1543,17 @@ int main (int argc, char *argv[])
 #ifdef TC_WINDOWS
 	catch (DriveLetterUnavailable &)
 	{
-		wstring mountPoint = argMountPoint.empty () ? L"(auto)" : StringConverter::ToWide (argMountPoint);
-		std::wcerr << L"Error: Drive letter " << mountPoint << L" is already in use." << std::endl;
-		std::wcerr << L"  If this is a stale mount from a previous run, disconnect it first:" << std::endl;
-		std::wcerr << L"    net use " << mountPoint << L" /delete" << std::endl;
-		std::wcerr << L"  Or try a different letter, e.g.: basalt-cli volume.tc Z:" << std::endl;
+		string mountPoint = argMountPoint.empty () ? "(auto)" : argMountPoint;
+		std::cerr << ansiRed << "Error: " << ansiReset << "Drive letter " << mountPoint << " is already in use." << std::endl;
+		std::cerr << ansiDim << "  If this is a stale mount from a previous run, disconnect it first:" << std::endl;
+		std::cerr << "    net use " << mountPoint << " /delete" << std::endl;
+		std::cerr << "  Or try a different letter, e.g.: basalt-cli volume.tc Z:" << ansiReset << std::endl;
 		return 1;
 	}
 #endif
 	catch (exception &e)
 	{
-		std::wcerr << L"Error: " << StringConverter::ToExceptionString (e) << std::endl;
+		std::cerr << ansiRed << "Error: " << ansiReset << W (StringConverter::ToExceptionString (e)) << std::endl;
 #ifndef TC_WINDOWS
 		try { CoreService::Stop (); } catch (...) {}
 #endif

@@ -403,6 +403,66 @@ the first password field focused the eye icon instead of the confirmation field.
 This applies to all password fields across the application (Mount, Change Password, Create).
 
 
+## Attack Surface Reduction
+
+The original TrueCrypt 7.1a codebase included several subsystems designed for
+Windows full-disk encryption and enterprise environments. These have been
+completely removed from Basalt because they are irrelevant to container-based
+encryption and represent unnecessary attack surface.
+
+### Windows Kernel Driver (14 files removed)
+**Deleted:** `Driver/Ntdriver.c/h`, `Ntvol.c/h`, `DriveFilter.c/h`,
+`DumpFilter.c/h`, `EncryptedIoQueue.c/h`, build infrastructure.
+
+Kernel drivers run at Ring 0 with full system access. A single vulnerability
+(buffer overflow, IOCTL validation error, race condition) grants an attacker
+complete control. Basalt replaced the kernel driver with a userspace iSCSI
+target on Windows and DarwinFUSE on macOS — both run unprivileged.
+
+### Pre-Boot Encryption / Boot Loader (27 files removed)
+**Deleted:** Entire `Boot/Windows/` directory — `BootMain.cpp`, `BootSector.asm`,
+`BootEncryptedIo.cpp`, `BootDiskIo.cpp`, `BootConsoleIo.cpp`, `BootMemory.cpp`,
+and 21 additional files (16-bit assembly, BIOS I/O, decompressor, CRT startup).
+
+Pre-boot code runs before any operating system, with no ASLR, no DEP, no
+stack canaries. It is the hardest code to audit and the most dangerous to get
+wrong. VeraCrypt's pre-boot DCS bootloader is signed by Microsoft UEFI CA 2011,
+placing Microsoft in the trust chain. Basalt has no bootloader and no
+third-party trust chain.
+
+### PKCS#11 / Hardware Token Support (5 files removed)
+**Deleted:** `Common/SecurityToken.cpp/h` (~800 lines), `pkcs11.h`, `pkcs11f.h`,
+`pkcs11t.h`.
+
+PKCS#11 is a complex C API for hardware security modules that loads third-party
+shared libraries (`.dylib` / `.dll`) at runtime. Each loaded library runs in the
+application's address space with full access to all memory, including encryption
+keys. A compromised or backdoored PKCS#11 module would bypass all other security
+measures. Basalt uses keyfiles (regular files) as the second factor instead.
+
+### wxWidgets GUI (86 files removed, ~2 MB dependency)
+**Deleted:** Entire `Main/`, `Mount/`, `Format/` directories.
+
+See Wave 6, §19 for details. The wxWidgets removal eliminated password handling
+through `wxString` with uncontrollable heap copies, signal handler deadlocks,
+destruction-order memory corruption, and a large third-party dependency.
+
+### Net Effect
+
+| Component | Files | Lines (approx.) |
+|-----------|------:|----------------:|
+| Windows kernel driver | 14 | ~8,500 |
+| Boot loader | 27 | ~4,500 |
+| PKCS#11 / tokens | 5 | ~1,200 |
+| wxWidgets GUI + Windows GUI | 86+ | ~25,000 |
+| Win32 Common (dialogs, registry, COM) | 30+ | ~20,000 |
+| **Total removed** | **~200** | **~60,000+** |
+
+The full `git diff --stat` from TrueCrypt 7.1a to Basalt shows 74,117 lines
+deleted across 309 files. Every removed line is a line that cannot contain a
+vulnerability.
+
+
 ## What This Port Does Change: Zero-State Design
 
 This application remembers nothing. No favorites, no cached passwords, no default
@@ -588,6 +648,39 @@ making this a significant trust concern.
 
 This port does not provide boot encryption and therefore has no bootloader trust chain
 dependency. All components are built from source with no pre-compiled binary blobs.
+
+
+## Best Practice: Steganographic Keyfiles
+
+Any static, publicly available file can serve as a keyfile — in addition to a
+strong password, not as a replacement.
+
+**Requirements for a good public keyfile:**
+- **Bit-identical** across all sources (verify with SHA-256 after download)
+- **Available from multiple independent mirrors** (no single point of failure)
+- **Memorable enough to locate again** without written notes
+- **Static** — the file must never change (avoid "latest version" links)
+
+**Examples:** Old OS installation ISOs (Windows 98, Ubuntu 14.04), RFC documents
+from IETF, Linux kernel release tarballs, Wikimedia Commons images with stable
+file hashes, Project Gutenberg plain-text editions.
+
+**The border crossing scenario:**
+When crossing borders with aggressive device inspection, carrying an encrypted
+volume is already suspicious. Carrying a USB stick with keyfiles makes it worse.
+With a public-file keyfile strategy:
+
+1. Cross the border with an empty laptop (or with the volume on cloud storage)
+2. After arrival, download the keyfile from its public source
+3. Mount the volume with password + keyfile
+4. No suspicious USB stick, no keyfile on the device, no evidence of what the
+   keyfile is
+
+**Important:** The keyfile adds entropy from its content (first 1,048,576 bytes
+are hashed into the key derivation pool). The security comes from the attacker
+not knowing *which* of millions of publicly available files you chose — not from
+the file being secret. This is defense-in-depth on top of a strong password, not
+a standalone protection.
 
 
 ## Audit Methodology

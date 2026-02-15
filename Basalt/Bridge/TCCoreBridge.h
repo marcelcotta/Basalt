@@ -158,6 +158,9 @@ typedef NS_ENUM(NSInteger, TCFilesystemType) {
 - (NSArray<NSString *> *)availableEncryptionAlgorithms;
 - (NSArray<NSString *> *)availableHashAlgorithms;
 
+// User entropy — mixes additional bytes into the RNG pool (optional, system entropy is sufficient)
+- (void)addUserEntropy:(NSData *)data;
+
 // Volume creation (async with progress)
 - (BOOL)startVolumeCreation:(TCVolumeCreationOptions *)options
                       error:(NSError **)error;
@@ -171,6 +174,38 @@ typedef NS_ENUM(NSInteger, TCFilesystemType) {
                     filesystem:(TCFilesystemType)filesystem
                          error:(NSError **)error;
 
+// Volume header backup — exports normal + hidden headers to an external file.
+// If the volume contains a hidden volume, provide hiddenPassword/hiddenKeyfiles.
+// Otherwise pass nil for both.
+- (BOOL)backupVolumeHeaders:(NSString *)volumePath
+                   password:(NSString *)password
+                   keyfiles:(nullable NSArray<NSString *> *)keyfilePaths
+             hiddenPassword:(nullable NSString *)hiddenPassword
+             hiddenKeyfiles:(nullable NSArray<NSString *> *)hiddenKeyfilePaths
+               backupToFile:(NSString *)backupFilePath
+                      error:(NSError **)error;
+
+// Volume header restore — from internal backup (embedded at end of volume).
+- (BOOL)restoreVolumeHeadersFromInternalBackup:(NSString *)volumePath
+                                      password:(NSString *)password
+                                      keyfiles:(nullable NSArray<NSString *> *)keyfilePaths
+                                         error:(NSError **)error;
+
+// Volume header restore — from an external backup file.
+- (BOOL)restoreVolumeHeadersFromFile:(NSString *)volumePath
+                          backupFile:(NSString *)backupFilePath
+                            password:(NSString *)password
+                            keyfiles:(nullable NSArray<NSString *> *)keyfilePaths
+                               error:(NSError **)error;
+
 @end
+
+// ---- Elevated service entry point ----
+// Called when the binary is re-invoked by sudo with --core-service.
+// Returns YES if the argument was handled (caller should exit), NO otherwise.
+#ifdef __cplusplus
+extern "C"
+#endif
+BOOL TCHandleCoreServiceArgument(int argc, char * _Nullable * _Nonnull argv);
 
 NS_ASSUME_NONNULL_END

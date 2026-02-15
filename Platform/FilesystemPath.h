@@ -14,7 +14,7 @@
 #include "SharedPtr.h"
 #include "StringConverter.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	struct FilesystemPathType
 	{

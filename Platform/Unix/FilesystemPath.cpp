@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void FilesystemPath::Delete () const
 	{

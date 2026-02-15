@@ -11,7 +11,7 @@
 #include "Platform/SerializerFactory.h"
 #include "Platform/StringConverter.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	VolumePassword::VolumePassword () : PasswordSize (0), Unportable (false)
 	{

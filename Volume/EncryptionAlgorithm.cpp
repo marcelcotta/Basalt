@@ -11,7 +11,7 @@
 #include "EncryptionModeLRW.h"
 #include "EncryptionModeXTS.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	EncryptionAlgorithm::EncryptionAlgorithm () : Deprecated (false)
 	{

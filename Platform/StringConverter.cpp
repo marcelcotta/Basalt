@@ -17,7 +17,7 @@
 #include "StringConverter.h"
 #include "SystemException.h"
 
-namespace TrueCrypt
+namespace Basalt
 {
 	void StringConverter::Erase (string &str)
 	{
@@ -184,9 +184,21 @@ namespace TrueCrypt
 		if (sysEx)
 			return ToWide (sysEx->what()) + L": " + sysEx->SystemText() + L": " + sysEx->GetSubject();
 
+		const ExecutedProcessFailed *epf = dynamic_cast <const ExecutedProcessFailed *> (&ex);
+		if (epf)
+		{
+			string msg = epf->GetCommand () + " failed";
+			string errOut = epf->GetErrorOutput ();
+			if (!errOut.empty ())
+				msg += ": " + errOut;
+			else
+				msg += " (exit code " + ToSingle ((int64) epf->GetExitCode ()) + ")";
+			return ToWide (msg);
+		}
+
 		if (ex.what() && !string (ex.what()).empty())
 			return ToWide (GetTypeName (typeid (ex)) + ": " + ex.what());
-		
+
 		return ToWide (GetTypeName (typeid (ex)));
 	}
 

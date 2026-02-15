@@ -12,6 +12,9 @@ struct MainWindow: View {
     @EnvironmentObject var vm: VolumeManager
     @EnvironmentObject var prefs: PreferencesManager
 
+    /// Volume path pre-filled for sheets opened from context menu
+    @State private var contextVolumePath: String?
+
     var body: some View {
         VStack(spacing: 0) {
             // Toolbar area
@@ -69,14 +72,43 @@ struct MainWindow: View {
                     ForEach(vm.mountedVolumes, id: \.slotNumber) { vol in
                         VolumeRow(volume: vol)
                             .tag(vol.slotNumber)
+                            .onTapGesture(count: 2) {
+                                if !vol.mountPoint.isEmpty {
+                                    NSWorkspace.shared.selectFile(nil,
+                                        inFileViewerRootedAtPath: vol.mountPoint)
+                                }
+                            }
+                            .onTapGesture(count: 1) {
+                                vm.selectedSlot = vol.slotNumber
+                            }
                             .contextMenu {
-                                Button("Dismount") { vm.dismountVolume(vol, force: prefs.forceDismount) }
-                                Divider()
+                                Button("Dismount") {
+                                    vm.dismountVolume(vol, force: prefs.forceDismount)
+                                }
+
                                 Button("Show in Finder") {
                                     if !vol.mountPoint.isEmpty {
                                         NSWorkspace.shared.selectFile(nil,
                                             inFileViewerRootedAtPath: vol.mountPoint)
                                     }
+                                }
+                                .disabled(vol.mountPoint.isEmpty)
+
+                                Divider()
+
+                                Button("Change Password...") {
+                                    contextVolumePath = vol.path
+                                    vm.showChangePasswordSheet = true
+                                }
+
+                                Button("Backup Headers...") {
+                                    contextVolumePath = vol.path
+                                    vm.showBackupSheet = true
+                                }
+
+                                Button("Restore Headers...") {
+                                    contextVolumePath = vol.path
+                                    vm.showRestoreSheet = true
                                 }
                             }
                     }
@@ -89,14 +121,22 @@ struct MainWindow: View {
                 .environmentObject(vm)
                 .environmentObject(prefs)
         }
-        .sheet(isPresented: $vm.showChangePasswordSheet) {
-            ChangePasswordSheet()
+        .sheet(isPresented: $vm.showChangePasswordSheet, onDismiss: { contextVolumePath = nil }) {
+            ChangePasswordSheet(initialVolumePath: contextVolumePath)
                 .environmentObject(vm)
         }
         .sheet(isPresented: $vm.showCreateSheet) {
             CreateVolumeSheet()
                 .environmentObject(vm)
                 .environmentObject(prefs)
+        }
+        .sheet(isPresented: $vm.showBackupSheet, onDismiss: { contextVolumePath = nil }) {
+            BackupHeaderSheet(initialVolumePath: contextVolumePath)
+                .environmentObject(vm)
+        }
+        .sheet(isPresented: $vm.showRestoreSheet, onDismiss: { contextVolumePath = nil }) {
+            RestoreHeaderSheet(initialVolumePath: contextVolumePath)
+                .environmentObject(vm)
         }
         .alert("Error", isPresented: Binding(
             get: { vm.errorMessage != nil && !vm.showMountSheet },
@@ -139,7 +179,7 @@ struct VolumeRow: View {
                     Text(volume.encryptionAlgorithmName)
 
                     if volume.pkcs5PrfName.hasPrefix("Argon2id") {
-                        Label(kdfLabel(volume.pkcs5PrfName), systemImage: "shield.checkered")
+                        Label(volume.pkcs5PrfName, systemImage: "shield.checkered")
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.green)
                             .padding(.horizontal, 6)
@@ -156,28 +196,31 @@ struct VolumeRow: View {
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("Slot \(volume.slotNumber)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                HStack(spacing: 4) {
-                    if volume.isHiddenVolume {
-                        Text("Hidden")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 1)
-                            .background(Color.orange.opacity(0.2))
-                            .cornerRadius(4)
-                    }
-                    if volume.isReadOnly {
-                        Text("RO")
-                            .font(.caption2)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 1)
-                            .background(Color.blue.opacity(0.2))
-                            .cornerRadius(4)
-                    }
+            HStack(spacing: 4) {
+                if volume.hiddenVolumeProtectionTriggered {
+                    Label("Protection Triggered", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(Color.red)
+                        .cornerRadius(4)
+                }
+                if volume.isHiddenVolume {
+                    Text("Hidden")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(Color.orange.opacity(0.2))
+                        .cornerRadius(4)
+                }
+                if volume.isReadOnly {
+                    Text("Read-Only")
+                        .font(.caption2)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 1)
+                        .background(Color.blue.opacity(0.2))
+                        .cornerRadius(4)
                 }
             }
         }
@@ -188,19 +231,6 @@ struct VolumeRow: View {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         return formatter.string(fromByteCount: Int64(bytes))
-    }
-
-    private func kdfLabel(_ name: String) -> String {
-        switch name {
-        case "Argon2id":     return "Argon2id"
-        case "Argon2id-Max": return "Argon2id-Max"
-        default:             return name
-        }
-    }
-
-    private func kdfColor(_ name: String) -> Color {
-        if name.hasPrefix("Argon2id") { return .green }
-        return .secondary
     }
 }
 
