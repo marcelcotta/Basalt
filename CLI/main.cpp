@@ -27,7 +27,7 @@
 
 #ifdef TC_WINDOWS
 #include <cstdio>
-#include "CLI/getopt_win.h"
+#include "getopt_win.h"
 #else
 #include <getopt.h>
 #endif

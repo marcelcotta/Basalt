@@ -124,6 +124,7 @@ typedef union
 
 // --- Secure memory wipe ---
 #ifdef _WIN32
+#include <windows.h>
 #define burn(mem,size) do { volatile char *burnm = (volatile char *)(mem); int burnc = size; RtlSecureZeroMemory (mem, size); while (burnc--) *burnm++ = 0; } while (0)
 #else
 /* Use memset_s() - C11 Annex K, guaranteed not to be optimized away.
