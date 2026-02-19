@@ -225,7 +225,7 @@ platform string conversions creating uncontrollable copies.
    and platform logic. Zero wxWidgets symbols.
 2. **`VolumeOperationCallback`** — Abstract C++ interface for user interaction, implemented
    separately by each UI layer.
-3. **Standalone CLI (`truecrypt-cli`)** — getopt_long + POSIX terminal I/O (termios).
+3. **Standalone CLI (`basalt-cli`)** — getopt_long + POSIX terminal I/O (termios).
    Password input uses `tcsetattr()` to disable echo. No toolkit dependency.
 4. **SwiftUI macOS app (`Basalt.app`)** — Native macOS UI via ObjC++ bridge
    (`TCCoreBridge.mm`). Passwords handled through `NSSecureTextField` (system-managed).
@@ -265,7 +265,7 @@ automatically dismounted. Each volume is tracked independently — only idle vol
 are affected.
 
 ### 23. Event-Based Auto-Dismount
-**Files:** `Basalt/App/TrueCryptApp.swift` (AppDelegate)
+**Files:** `Basalt/App/BasaltApp.swift` (AppDelegate)
 **Problem:** Volumes remain mounted during security-sensitive system transitions
 (screen lock, sleep, application exit, logout) where the user is not actively present.
 **Fix:** Four automatic dismount triggers:
@@ -416,8 +416,8 @@ encryption and represent unnecessary attack surface.
 
 Kernel drivers run at Ring 0 with full system access. A single vulnerability
 (buffer overflow, IOCTL validation error, race condition) grants an attacker
-complete control. Basalt replaced the kernel driver with a userspace iSCSI
-target on Windows and DarwinFUSE on macOS — both run unprivileged.
+complete control. Basalt uses DarwinFUSE — a userspace NFSv4 implementation
+that requires no kernel extension and runs unprivileged.
 
 ### Pre-Boot Encryption / Boot Loader (27 files removed)
 **Deleted:** Entire `Boot/Windows/` directory — `BootMain.cpp`, `BootSector.asm`,
@@ -458,8 +458,10 @@ destruction-order memory corruption, and a large third-party dependency.
 | Win32 Common (dialogs, registry, COM) | 30+ | ~20,000 |
 | **Total removed** | **~200** | **~60,000+** |
 
-The full `git diff --stat` from TrueCrypt 7.1a to Basalt shows 74,117 lines
-deleted across 309 files. Every removed line is a line that cannot contain a
+The full `git diff --stat` from TrueCrypt 7.1a to Basalt shows 110,488 lines
+deleted and 16,195 lines added across 496 files changed. The codebase shrank
+from 194,634 lines (345 source files) to 47,439 lines (223 source files) — a
+**75.6% reduction**. Every removed line is a line that cannot contain a
 vulnerability.
 
 
@@ -524,8 +526,8 @@ compatible" option during volume creation if cross-application compatibility is 
   identical to TrueCrypt 7.1a / VeraCrypt. Only the 4-byte magic identifier differs.
 - **On-disk format:** Volumes are byte-compatible at the encryption layer. Data area
   layout, sector sizes, and XTS tweak computation are unchanged.
-- **FUSE driver:** Volume mounting still uses macFUSE. The FUSE driver logic is unchanged
-  (only mount options were hardened with nosuid/nodev).
+- **FUSE driver:** Volume mounting uses DarwinFUSE (built-in NFSv4 userspace FUSE). The
+  FUSE driver logic is unchanged (only mount options were hardened with nosuid/nodev).
 
 
 ## Known Remaining Weaknesses

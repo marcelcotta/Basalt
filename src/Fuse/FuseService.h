@@ -37,7 +37,7 @@ namespace Basalt
 			VolumeSlotNumber SlotNumber;
 		};
 
-		friend class ExecFunctor;
+		friend struct ExecFunctor;
 #endif
 
 	public:

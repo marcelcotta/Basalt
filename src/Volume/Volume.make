@@ -25,19 +25,12 @@ OBJS += VolumeInfo.o
 OBJS += VolumeLayout.o
 OBJS += VolumePassword.o
 
-ifeq "$(CPU_ARCH)" "x86"
-	OBJS += ../Crypto/Aes_x86.o
-	OBJS += ../Crypto/Aes_hw_cpu.o
-	ifeq "$(PLATFORM)" "MacOSX"
-		OBJS += ../Crypto/Aescrypt.o
-	endif
-else ifeq "$(CPU_ARCH)" "x64"
+ifeq "$(CPU_ARCH)" "x64"
 	OBJS += ../Crypto/Aes_x64.o
 	OBJS += ../Crypto/Aes_hw_cpu.o
 else
 	OBJS += ../Crypto/Aescrypt.o
-	# ARM64 hardware AES via NEON intrinsics (not assembly, works with NOASM=1)
-	# Use TARGET_ARCH if set (for cross-compilation), else detect via uname -m
+	# ARM64 hardware AES via NEON intrinsics (works with NOASM=1)
 	REAL_ARCH := $(or $(TARGET_ARCH),$(shell uname -m))
 	ifneq (,$(filter arm64 aarch64,$(REAL_ARCH)))
 		OBJS += ../Crypto/Aes_hw_cpu_arm.o

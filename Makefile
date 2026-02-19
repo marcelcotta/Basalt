@@ -13,13 +13,10 @@
 # NOSTRIP:		Do not strip release binary
 # NOTEST:		Do not test release binary
 # VERBOSE:		Enable verbose messages
-# TARGET_ARCH:	Override target architecture for cross-compilation (arm64 or x86_64)
-
 
 #------ Targets ------
 # libBasaltCore		Build the core static library (no UI dependency)
 # cli			Build standalone command-line tool
-# gui			Build Qt6 GUI (uses CMake for Qt6 deps)
 # clean			Remove build artifacts
 
 
@@ -37,15 +34,11 @@ export AS := nasm
 export RANLIB ?= ranlib
 
 export CFLAGS := -Wall
-export CXXFLAGS := -Wall -Wno-unused-parameter
+export CXXFLAGS := -Wall -Wno-unused-parameter -Wno-potentially-evaluated-expression
 C_CXX_FLAGS := -MMD -D__STDC_WANT_LIB_EXT1__=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES -I$(BASE_DIR)/src -I$(BASE_DIR)/src/Crypto
 export ASFLAGS := -Ox -D __GNUC__
 export LFLAGS :=
-ifneq "$(shell uname -s)" "Darwin"
-export LIBS := -ldl
-else
 export LIBS :=
-endif
 
 export PKG_CONFIG_PATH ?= /usr/local/lib/pkgconfig
 
@@ -88,23 +81,12 @@ endif
 
 #------ Platform configuration ------
 
-export PLATFORM := "Unknown"
-export PLATFORM_UNSUPPORTED := 0
-
 export CPU_ARCH ?= unknown
-export TARGET_ARCH ?=
 
-ARCH = $(shell uname -p)
-ifeq "$(ARCH)" "unknown"
-	ARCH = $(shell uname -m)
-endif
+ARCH = $(shell uname -m)
 
-ifneq (,$(filter i386 i486 i586 i686 x86,$(ARCH)))
-	CPU_ARCH = x86
-	ASM_OBJ_FORMAT = elf32
-else ifneq (,$(filter x86_64 x86-64 amd64 x64,$(ARCH)))
+ifneq (,$(filter x86_64 x86-64 amd64 x64,$(ARCH)))
 	CPU_ARCH = x64
-	ASM_OBJ_FORMAT = elf64
 else ifneq (,$(filter arm64 aarch64,$(ARCH)))
 	CPU_ARCH = arm64
 endif
@@ -113,82 +95,35 @@ ifeq "$(origin NOASM)" "command line"
 	CPU_ARCH = unknown
 endif
 
-ifeq "$(CPU_ARCH)" "x86"
-	C_CXX_FLAGS += -D TC_ARCH_X86
-else ifeq "$(CPU_ARCH)" "x64"
+ifeq "$(CPU_ARCH)" "x64"
 	C_CXX_FLAGS += -D TC_ARCH_X64
 endif
 
 
-#------ Linux configuration ------
+#------ macOS configuration ------
 
-ifeq "$(shell uname -s)" "Linux"
+export PLATFORM := MacOSX
+export PLATFORM_UNSUPPORTED := 0
+APPNAME := Basalt
 
-	PLATFORM := Linux
-	C_CXX_FLAGS += -DTC_UNIX -DTC_LINUX
-	CXXFLAGS += -std=c++14 -Wno-deprecated-declarations
+TC_OSX_SDK ?= $(shell xcrun --show-sdk-path)
 
-	ifeq "$(TC_BUILD_CONFIG)" "Release"
-		C_CXX_FLAGS += -fdata-sections -ffunction-sections
-		LFLAGS += -Wl,--gc-sections
+C_CXX_FLAGS += -DTC_UNIX -DTC_BSD -DTC_MACOSX -mmacosx-version-min=11.0 -isysroot $(TC_OSX_SDK)
+CXXFLAGS += -std=c++14 -stdlib=libc++ -Wno-deprecated-declarations
+LFLAGS += -mmacosx-version-min=11.0 -Wl,-syslibroot,$(TC_OSX_SDK) -stdlib=libc++
 
-		ifneq "$(shell ld --help 2>&1 | grep sysv | wc -l)" "0"
-			LFLAGS += -Wl,--hash-style=sysv
-		endif
-	endif
+ASM_OBJ_FORMAT = macho64
+ASFLAGS += --prefix _
 
-endif
+ifeq "$(TC_BUILD_CONFIG)" "Release"
 
+	export DISABLE_PRECOMPILED_HEADERS := 1
 
-#------ Mac OS X configuration ------
+	S := $(C_CXX_FLAGS)
+	C_CXX_FLAGS = $(subst -MMD,,$(S))
 
-ifeq "$(shell uname -s)" "Darwin"
-
-	PLATFORM := MacOSX
-	APPNAME := Basalt
-
-	TC_OSX_SDK ?= $(shell xcrun --show-sdk-path)
-
-	C_CXX_FLAGS += -DTC_UNIX -DTC_BSD -DTC_MACOSX -mmacosx-version-min=11.0 -isysroot $(TC_OSX_SDK)
-	CXXFLAGS += -std=c++14 -stdlib=libc++ -Wno-deprecated-declarations
-	LFLAGS += -mmacosx-version-min=11.0 -Wl,-syslibroot,$(TC_OSX_SDK) -stdlib=libc++
-
-	ASM_OBJ_FORMAT = macho64
-	ASFLAGS += --prefix _
-
-	ifeq "$(TC_BUILD_CONFIG)" "Release"
-
-		export DISABLE_PRECOMPILED_HEADERS := 1
-
-		S := $(C_CXX_FLAGS)
-		C_CXX_FLAGS = $(subst -MMD,,$(S))
-
-		C_CXX_FLAGS += -g
-		LFLAGS += -Wl,-dead_strip
-
-	endif
-
-endif
-
-
-#------ FreeBSD configuration ------
-
-ifeq "$(shell uname -s)" "FreeBSD"
-
-	PLATFORM := FreeBSD
-	PLATFORM_UNSUPPORTED := 1
-	C_CXX_FLAGS += -DTC_UNIX -DTC_BSD -DTC_FREEBSD
-
-endif
-
-
-#------ Solaris configuration ------
-
-ifeq "$(shell uname -s)" "SunOS"
-
-	PLATFORM := Solaris
-	PLATFORM_UNSUPPORTED := 1
-	C_CXX_FLAGS += -DTC_UNIX -DTC_SOLARIS
+	C_CXX_FLAGS += -g
+	LFLAGS += -Wl,-dead_strip
 
 endif
 
@@ -205,18 +140,16 @@ LFLAGS := $(LFLAGS) $(TC_EXTRA_LFLAGS)
 
 CORE_DIRS := Platform Volume Fuse Core
 
-.PHONY: libBasaltCore cli gui clean darwinfuse
+.PHONY: libBasaltCore cli clean darwinfuse
 
-#------ DarwinFUSE (macOS only — NFSv4 FUSE replacement) ------
+#------ DarwinFUSE (NFSv4 userspace FUSE) ------
 
-ifeq "$(shell uname -s)" "Darwin"
 DARWINFUSE_LIB := $(SRC_DIR)/DarwinFUSE/libdarwinfuse.a
 
 darwinfuse: $(DARWINFUSE_LIB)
 
 $(DARWINFUSE_LIB):
 	$(MAKE) -C $(SRC_DIR)/DarwinFUSE TC_BUILD_CONFIG=$(TC_BUILD_CONFIG)
-endif
 
 #------ Core library (no UI dependency) ------
 
@@ -226,82 +159,18 @@ CORE_ARCHIVES := \
 	$(SRC_DIR)/Fuse/Fuse.a \
 	$(SRC_DIR)/Core/Core.a
 
-ifeq "$(shell uname -s)" "Darwin"
 libBasaltCore: $(DARWINFUSE_LIB)
-endif
-
-libBasaltCore:
 	@for DIR in $(CORE_DIRS); do \
 		$(MAKE) -C $(SRC_DIR)/$$DIR -f $$DIR.make NAME=$$DIR || exit $$?; \
 	done
 	@echo "Creating libBasaltCore.a..."
-ifeq "$(shell uname -s)" "Darwin"
 	libtool -static -o $(BASE_DIR)/libBasaltCore.a $(CORE_ARCHIVES)
-else
-	rm -f $(BASE_DIR)/libBasaltCore.a
-	$(eval TMPDIR_AR := $(shell mktemp -d))
-	@for archive in $(CORE_ARCHIVES); do \
-		cd $(TMPDIR_AR) && $(AR) x $$archive; \
-	done
-	$(AR) rcs $(BASE_DIR)/libBasaltCore.a $(TMPDIR_AR)/*.o
-	$(RANLIB) $(BASE_DIR)/libBasaltCore.a
-	rm -rf $(TMPDIR_AR)
-endif
 
 
 #------ Standalone CLI (no UI dependency) ------
 
 cli: libBasaltCore
 	$(MAKE) -C CLI -f CLI.make APPNAME=basalt-cli
-
-
-#------ Qt6 GUI (uses CMake — handles Qt6 dependency) ------
-
-gui:
-	@echo "Building Basalt Qt6 GUI via CMake..."
-ifeq "$(TC_BUILD_CONFIG)" "Release"
-	cmake -B build_gui -DCMAKE_BUILD_TYPE=Release -DBASALT_BUILD_GUI=ON 2>&1 | tail -5
-else
-	cmake -B build_gui -DCMAKE_BUILD_TYPE=Debug -DBASALT_BUILD_GUI=ON 2>&1 | tail -5
-endif
-	cmake --build build_gui --target basalt-gui -- -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-	@echo "GUI binary: build_gui/bin/basalt-gui"
-
-
-#------ Qt6 GUI for Windows (cross-compile from macOS via MinGW + aqtinstall) ------
-
-gui-windows:
-	@echo "Cross-compiling Basalt Qt6 GUI for Windows..."
-	@if [ ! -d qt6-win-mingw ]; then \
-		echo "ERROR: Qt6 for Windows/MinGW not found."; \
-		echo "  Install: pip install aqtinstall"; \
-		echo "  Then:    aqt install-qt windows desktop 6.10.2 win64_mingw --outputdir qt6-win-mingw"; \
-		exit 1; \
-	fi
-ifeq "$(TC_BUILD_CONFIG)" "Release"
-	cmake -B build_wingui -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-qt6.cmake -DBASALT_BUILD_GUI=ON -DCMAKE_BUILD_TYPE=Release 2>&1 | tail -5
-else
-	cmake -B build_wingui -DCMAKE_TOOLCHAIN_FILE=cmake/mingw-w64-qt6.cmake -DBASALT_BUILD_GUI=ON -DCMAKE_BUILD_TYPE=Debug 2>&1 | tail -5
-endif
-	cmake --build build_wingui --target basalt-gui -- -j$$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
-	@echo "Windows GUI binary: build_wingui/bin/basalt-gui.exe"
-	@echo "Run 'make deploy-windows' to create a distributable folder with all DLLs."
-
-deploy-windows: gui-windows
-	@echo "Packaging Basalt for Windows..."
-	@QT_DIR=$$(find qt6-win-mingw -path "*/mingw_64" -type d | head -1) && \
-	rm -rf dist/windows && mkdir -p dist/windows/platforms && \
-	cp build_wingui/bin/basalt-gui.exe dist/windows/ && \
-	cp build_wingui/bin/basalt-cli.exe dist/windows/ 2>/dev/null; \
-	cp "$$QT_DIR/bin/Qt6Core.dll" dist/windows/ && \
-	cp "$$QT_DIR/bin/Qt6Gui.dll" dist/windows/ && \
-	cp "$$QT_DIR/bin/Qt6Widgets.dll" dist/windows/ && \
-	cp "$$QT_DIR/bin/libgcc_s_seh-1.dll" dist/windows/ && \
-	cp "$$QT_DIR/bin/libstdc++-6.dll" dist/windows/ && \
-	cp "$$QT_DIR/bin/libwinpthread-1.dll" dist/windows/ && \
-	cp "$$QT_DIR/plugins/platforms/qwindows.dll" dist/windows/platforms/ && \
-	echo "Done: dist/windows/ ($$(ls dist/windows/*.{exe,dll} 2>/dev/null | wc -l | tr -d ' ') files)" && \
-	du -sh dist/windows/
 
 
 #------ Clean ------
@@ -311,8 +180,5 @@ clean:
 		$(MAKE) -C $(SRC_DIR)/$$DIR -f $$DIR.make NAME=$$DIR clean 2>/dev/null || true; \
 	done
 	$(MAKE) -C CLI -f CLI.make clean 2>/dev/null || true
-ifeq "$(shell uname -s)" "Darwin"
 	$(MAKE) -C $(SRC_DIR)/DarwinFUSE clean 2>/dev/null || true
-endif
-	rm -rf $(BASE_DIR)/build_gui
 	rm -f $(BASE_DIR)/libBasaltCore.a

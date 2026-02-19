@@ -108,8 +108,8 @@ typedef union
 
 } UINT64_STRUCT;
 
-// --- Fatal exception (null-pointer dereference for crash dump) ---
-#define TC_THROW_FATAL_EXCEPTION	*(char *) 0 = 0
+// --- Fatal exception (trap for crash dump) ---
+#define TC_THROW_FATAL_EXCEPTION	__builtin_trap()
 
 // --- Stringification ---
 #ifndef TC_TO_STRING

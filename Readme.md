@@ -1,15 +1,13 @@
 <p align="center">
-  <img src="Resources/Icons/Basalt.png" width="128" alt="Basalt icon">
+  <img src="Resources/Icons/basalt-icon-256.png" width="128" alt="Basalt icon">
 </p>
 <h1 align="center">Basalt</h1>
 <p align="center">
-  <strong>A security-hardened fork of TrueCrypt 7.1a for macOS, Linux, and Windows</strong><br>
+  <strong>A security-hardened fork of TrueCrypt 7.1a for macOS</strong><br>
   Native SwiftUI app &middot; Argon2id key derivation &middot; DarwinFUSE (no kext) &middot; Universal Binary (arm64 + x86_64)
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-12%2B-blue" alt="macOS 12+">
-  <img src="https://img.shields.io/badge/Linux-CLI-green" alt="Linux CLI">
-  <img src="https://img.shields.io/badge/Windows-CLI-green" alt="Windows CLI">
   <img src="https://img.shields.io/badge/license-TrueCrypt%203.0-lightgrey" alt="License">
 </p>
 
@@ -38,7 +36,7 @@ window dressing — just solid encryption with modern key derivation.
 - **Opens TrueCrypt & VeraCrypt volumes** — plus automatic KDF upgrade prompt for legacy iterations.
 - **Hidden volumes** — create and mount with plausible deniability, with write protection for the outer volume.
 - **Native SwiftUI app** — no wxWidgets, no Qt on macOS. Clean, dark-mode interface.
-- **Cross-platform CLI** — `basalt-cli` on macOS, Linux, and Windows.
+- **CLI included** — `basalt-cli` for scripting and headless use.
 - **DarwinFUSE built-in** — no macFUSE, no kernel extension, no SIP changes.
 - **Zero-state design** — no password cache, no favorites, no history. Forensic analysis reveals nothing.
 - **Auto-dismount** — on inactivity, screen lock, sleep, quit, and logout.
@@ -71,33 +69,23 @@ prompt for modern key derivation.
 
 ## Building
 
-### macOS
-
 Requirements: macOS 12+, Xcode Command Line Tools, pkg-config.
 No external FUSE installation required.
 
+**GUI (Basalt.app):**
+```sh
+cd Basalt && ./build.sh
+```
+
+**CLI:**
+```sh
+make cli
+```
+
+**Universal Binary (arm64 + x86_64):**
 ```sh
 bash build-universal.sh release
 ```
-
-### Linux
-
-```sh
-sudo apt install build-essential pkg-config libfuse-dev   # Debian/Ubuntu
-make NOASM=1 cli
-sudo ./CLI/basalt-cli --mount /path/to/volume
-```
-
-### Windows
-
-```powershell
-cmake -B build_windows -G "Visual Studio 17 2022" -A x64
-cmake --build build_windows --config Release
-basalt-cli.exe volume.tc F:
-```
-
-On Windows, Basalt uses a local iSCSI target — no FUSE, no kernel driver.
-The built-in iSCSI Initiator creates a real block device per drive letter.
 
 
 ## Architecture
@@ -105,8 +93,9 @@ The built-in iSCSI Initiator creates a real block device per drive letter.
 ```
 Basalt.app (SwiftUI)          Native macOS UI (macOS 12+)
   TCCoreBridge.mm (ObjC++)    Bridge: Foundation ↔ C++
-basalt-cli (C++)              Standalone terminal tool (macOS + Linux + Windows)
+basalt-cli (C++)              Standalone terminal tool
   libBasaltCore.a (src/)      Crypto + Volume + FUSE + Platform
+    DarwinFUSE (C)            NFSv4 userspace FUSE (no kernel extension)
 ```
 
 

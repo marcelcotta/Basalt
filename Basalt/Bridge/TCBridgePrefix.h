@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2024-2026 Basalt contributors. All rights reserved.
+ Copyright (c) 2026 Basalt contributors. All rights reserved.
 
  Bridge prefix header — resolves BOOL conflict between TrueCrypt (C legacy)
  and Objective-C. Must be included BEFORE any other headers in .mm files.

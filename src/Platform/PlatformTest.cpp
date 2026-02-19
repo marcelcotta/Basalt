@@ -278,7 +278,7 @@ namespace Basalt
 
 		try
 		{
-			dynamic_cast <RttiTest &> (rttiBaseRef);
+			(void) dynamic_cast <RttiTest &> (rttiBaseRef);
 		}
 		catch (...)
 		{

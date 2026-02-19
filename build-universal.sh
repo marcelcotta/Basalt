@@ -117,7 +117,7 @@ build_swiftui() {
     local CXX_FLAGS="${COMMON_FLAGS} -std=c++14 -stdlib=libc++ -I${SYMLINK}/src -I${SYMLINK}/src/Crypto"
     CXX_FLAGS="${CXX_FLAGS} -DTC_UNIX -DTC_BSD -DTC_MACOSX -D__STDC_WANT_LIB_EXT1__=1"
     CXX_FLAGS="${CXX_FLAGS} -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES"
-    local OBJCXX_FLAGS="${CXX_FLAGS} -fobjc-arc"
+    local OBJCXX_FLAGS="${CXX_FLAGS} -fobjc-arc -Wno-potentially-evaluated-expression"
 
     if [ "${BUILD_CONFIG}" = "release" ]; then
         OBJCXX_FLAGS="${OBJCXX_FLAGS} -O2"
@@ -175,8 +175,7 @@ build_swiftui() {
     local SWIFT_LIB_DIR
     SWIFT_LIB_DIR="$(dirname "$(xcrun --find swiftc)")/../lib/swift/macosx"
 
-    local FUSE_LIBS
-    FUSE_LIBS="$(pkg-config fuse --libs 2>/dev/null || echo '-losxfuse')"
+    local FUSE_LIBS="${SYMLINK}/src/DarwinFUSE/libdarwinfuse.a"
 
     local SWIFT_OBJS
     SWIFT_OBJS=$(find "${OBJ_DIR}" -name "*.swift.o" -type f | sort)
@@ -187,7 +186,6 @@ build_swiftui() {
         ${SWIFT_OBJS} \
         "${CORE_LIB}" \
         ${FUSE_LIBS} \
-        -lc++ \
         -framework AppKit \
         -framework Security \
         -framework SwiftUI \
@@ -258,6 +256,9 @@ echo -n "APPLBSLT" > "${APP_BUNDLE}/Contents/PkgInfo"
 if [ -f "${SYMLINK}/Resources/Icons/Basalt.icns" ]; then
     cp "${SYMLINK}/Resources/Icons/Basalt.icns" "${APP_BUNDLE}/Contents/Resources/"
 fi
+
+# Copy Credits (shown in About window — required by TrueCrypt License III.1.c)
+cp "${SYMLINK}/Basalt/Credits.rtf" "${APP_BUNDLE}/Contents/Resources/"
 
 # ============================================================
 # Step 5: Ad-hoc code sign

@@ -55,7 +55,7 @@ COMMON_FLAGS="-arch ${ARCH} -mmacosx-version-min=${MIN_MACOS} -isysroot ${SDK_PA
 CXX_FLAGS="${COMMON_FLAGS} -std=c++14 -stdlib=libc++ -I${SRC_ROOT}/src -I${SRC_ROOT}/src/Crypto"
 CXX_FLAGS="${CXX_FLAGS} -DTC_UNIX -DTC_BSD -DTC_MACOSX -D__STDC_WANT_LIB_EXT1__=1"
 CXX_FLAGS="${CXX_FLAGS} -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGE_FILES"
-OBJCXX_FLAGS="${CXX_FLAGS} -fobjc-arc"
+OBJCXX_FLAGS="${CXX_FLAGS} -fobjc-arc -Wno-potentially-evaluated-expression"
 
 if [ "${BUILD_CONFIG}" = "release" ]; then
     OBJCXX_FLAGS="${OBJCXX_FLAGS} -O2"
@@ -123,7 +123,6 @@ clang++ ${LINK_FLAGS} \
     ${SWIFT_OBJS} \
     "${CORE_LIB}" \
     ${FUSE_LIBS} \
-    -lc++ \
     -framework AppKit \
     -framework Security \
     -framework SwiftUI \
@@ -147,6 +146,9 @@ echo -n "APPLBSLT" > "${APP_BUNDLE}/Contents/PkgInfo"
 if [ -f "${SYMLINK}/Resources/Icons/Basalt.icns" ]; then
     cp "${SYMLINK}/Resources/Icons/Basalt.icns" "${APP_BUNDLE}/Contents/Resources/"
 fi
+
+# Copy Credits (shown in About window — required by TrueCrypt License III.1.c)
+cp "${SYMLINK}/Basalt/Credits.rtf" "${APP_BUNDLE}/Contents/Resources/"
 
 # Step 5: Ad-hoc code sign
 echo "Code signing..."

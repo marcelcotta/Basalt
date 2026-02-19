@@ -10,15 +10,6 @@ CLI/basalt-cli
 Basalt/build/
 build-universal/
 
-# CMake build directories
-build_*/
-
-# Qt6 for Windows cross-compile (~1GB, downloaded via aqtinstall)
-qt6-win-mingw/
-
-# Logs
-aqtinstall.log
-
 # macOS
 .DS_Store
 *.swp
