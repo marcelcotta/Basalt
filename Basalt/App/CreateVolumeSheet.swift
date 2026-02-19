@@ -208,6 +208,7 @@ struct CreateVolumeSheet: View {
                 Text("Hidden volume").tag(1)
             }
             .pickerStyle(.segmented)
+            .help("A hidden volume is stored inside another volume. If coerced, you can reveal the outer volume while the hidden one stays secret.")
             .onChange(of: volumeType) { _ in
                 volumePath = ""
                 selectedDeviceSize = 0
@@ -249,6 +250,7 @@ struct CreateVolumeSheet: View {
                     .pickerStyle(.segmented)
                     .frame(width: 160)
                 }
+                .help("Must fit inside the outer volume. Leave space for decoy files on the outer volume.")
 
                 if sizeInBytes > 0 {
                     Text(formatBytes(sizeInBytes))
@@ -376,6 +378,7 @@ struct CreateVolumeSheet: View {
                 }
             }
             .pickerStyle(.menu)
+            .help("AES is fastest (hardware-accelerated). Cascades like AES-Twofish-Serpent encrypt with multiple algorithms for defense-in-depth.")
 
             Picker("Hash Algorithm:", selection: $selectedHash) {
                 ForEach(vm.availableHashAlgorithms, id: \.self) { hash in
@@ -383,19 +386,23 @@ struct CreateVolumeSheet: View {
                 }
             }
             .pickerStyle(.menu)
+            .help("Determines how your password is converted into an encryption key.")
 
             Divider()
 
             if selectedHash == "Argon2id" {
                 Label("Argon2id (512 MB, 4 threads) — strong protection against brute-force attacks.", systemImage: "shield.checkered")
+                    .help("Uses 512 MB of RAM per attempt. Strong GPU resistance.")
                     .font(.caption)
                     .foregroundColor(.green)
             } else if selectedHash == "Argon2id-Max" {
                 Label("Argon2id Maximum Security (1 GB, 8 threads) — strongest protection for high-value data.", systemImage: "shield.checkered")
+                    .help("Uses 1 GB of RAM per attempt. Maximum brute-force resistance — slower mount times.")
                     .font(.caption)
                     .foregroundColor(.green)
             } else {
                 Toggle("TrueCrypt 7.1a compatible (legacy iterations)", isOn: $legacyIterations)
+                    .help("Uses weaker key derivation (1,000 iterations instead of 500,000+). Only enable if you need to open this volume with TrueCrypt 7.1a.")
 
                 if legacyIterations {
                     Label("Uses original TrueCrypt 7.1a iteration counts (1000–2000). The volume can be opened with TrueCrypt 7.1a but has weaker key derivation.", systemImage: "exclamationmark.triangle")
@@ -522,6 +529,7 @@ struct CreateVolumeSheet: View {
                 Image(systemName: "dice")
                 Text("Extra entropy")
                     .font(.callout)
+                    .help("Move your mouse randomly to add extra randomness to key generation.")
                 Text("(optional)")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -546,6 +554,7 @@ struct CreateVolumeSheet: View {
                     Text("Mac OS Extended (HFS+)").tag(2)
                 }
                 .pickerStyle(.menu)
+                .help("FAT: cross-platform, 4 GB file size limit. HFS+: macOS native, no file size limit. None: raw encrypted storage.")
 
                 if filesystem == 1 && effectiveSize > 4_294_967_295 { // FAT 4 GB limit
                     Label("FAT does not support files larger than 4 GB. Consider Mac OS Extended for larger files.", systemImage: "exclamationmark.triangle")
@@ -554,6 +563,7 @@ struct CreateVolumeSheet: View {
                 }
 
                 Toggle("Quick format", isOn: $quickFormat)
+                    .help("Quick format initializes headers only (instant). Full format writes random data across the volume (slower but more secure).")
 
                 if !quickFormat {
                     Text("Full format writes encrypted random data to the entire volume. This is more secure but takes longer.")

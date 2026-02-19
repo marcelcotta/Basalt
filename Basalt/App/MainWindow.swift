@@ -7,6 +7,7 @@
 */
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct MainWindow: View {
     @EnvironmentObject var vm: VolumeManager
@@ -61,7 +62,7 @@ struct MainWindow: View {
                     Text("No Volumes Mounted")
                         .font(.title2)
                         .foregroundColor(.secondary)
-                    Text("Click Mount to open an encrypted volume")
+                    Text("Click Mount or drop a volume file here")
                         .font(.callout)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -114,6 +115,17 @@ struct MainWindow: View {
                     }
                 }
             }
+        }
+        .onDrop(of: [.fileURL], isTargeted: nil) { providers in
+            guard let provider = providers.first else { return false }
+            _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                guard let url else { return }
+                Task { @MainActor in
+                    vm.mountPath = url.path
+                    vm.showMountSheet = true
+                }
+            }
+            return true
         }
         .frame(minWidth: 600, minHeight: 300)
         .sheet(isPresented: $vm.showMountSheet) {

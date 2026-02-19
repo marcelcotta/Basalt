@@ -48,6 +48,7 @@ struct PreferencesView: View {
                 Toggle("Dismount all on logout/shutdown", isOn: $prefs.dismountOnLogOff)
 
                 Toggle("Force dismount (even if files are open)", isOn: $prefs.forceDismount)
+                    .help("Unmounts volumes even if applications still have open files. Disable to be warned about open files first.")
             }
 
             Divider()
@@ -60,6 +61,7 @@ struct PreferencesView: View {
 
             Section("Key Derivation") {
                 Toggle("Don't prompt to upgrade legacy volumes", isOn: $prefs.suppressKdfUpgradePrompt)
+                    .help("Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation.")
             }
         }
         .padding(20)
@@ -71,6 +73,7 @@ struct PreferencesView: View {
         Form {
             Section("Default Mount Options") {
                 Toggle("Preserve file timestamps", isOn: $prefs.defaultPreserveTimestamps)
+                    .help("Keeps original file dates unchanged when accessing files on the volume.")
                 Toggle("Mount as read-only", isOn: $prefs.defaultReadOnly)
             }
 

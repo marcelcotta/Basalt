@@ -15,14 +15,14 @@
 #define TC_APP_NAME						"Basalt"
 
 // Version displayed to user
-#define VERSION_STRING					"1.0"
+#define VERSION_STRING					"1.1"
 
 // Version number to compare against driver
-#define VERSION_NUM						0x0100
+#define VERSION_NUM						0x0101
 
 // Release date
-#define TC_STR_RELEASE_DATE				"February 10, 2025"
-#define TC_RELEASE_DATE_YEAR			2025
+#define TC_STR_RELEASE_DATE				"February 19, 2026"
+#define TC_RELEASE_DATE_YEAR			2026
 #define TC_RELEASE_DATE_MONTH			2
 
 #define BYTES_PER_KB                    1024LL

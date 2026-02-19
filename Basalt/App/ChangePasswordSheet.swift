@@ -85,6 +85,7 @@ struct ChangePasswordSheet: View {
                 }
             }
             .pickerStyle(.menu)
+            .help("The hash algorithm used for key derivation. Select '(unchanged)' to keep the current setting.")
 
             // Error display
             if let error = vm.errorMessage {

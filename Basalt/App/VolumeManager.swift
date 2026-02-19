@@ -32,6 +32,9 @@ class VolumeManager: ObservableObject {
 
     @Published var selectedSlot: Int?
 
+    /// Pre-filled volume path for MountSheet (set by drag & drop or menu bar)
+    @Published var mountPath: String?
+
     var selectedVolume: TCVolumeInfo? {
         guard let slot = selectedSlot else { return nil }
         return mountedVolumes.first { $0.slotNumber == slot }
@@ -98,6 +101,12 @@ class VolumeManager: ObservableObject {
         mountedVolumes = bridge.mountedVolumes()
         checkProtectionTriggered()
         checkInactivity()
+
+        NotificationCenter.default.post(
+            name: .basaltVolumesChanged,
+            object: nil,
+            userInfo: ["volumes": mountedVolumes]
+        )
     }
 
     // MARK: - Hidden Volume Protection Alert
@@ -211,6 +220,14 @@ class VolumeManager: ObservableObject {
                 if let vol = resultVol {
                     self?.refreshVolumes()
                     self?.showMountSheet = false
+
+                    // Prevent Spotlight from indexing the mounted volume
+                    if !vol.mountPoint.isEmpty {
+                        let marker = URL(fileURLWithPath: vol.mountPoint)
+                            .appendingPathComponent(".metadata_never_index")
+                        FileManager.default.createFile(atPath: marker.path, contents: nil)
+                    }
+
                     if shouldOpenFinder && !vol.mountPoint.isEmpty {
                         NSWorkspace.shared.selectFile(nil,
                             inFileViewerRootedAtPath: vol.mountPoint)

@@ -38,6 +38,7 @@ struct BasaltApp: App {
                     volumeManager.preferences = preferences
                     appDelegate.volumeManager = volumeManager
                     appDelegate.preferences = preferences
+                    appDelegate.observeVolumes(volumeManager)
                 }
         }
         .commands {
@@ -94,7 +95,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var volumeManager: VolumeManager?
     var preferences: PreferencesManager?
 
+    private var statusItem: NSStatusItem?
+    private var volumeObserver: NSObjectProtocol?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        setupStatusItem()
         // SECURITY: Prevent screen capture of ALL windows (including alerts/dialogs).
         //
         // SwiftUI .alert() creates a separate NSAlert window that does not inherit
@@ -132,6 +137,92 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
+    // MARK: - Menu Bar Status Item
+
+    private func setupStatusItem() {
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        if let button = statusItem?.button {
+            button.image = NSImage(systemSymbolName: "lock.shield", accessibilityDescription: "Basalt")
+        }
+        rebuildStatusMenu(volumes: [])
+    }
+
+    func observeVolumes(_ vm: VolumeManager) {
+        volumeObserver = NotificationCenter.default.addObserver(
+            forName: .basaltVolumesChanged, object: nil, queue: .main
+        ) { [weak self] notification in
+            let volumes = notification.userInfo?["volumes"] as? [TCVolumeInfo] ?? []
+            self?.rebuildStatusMenu(volumes: volumes)
+            if let button = self?.statusItem?.button {
+                let name = volumes.isEmpty ? "lock.shield" : "lock.shield.fill"
+                button.image = NSImage(systemSymbolName: name, accessibilityDescription: "Basalt")
+            }
+        }
+    }
+
+    private func rebuildStatusMenu(volumes: [TCVolumeInfo]) {
+        let menu = NSMenu()
+
+        if volumes.isEmpty {
+            let item = NSMenuItem(title: "No Volumes Mounted", action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        } else {
+            for vol in volumes {
+                let label = (vol.mountPoint.isEmpty ? vol.path : vol.mountPoint)
+                let item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                menu.addItem(item)
+
+                let dismountItem = NSMenuItem(title: "  Dismount", action: #selector(statusMenuDismount(_:)), keyEquivalent: "")
+                dismountItem.target = self
+                dismountItem.representedObject = vol
+                menu.addItem(dismountItem)
+            }
+
+            menu.addItem(NSMenuItem.separator())
+
+            let dismountAll = NSMenuItem(title: "Dismount All", action: #selector(statusMenuDismountAll), keyEquivalent: "")
+            dismountAll.target = self
+            menu.addItem(dismountAll)
+        }
+
+        menu.addItem(NSMenuItem.separator())
+
+        let mount = NSMenuItem(title: "Mount Volume...", action: #selector(statusMenuMount), keyEquivalent: "")
+        mount.target = self
+        menu.addItem(mount)
+
+        menu.addItem(NSMenuItem.separator())
+
+        let quit = NSMenuItem(title: "Quit Basalt", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(quit)
+
+        statusItem?.menu = menu
+    }
+
+    @objc private func statusMenuMount() {
+        NSApp.activate(ignoringOtherApps: true)
+        Task { @MainActor in
+            volumeManager?.showMountSheet = true
+        }
+    }
+
+    @objc private func statusMenuDismount(_ sender: NSMenuItem) {
+        guard let vol = sender.representedObject as? TCVolumeInfo else { return }
+        Task { @MainActor in
+            volumeManager?.dismountVolume(vol, force: preferences?.forceDismount ?? true)
+        }
+    }
+
+    @objc private func statusMenuDismountAll() {
+        Task { @MainActor in
+            volumeManager?.dismountAll(force: preferences?.forceDismount ?? true)
+        }
+    }
+
+    // MARK: - App Lifecycle
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let prefs = preferences, let vm = volumeManager else { return .terminateNow }
 
@@ -166,6 +257,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             volumeManager?.dismountAll(force: prefs.forceDismount)
         }
     }
+}
+
+extension Notification.Name {
+    static let basaltVolumesChanged = Notification.Name("BasaltVolumesChanged")
 }
 
 // MARK: - Screen Capture Protection via Method Swizzling

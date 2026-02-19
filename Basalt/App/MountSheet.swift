@@ -116,6 +116,7 @@ struct MountSheet: View {
             HStack {
                 Text("Keyfiles:")
                     .foregroundColor(.secondary)
+                    .help("Files used as part of your authentication. The volume requires both the password and the keyfiles to open.")
 
                 if keyfiles.isEmpty {
                     Text("None")
@@ -150,6 +151,7 @@ struct MountSheet: View {
                     HStack {
                         TextField("Mount point (optional)", text: $mountPoint)
                             .textFieldStyle(.roundedBorder)
+                            .help("Where the volume appears in Finder. Leave empty for automatic placement.")
                         Button("Browse...") {
                             let panel = NSOpenPanel()
                             panel.canChooseFiles = false
@@ -163,11 +165,14 @@ struct MountSheet: View {
                     }
 
                     Toggle("Read-only", isOn: $readOnly)
+                        .help("Files can be read but not modified or deleted.")
                     Toggle("Use backup headers", isOn: $useBackupHeaders)
+                        .help("Use the backup copy of the volume header, stored at the end of the file. Try this if the volume won't open normally.")
 
                     Divider()
 
                     Toggle("Protect hidden volume when mounting outer", isOn: $protectHiddenVolume)
+                        .help("Prevents the outer volume from accidentally overwriting hidden volume data. Requires the hidden volume password.")
 
                     if protectHiddenVolume {
                         PasswordView("Hidden volume password", text: $hiddenVolumePassword)
@@ -263,6 +268,10 @@ struct MountSheet: View {
         .screenCaptureProtection()
         .onAppear {
             readOnly = prefs.defaultReadOnly
+            if let path = vm.mountPath {
+                volumePath = path
+                vm.mountPath = nil
+            }
             passwordFocused = true
         }
         .onChange(of: vm.showMountSheet) { newValue in
@@ -334,6 +343,7 @@ struct DevicePickerPopover: View {
             Toggle("Show internal disks", isOn: $showAllDevices)
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .help("Reveals your Mac's internal disk in the device list. Use with caution.")
 
             if showAllDevices {
                 Label("Selecting an internal disk can destroy your system!", systemImage: "exclamationmark.triangle.fill")
