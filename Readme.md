@@ -81,10 +81,14 @@ but costs $50,000+ instead of $1,600.
 |--------|:-----:|:------:|
 | Basalt | ✓ | ✓ |
 | TrueCrypt 7.1a | ✓ | ✓ (legacy mode) |
-| VeraCrypt | ✓ | — |
+| VeraCrypt | ✓* | — |
 
 Existing volumes just work. Legacy TrueCrypt volumes get an automatic upgrade
 prompt for modern key derivation.
+
+*VeraCrypt volumes using Camellia or Kuznyechik are not supported — see
+[SECURITY.md](SECURITY.md#cipher-selection-why-not-camellia-or-kuznyechik) for
+the rationale.
 
 
 ## Download
