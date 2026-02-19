@@ -1,7 +1,7 @@
 # Security Hardening: Basalt (TrueCrypt 7.1a macOS Port)
 
 This document describes all security-relevant changes made to the TrueCrypt 7.1a
-codebase as part of the macOS 14 (Apple Silicon) port. The goal is to fix known
+codebase as part of the macOS 12+ universal (arm64 + x86_64) port. The goal is to fix known
 weaknesses identified by the original OCAP audits (2013-2015) and bring the
 implementation to modern standards — without breaking compatibility with existing
 TrueCrypt volumes.
@@ -448,15 +448,6 @@ through `wxString` with uncontrollable heap copies, signal handler deadlocks,
 destruction-order memory corruption, and a large third-party dependency.
 
 ### Net Effect
-
-| Component | Files | Lines (approx.) |
-|-----------|------:|----------------:|
-| Windows kernel driver | 14 | ~8,500 |
-| Boot loader | 27 | ~4,500 |
-| PKCS#11 / tokens | 5 | ~1,200 |
-| wxWidgets GUI + Windows GUI | 86+ | ~25,000 |
-| Win32 Common (dialogs, registry, COM) | 30+ | ~20,000 |
-| **Total removed** | **~200** | **~60,000+** |
 
 The full `git diff --stat` from TrueCrypt 7.1a to Basalt shows 110,488 lines
 deleted and 16,195 lines added across 496 files changed. The codebase shrank
