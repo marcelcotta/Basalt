@@ -41,7 +41,7 @@ window dressing — just solid encryption with modern key derivation.
 - **Zero-state design** — no password cache, no favorites, no history. Forensic analysis reveals nothing.
 - **Auto-dismount** — on inactivity, screen lock, sleep, quit, and logout.
 - **Screen capture protection** — the entire app is invisible to screenshots, screen recording, and AirPlay.
-- **~60,000 lines of attack surface removed** — boot loader, kernel driver, PKCS#11, wxWidgets all deleted.
+- **Codebase reduced by 75%** — from 195k to 47k lines. Boot loader, kernel driver, PKCS#11, wxWidgets, Win32 all deleted.
 
 <details>
 <summary><strong>More screenshots</strong></summary>
