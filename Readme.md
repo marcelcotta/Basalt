@@ -67,7 +67,35 @@ Existing volumes just work. Legacy TrueCrypt volumes get an automatic upgrade
 prompt for modern key derivation.
 
 
-## Building
+## Download
+
+Pre-built universal binaries (arm64 + x86_64) are available on the
+[Releases](https://github.com/marcelcotta/Basalt/releases) page:
+
+- **Basalt.app** — the GUI, packaged as a DMG
+- **basalt-cli** — the command-line tool, packaged as a ZIP
+
+### Opening the app (unsigned)
+
+Basalt is not notarized by Apple. macOS Gatekeeper will block it on first launch.
+
+**Option A — Right-click:**
+1. Right-click (or Control-click) `Basalt.app`
+2. Select **Open** from the context menu
+3. Click **Open** in the dialog
+
+**Option B — Terminal:**
+```sh
+xattr -d com.apple.quarantine /path/to/Basalt.app
+```
+
+The same applies to `basalt-cli`:
+```sh
+xattr -d com.apple.quarantine /path/to/basalt-cli
+```
+
+
+## Building from source
 
 Requirements: macOS 12+, Xcode Command Line Tools, pkg-config.
 No external FUSE installation required.

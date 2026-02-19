@@ -51,8 +51,12 @@ build_core_lib() {
     find "${SYMLINK}/src/Common" -name '*.o' -delete 2>/dev/null || true
     rm -f "${SYMLINK}/libBasaltCore.a"
 
+    # Rebuild DarwinFUSE for this architecture
+    make -C "${SYMLINK}/src/DarwinFUSE" clean
+    make -C "${SYMLINK}/src/DarwinFUSE" TC_BUILD_CONFIG=Release \
+        CFLAGS="-arch ${ARCH} -Wall -Wextra -Wno-unused-parameter -std=c11 -I${SYMLINK}/src/DarwinFUSE/include -I${SYMLINK}/src/DarwinFUSE/src -D_FILE_OFFSET_BITS=64 -O2"
+
     # Build with architecture override
-    # TARGET_ARCH controls which arch-specific crypto sources are included
     make -C "${SYMLINK}" BASE_DIR="${SYMLINK}" NOASM=1 \
         TARGET_ARCH="${ARCH}" \
         TC_EXTRA_CFLAGS="-arch ${ARCH}" \
