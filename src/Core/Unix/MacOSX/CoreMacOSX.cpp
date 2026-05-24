@@ -70,22 +70,56 @@ namespace Basalt
 				mountedVolume = ml.front();
 		}
 
-		list <string> args;
-		args.push_back ("--");
-		args.push_back (mountedVolume->AuxMountPoint);
-
-		for (int t = 0; true; t++)
+		// Forceful path: macOS' /sbin/umount commonly fails with "Resource busy --
+		// try 'diskutil unmount'" on FUSE mounts when background services (mds,
+		// fseventsd, ...) still hold handles. When the caller asked to ignore open
+		// files, follow the OS' own recommendation and try diskutil first, then
+		// fall back to umount -f. Without force we keep the original retry loop.
+		if (ignoreOpenFiles)
 		{
-			try
+			bool unmounted = false;
+
 			{
-				Process::Execute ("/sbin/umount", args);
-				break;
+				list <string> dargs;
+				dargs.push_back ("unmount");
+				dargs.push_back ("force");
+				dargs.push_back (mountedVolume->AuxMountPoint);
+				try
+				{
+					Process::Execute ("/usr/sbin/diskutil", dargs);
+					unmounted = true;
+				}
+				catch (ExecutedProcessFailed&) { }
 			}
-			catch (ExecutedProcessFailed&)
+
+			if (!unmounted)
 			{
-				if (t > 10)
-					throw;
-				Thread::Sleep (200);
+				list <string> uargs;
+				uargs.push_back ("-f");
+				uargs.push_back ("--");
+				uargs.push_back (mountedVolume->AuxMountPoint);
+				Process::Execute ("/sbin/umount", uargs);
+			}
+		}
+		else
+		{
+			list <string> args;
+			args.push_back ("--");
+			args.push_back (mountedVolume->AuxMountPoint);
+
+			for (int t = 0; true; t++)
+			{
+				try
+				{
+					Process::Execute ("/sbin/umount", args);
+					break;
+				}
+				catch (ExecutedProcessFailed&)
+				{
+					if (t > 10)
+						throw;
+					Thread::Sleep (200);
+				}
 			}
 		}
 
