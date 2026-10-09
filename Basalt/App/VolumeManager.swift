@@ -347,10 +347,9 @@ class VolumeManager: ObservableObject {
         defer { isLoading = false }
 
         let state = QuitDismountState()
-        let bridge = self.bridge
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                try bridge.dismountAllVolumes(force)
+                try TCCoreBridge.shared().dismountAllVolumes(force)
             } catch {
                 state.error = error.localizedDescription
             }
@@ -362,7 +361,7 @@ class VolumeManager: ObservableObject {
             if Date() > deadline {
                 return String(localized: "Dismounting did not finish in time.")
             }
-            RunLoop.current.run(mode: .modalPanel, before: Date())
+            _ = RunLoop.current.run(mode: .modalPanel, before: Date())
         }
 
         refreshVolumes()
