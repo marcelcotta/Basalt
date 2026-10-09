@@ -186,6 +186,13 @@ The upgrade preserves the user's password, keyfiles, and hash algorithm choice. 
 iteration count changes. The file hash will change (header bytes are different), but the
 on-disk encryption format and data content are unchanged.
 
+**Update (Wave 11, #44):** The app now offers Argon2id-Max instead of a higher PBKDF2
+iteration count, for TrueCrypt volumes and for VeraCrypt volumes (PBKDF2 with 500,000
+iterations) alike. The prompt warns that TrueCrypt and VeraCrypt can no longer open the
+volume afterwards; "Not Now" and "Never Ask Again" leave it untouched. The CLI (#24)
+offers Argon2id-Max for TrueCrypt iteration counts only: it cannot remember a "no", and
+VeraCrypt volumes would be asked on every mount.
+
 ### 17. Single-Pass Wipe for KDF Upgrades
 **Files:** `Core/CoreBase.h`, `Core/CoreBase.cpp`
 **Problem:** `ChangePassword()` performs `PRAND_DISK_WIPE_PASSES` (256 in release builds)
@@ -514,21 +521,42 @@ could pre-create it so that the script builds (and later signs) a foreign tree.
 Improvements suggested in the audit report (open items O-1, O-2, O-3, O-6) and
 usability changes with a security angle.
 
-### 44. Choosing the Key Derivation When Mounting
-**Files:** `Volume/Pkcs5Kdf.*`, `Volume/Volume.*`, `Core/MountOptions.*`, `Core/CoreBase.*`,
-`Core/Unix/CoreUnix.cpp`, `CLI/main.cpp`, `Basalt/App/MountSheet.swift`, `Basalt/App/PreferencesView.swift`
+### 44. Faster Key Derivation Search When Mounting
+**Files:** `Volume/Pkcs5Kdf.*`, `Volume/VolumeHeader.cpp`, `Volume/VolumeLayout.*`, `Volume/Volume.*`,
+`Core/MountOptions.*`, `Core/CoreBase.cpp`, `Core/VolumeOperations.cpp`, `Crypto/Rmd160.c`,
+`CLI/main.cpp`, `Basalt/Bridge/TCCoreBridge.mm`
 **Problem:** The KDF is not stored in the header (it cannot be, without revealing
 information), so opening a volume tries every supported KDF in turn. With two Argon2id
-profiles, their legacy variants and the PBKDF2 PRFs, a wrong password took over a
-minute to report, and a correct one could wait for several KDFs that do not apply.
-**Fix:** An optional KDF hint (`Argon2id-Max`, `Argon2id`, `PBKDF2`) restricts the attempts
-to that family; the legacy (pre-RFC 9106) Argon2id variants are included in the Argon2id
-choices. The GUI offers it under Options in the mount sheet and as a default in
-Settings; the CLI accepts `--kdf=auto|argon2id-max|argon2id|pbkdf2`. A wrong password
-is reported after one KDF family instead of all of them (11.5 s instead of 79 s in a
-test on Linux), and the error says that only the selected KDF was tried. The hint is never
-written to the volume; the default is stored like the other mount defaults. Protected
-hidden volume headers are always tried with all KDFs.
+profiles, their legacy variants and four PBKDF2 PRFs, a wrong password took 91 s to report
+(4-core Linux test machine), and a VeraCrypt volume 11.6 s to open. Most of that time was
+PBKDF2: the 192-byte header key takes 3 blocks with SHA-512 and 10 with RIPEMD-160 or
+SHA-1, each a full run of the iteration count, computed one after the other.
+**Fix:**
+- **Parallel PBKDF2.** PBKDF2 output blocks are independent, so every (PRF, block) pair
+  becomes a job for a thread per core. Jobs are taken in KDF order, so the first PRF's key
+  is tested while the others are still being derived; the threads stop as soon as a key
+  matches. Keys are kept in `SecureBuffer`s that are wiped when freed. Argon2id runs
+  alone, as it is multi-threaded itself.
+- **Order.** Legacy TrueCrypt PBKDF2 (1,000–2,000 iterations, instant), Argon2id-Max,
+  Argon2id, PBKDF2 with modern iteration counts (VeraCrypt), then the open-only
+  pre-RFC 9106 Argon2id variants of Basalt ≤ 1.1.x.
+- **TrueCrypt ≤ 5.x hidden header location** (`VolumeLayoutV1Hidden`) is tried with PBKDF2
+  only: Basalt never creates volumes in that layout, and `ChangePassword` refuses to write
+  an Argon2id header there, so no other KDF can match.
+- **RIPEMD-160 data race.** `RMD160Init` wrote the global `PADDING` array on every call,
+  a data race once several threads derive keys (found with ThreadSanitizer). The array is
+  now constant.
+- **Upgrade offer.** TrueCrypt and VeraCrypt volumes are offered Argon2id-Max (#16); once
+  upgraded they open in about 2 s instead of 6.6–11.8 s.
+
+Measured on the same machine: wrong password 91 s → 33 s, VeraCrypt (SHA-512) 11.6 s →
+6.6 s, Argon2id 6.0 s → 3.3 s, Argon2id-Max 2.6 s → 2.2 s. Machines with more cores
+gain more. The derived keys are bit-identical to the sequential code for all PRFs.
+
+The GUI no longer lets the user pick a KDF when mounting: with Argon2id first, the choice
+saved little for current volumes and implied that mounting was unfinished work. The CLI
+keeps `--kdf=auto|argon2id-max|argon2id|pbkdf2` for scripted use; the hint is never written
+to the volume, and protected hidden volume headers are always tried with all KDFs.
 
 ### 45. Passwords via Standard Input (CLI)
 **Files:** `CLI/main.cpp`

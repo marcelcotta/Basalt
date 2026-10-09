@@ -65,12 +65,6 @@ class PreferencesManager: ObservableObject {
         didSet { UserDefaults.standard.set(closeFinderOnDismount, forKey: "closeFinderOnDismount") }
     }
 
-    /// Key derivation tried first when mounting ("" = auto-detect). A global
-    /// setting, not stored per volume.
-    @Published var defaultKdfHint: String {
-        didSet { UserDefaults.standard.set(defaultKdfHint, forKey: "defaultKdfHint") }
-    }
-
     // MARK: - Init
 
     init() {
@@ -89,8 +83,10 @@ class PreferencesManager: ObservableObject {
             "defaultReadOnly": false,
             "openFinderAfterMount": true,
             "closeFinderOnDismount": true,
-            "defaultKdfHint": "",
         ])
+
+        // Setting of an earlier build that no longer exists
+        d.removeObject(forKey: "defaultKdfHint")
 
         suppressKdfUpgradePrompt = d.bool(forKey: "suppressKdfUpgradePrompt")
         dismountOnScreenSaver = d.bool(forKey: "dismountOnScreenSaver")
@@ -104,7 +100,6 @@ class PreferencesManager: ObservableObject {
         defaultReadOnly = d.bool(forKey: "defaultReadOnly")
         openFinderAfterMount = d.bool(forKey: "openFinderAfterMount")
         closeFinderOnDismount = d.bool(forKey: "closeFinderOnDismount")
-        defaultKdfHint = d.string(forKey: "defaultKdfHint") ?? ""
     }
 
     // MARK: - Apply to Mount Options

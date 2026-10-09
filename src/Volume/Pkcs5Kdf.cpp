@@ -9,6 +9,7 @@
 #include "Common/Pkcs5.h"
 #include "Common/Argon2Kdf.h"
 #include "Pkcs5Kdf.h"
+#include "VolumeInfo.h"
 #include "VolumePassword.h"
 
 namespace Basalt
@@ -53,7 +54,18 @@ namespace Basalt
 		throw ParameterIncorrect (SRC_POS);
 	}
 
-	shared_ptr <Pkcs5Kdf> Pkcs5Kdf::GetUpgradeTarget (const wstring &name, int iterationCount)
+	shared_ptr <Pkcs5Kdf> Pkcs5Kdf::GetUpgradeTarget (const VolumeInfo &volume, bool upgradeCurrentPbkdf2)
+	{
+		shared_ptr <Pkcs5Kdf> target = GetUpgradeTarget (volume.Pkcs5PrfName, (int) volume.Pkcs5IterationCount, upgradeCurrentPbkdf2);
+
+		// TrueCrypt <= 5.x format: required program version below 6.0
+		if (target && !target->IsPbkdf2() && volume.Type == VolumeType::Hidden && volume.MinRequiredProgramVersion < 0x600)
+			return shared_ptr <Pkcs5Kdf>();
+
+		return target;
+	}
+
+	shared_ptr <Pkcs5Kdf> Pkcs5Kdf::GetUpgradeTarget (const wstring &name, int iterationCount, bool upgradeCurrentPbkdf2)
 	{
 		// A mounted volume reports its KDF by name and iteration count; together
 		// they identify the KDF (legacy and modern PBKDF2 share names).
@@ -62,10 +74,18 @@ namespace Basalt
 			if (kdf->GetName() != name || kdf->GetIterationCount() != iterationCount)
 				continue;
 
-			if (!kdf->IsLegacy())
+			if (kdf->IsPbkdf2())
+			{
+				if (kdf->IsLegacy() || upgradeCurrentPbkdf2)
+					return GetAlgorithm (L"Argon2id-Max");
 				return shared_ptr <Pkcs5Kdf>();
+			}
 
-			return GetAlgorithm (*kdf->GetHash());
+			// Argon2id: only the pre-RFC 9106 variants of Basalt <= 1.1.x
+			if (kdf->IsOpenOnly())
+				return GetAlgorithm (*kdf->GetHash());
+
+			return shared_ptr <Pkcs5Kdf>();
 		}
 
 		return shared_ptr <Pkcs5Kdf>();

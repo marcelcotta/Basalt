@@ -438,27 +438,6 @@
 "Prevents the outer volume from overwriting the hidden volume's data area." = "Impedisce che il volume esterno sovrascriva l'area dati del volume nascosto.";
 
 /* MountSheet.swift */
-"Key derivation:" = "Derivazione della chiave:";
-
-/* MountSheet.swift */
-"Auto-detect (slowest)" = "Rilevamento automatico (più lento)";
-
-/* MountSheet.swift */
-"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2 (TrueCrypt / VeraCrypt)";
-
-/* MountSheet.swift */
-"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "Viene provata solo la derivazione della chiave selezionata, il che rende l'apertura molto più veloce. Il rilevamento automatico le prova tutte. I volumi di Basalt 1.1 e versioni precedenti sono inclusi nelle opzioni Argon2id.";
-
-/* MountSheet.swift */
-"%lld s elapsed" = "Tempo trascorso: %lld s";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow to resist brute-force attacks." = "La derivazione della chiave è volutamente lenta per resistere agli attacchi a forza bruta.";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "La derivazione della chiave è volutamente lenta. Selezionarla in Opzioni rende l'apertura più veloce.";
-
-/* MountSheet.swift */
 "Select Device" = "Seleziona dispositivo";
 
 /* MountSheet.swift */
@@ -579,12 +558,6 @@
 "Key Derivation" = "Derivazione della chiave";
 
 /* PreferencesView.swift */
-"Don't prompt to upgrade legacy volumes" = "Non chiedere di aggiornare i volumi legacy";
-
-/* PreferencesView.swift */
-"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "Disattiva la richiesta di aggiornare i vecchi volumi TrueCrypt a una derivazione della chiave più robusta.";
-
-/* PreferencesView.swift */
 "Default Mount Options" = "Opzioni di montaggio predefinite";
 
 /* PreferencesView.swift */
@@ -647,7 +620,7 @@
 /* VolumeManager.swift */
 "Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "Protezione del volume nascosto attivata!\n\nUn'operazione di scrittura ha tentato di sovrascrivere l'area del volume nascosto. La scrittura è stata bloccata e il volume nascosto è al sicuro, ma il file system del volume esterno potrebbe essere danneggiato.\n\nSmontare subito questo volume. Non scrivervi altri dati.";
 
-/* VolumeManager.swift */
+/* VolumeManager.swift, TCCoreBridge.mm */
 "Mount failed" = "Montaggio non riuscito";
 
 /* VolumeManager.swift */
@@ -795,9 +768,6 @@
 "This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "Questa intestazione del volume è stata creata da Basalt 1.1 o versioni precedenti (%@). Tali versioni usavano un'implementazione di Argon2id non conforme allo standard RFC 9106.\n\nL'aggiornamento cifra nuovamente l'intestazione del volume con %@ standard. Dati, password e cifratura rimangono invariati.";
 
 /* TCCoreBridge.mm */
-"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "Questo volume usa una derivazione della chiave legacy (%@, %@ iterazioni).\n\nI volumi moderni usano %@ iterazioni — ciò rende gli attacchi a forza bruta contro la password molto più difficili.\n\nL'aggiornamento cifra nuovamente l'intestazione del volume con una derivazione della chiave più robusta. Dati, password e cifratura rimangono invariati.\n\n⚠ Dopo l'aggiornamento, il volume non potrà più essere aperto con TrueCrypt 7.1a. In caso di dubbio, scegliere “Non ora”.";
-
-/* TCCoreBridge.mm */
 "Upgrade Volume Key Derivation?" = "Aggiornare la derivazione della chiave del volume?";
 
 /* TCCoreBridge.mm */
@@ -819,9 +789,6 @@
 "Volume header upgraded successfully.\nNew key derivation: %@" = "Intestazione del volume aggiornata correttamente.\nNuova derivazione della chiave: %@";
 
 /* TCCoreBridge.mm */
-"Volume header upgraded successfully.\nNew iterations: %@" = "Intestazione del volume aggiornata correttamente.\nNuovo numero di iterazioni: %@";
-
-/* TCCoreBridge.mm */
 "Header upgrade failed: %@" = "Aggiornamento dell'intestazione non riuscito: %@";
 
 /* TCCoreBridge.mm */
@@ -836,9 +803,6 @@
 /* TCCoreBridge.mm */
 "The backup file size is incorrect. This may not be a valid volume header backup." = "La dimensione del file di backup non è corretta. Potrebbe non essere un backup valido dell'intestazione del volume.";
 
-/* VolumeManager.swift */
-"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "È stata provata solo la derivazione della chiave selezionata in Opzioni. In caso di dubbio, scegliere “Rilevamento automatico”.";
-
 /* BasaltApp.swift */
 "Volumes could not be dismounted" = "Impossibile smontare i volumi";
 
@@ -850,3 +814,12 @@
 
 /* VolumeManager.swift */
 "Dismounting did not finish in time." = "Lo smontaggio non è stato completato in tempo.";
+
+/* PreferencesView.swift */
+"Don't offer key derivation upgrades" = "Non proporre di cambiare la derivazione della chiave";
+
+/* PreferencesView.swift */
+"Stops the offer to switch TrueCrypt and VeraCrypt volumes to Argon2id-Max and volumes from Basalt 1.1 to standard Argon2id." = "Non propone più di passare i volumi TrueCrypt e VeraCrypt ad Argon2id-Max e i volumi di Basalt 1.1 ad Argon2id standard.";
+
+/* TCCoreBridge.mm */
+"This volume uses %@ with %@ iterations, the key derivation of TrueCrypt and VeraCrypt.\n\nSwitching to %@ makes password guessing on graphics cards far more expensive, and Basalt opens the volume faster.\n\nOnly the volume header is re-encrypted. Your data, password and encryption remain unchanged.\n\n⚠ Afterwards, TrueCrypt and VeraCrypt can no longer open this volume. If you still need it there, choose \"Not Now\"." = "Questo volume usa %@ con %@ iterazioni, la derivazione della chiave di TrueCrypt e VeraCrypt.\n\nIl passaggio a %@ rende molto più costoso indovinare la password con le schede grafiche, e Basalt apre il volume più rapidamente.\n\nViene cifrata nuovamente solo l'intestazione del volume. Dati, password e cifratura rimangono invariati.\n\n⚠ In seguito, TrueCrypt e VeraCrypt non potranno più aprire questo volume. Se serve ancora lì, scegliere “Non ora”.";

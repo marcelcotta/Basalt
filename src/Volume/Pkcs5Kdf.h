@@ -16,6 +16,7 @@
 namespace Basalt
 {
 	class Pkcs5Kdf;
+	class VolumeInfo;
 	typedef list < shared_ptr <Pkcs5Kdf> > Pkcs5KdfList;
 
 	class Pkcs5Kdf
@@ -28,7 +29,13 @@ namespace Basalt
 		static shared_ptr <Pkcs5Kdf> GetAlgorithm (const wstring &name, bool allowLegacy = false);
 		static shared_ptr <Pkcs5Kdf> GetAlgorithm (const Hash &hash, bool allowLegacy = false);
 		static Pkcs5KdfList GetAvailableAlgorithms ();
-		static shared_ptr <Pkcs5Kdf> GetUpgradeTarget (const wstring &name, int iterationCount);
+		// Header upgrade to offer for a mounted volume, or null. Volumes from
+		// Basalt <= 1.1.x (pre-RFC 9106 Argon2id) get the standard counterpart;
+		// PBKDF2 volumes get Argon2id-Max - with TrueCrypt iteration counts always,
+		// with current ones (VeraCrypt) only if upgradeCurrentPbkdf2. Hidden volumes
+		// in the TrueCrypt <= 5.x format keep PBKDF2 (see VolumeLayoutV1Hidden).
+		static shared_ptr <Pkcs5Kdf> GetUpgradeTarget (const VolumeInfo &volume, bool upgradeCurrentPbkdf2);
+		static shared_ptr <Pkcs5Kdf> GetUpgradeTarget (const wstring &name, int iterationCount, bool upgradeCurrentPbkdf2);
 		// Restricts the KDFs tried when opening a volume. Hint: empty (all),
 		// "Argon2id-Max" or "Argon2id" (each including its pre-RFC variant), "PBKDF2".
 		static Pkcs5KdfList FilterByHint (const Pkcs5KdfList &kdfs, const wstring &hint);

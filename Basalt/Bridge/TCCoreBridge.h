@@ -71,10 +71,6 @@ typedef NS_ENUM(NSInteger, TCErrorCode) {
 @property (nonatomic) BOOL preserveTimestamps;
 @property (nonatomic) BOOL sharedAccessAllowed;
 
-// Restrict key derivation tried on mount: nil = all, @"Argon2id-Max",
-// @"Argon2id" or @"PBKDF2" (TrueCrypt/VeraCrypt). Speeds up opening.
-@property (nonatomic, copy, nullable) NSString *kdfHint;
-
 // Hidden volume protection
 @property (nonatomic) BOOL protectHiddenVolume;
 @property (nonatomic, copy, nullable) NSString *protectionPassword;

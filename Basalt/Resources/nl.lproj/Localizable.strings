@@ -438,27 +438,6 @@
 "Prevents the outer volume from overwriting the hidden volume's data area." = "Voorkomt dat het buitenvolume het gegevensgebied van het verborgen volume overschrijft.";
 
 /* MountSheet.swift */
-"Key derivation:" = "Sleutelafleiding:";
-
-/* MountSheet.swift */
-"Auto-detect (slowest)" = "Automatisch detecteren (traagst)";
-
-/* MountSheet.swift */
-"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2 (TrueCrypt / VeraCrypt)";
-
-/* MountSheet.swift */
-"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "Alleen de geselecteerde sleutelafleiding wordt geprobeerd, waardoor openen veel sneller gaat. Automatisch detecteren probeert ze allemaal. Volumes van Basalt 1.1 en eerder vallen onder de Argon2id-opties.";
-
-/* MountSheet.swift */
-"%lld s elapsed" = "%lld s verstreken";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow to resist brute-force attacks." = "Sleutelafleiding is bewust traag om brute-force-aanvallen tegen te gaan.";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "Sleutelafleiding is bewust traag. Als u deze onder Opties kiest, gaat het openen sneller.";
-
-/* MountSheet.swift */
 "Select Device" = "Selecteer apparaat";
 
 /* MountSheet.swift */
@@ -579,12 +558,6 @@
 "Key Derivation" = "Sleutelafleiding";
 
 /* PreferencesView.swift */
-"Don't prompt to upgrade legacy volumes" = "Vraag niet om verouderde volumes te upgraden";
-
-/* PreferencesView.swift */
-"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "Onderdrukt de vraag om oude TrueCrypt-volumes te upgraden naar een sterkere sleutelafleiding.";
-
-/* PreferencesView.swift */
 "Default Mount Options" = "Standaardopties voor koppelen";
 
 /* PreferencesView.swift */
@@ -647,7 +620,7 @@
 /* VolumeManager.swift */
 "Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "Bescherming van verborgen volume geactiveerd!\n\nEen schrijfbewerking probeerde het gebied van het verborgen volume te overschrijven. De schrijfbewerking is geblokkeerd en het verborgen volume is veilig, maar het bestandssysteem van het buitenvolume is mogelijk beschadigd.\n\nOntkoppel dit volume onmiddellijk. Schrijf er geen gegevens meer naartoe.";
 
-/* VolumeManager.swift */
+/* VolumeManager.swift, TCCoreBridge.mm */
 "Mount failed" = "Koppelen mislukt";
 
 /* VolumeManager.swift */
@@ -795,9 +768,6 @@
 "This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "Deze volumeheader is aangemaakt met Basalt 1.1 of eerder (%@). Die versies gebruikten een Argon2id-implementatie die afwijkt van de RFC 9106-standaard.\n\nBij het upgraden wordt de volumeheader opnieuw versleuteld met %@ volgens de standaard. Uw gegevens, wachtwoord en versleuteling blijven ongewijzigd.";
 
 /* TCCoreBridge.mm */
-"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "Dit volume gebruikt een verouderde sleutelafleiding (%@, %@ iteraties).\n\nModerne volumes gebruiken %@ iteraties — dit maakt brute-force-aanvallen op uw wachtwoord aanzienlijk moeilijker.\n\nBij het upgraden wordt de volumeheader opnieuw versleuteld met een sterkere sleutelafleiding. Uw gegevens, wachtwoord en versleuteling blijven ongewijzigd.\n\n⚠ Na het upgraden kan het volume niet meer met TrueCrypt 7.1a worden geopend. Kies “Niet nu” als u twijfelt.";
-
-/* TCCoreBridge.mm */
 "Upgrade Volume Key Derivation?" = "Sleutelafleiding van volume upgraden?";
 
 /* TCCoreBridge.mm */
@@ -819,9 +789,6 @@
 "Volume header upgraded successfully.\nNew key derivation: %@" = "Volumeheader met succes geüpgraded.\nNieuwe sleutelafleiding: %@";
 
 /* TCCoreBridge.mm */
-"Volume header upgraded successfully.\nNew iterations: %@" = "Volumeheader met succes geüpgraded.\nNieuw aantal iteraties: %@";
-
-/* TCCoreBridge.mm */
 "Header upgrade failed: %@" = "Upgraden van header mislukt: %@";
 
 /* TCCoreBridge.mm */
@@ -836,9 +803,6 @@
 /* TCCoreBridge.mm */
 "The backup file size is incorrect. This may not be a valid volume header backup." = "De grootte van het reservekopiebestand is onjuist. Dit is mogelijk geen geldige reservekopie van een volumeheader.";
 
-/* VolumeManager.swift */
-"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "Alleen de sleutelafleiding die onder Opties is gekozen, is geprobeerd. Kies bij twijfel “Automatisch detecteren”.";
-
 /* BasaltApp.swift */
 "Volumes could not be dismounted" = "Volumes konden niet worden ontkoppeld";
 
@@ -850,3 +814,12 @@
 
 /* VolumeManager.swift */
 "Dismounting did not finish in time." = "Het ontkoppelen is niet op tijd voltooid.";
+
+/* PreferencesView.swift */
+"Don't offer key derivation upgrades" = "Bied geen wijziging van de sleutelafleiding aan";
+
+/* PreferencesView.swift */
+"Stops the offer to switch TrueCrypt and VeraCrypt volumes to Argon2id-Max and volumes from Basalt 1.1 to standard Argon2id." = "Biedt niet meer aan om TrueCrypt- en VeraCrypt-volumes om te zetten naar Argon2id-Max en volumes uit Basalt 1.1 naar standaard-Argon2id.";
+
+/* TCCoreBridge.mm */
+"This volume uses %@ with %@ iterations, the key derivation of TrueCrypt and VeraCrypt.\n\nSwitching to %@ makes password guessing on graphics cards far more expensive, and Basalt opens the volume faster.\n\nOnly the volume header is re-encrypted. Your data, password and encryption remain unchanged.\n\n⚠ Afterwards, TrueCrypt and VeraCrypt can no longer open this volume. If you still need it there, choose \"Not Now\"." = "Dit volume gebruikt %@ met %@ iteraties, de sleutelafleiding van TrueCrypt en VeraCrypt.\n\nOverstappen op %@ maakt het raden van het wachtwoord met grafische kaarten veel duurder, en Basalt opent het volume sneller.\n\nAlleen de volumeheader wordt opnieuw versleuteld. Uw gegevens, wachtwoord en versleuteling blijven ongewijzigd.\n\n⚠ Daarna kunnen TrueCrypt en VeraCrypt dit volume niet meer openen. Kies “Niet nu” als u het daar nog nodig hebt.";

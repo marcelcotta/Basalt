@@ -438,27 +438,6 @@
 "Prevents the outer volume from overwriting the hidden volume's data area." = "Не позволяет внешнему тому перезаписать область данных скрытого тома.";
 
 /* MountSheet.swift */
-"Key derivation:" = "Формирование ключа:";
-
-/* MountSheet.swift */
-"Auto-detect (slowest)" = "Автоопределение (самое медленное)";
-
-/* MountSheet.swift */
-"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2 (TrueCrypt / VeraCrypt)";
-
-/* MountSheet.swift */
-"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "Проверяется только выбранный способ формирования ключа, поэтому том открывается значительно быстрее. При автоопределении проверяются все способы. Тома из Basalt 1.1 и более ранних версий относятся к вариантам Argon2id.";
-
-/* MountSheet.swift */
-"%lld s elapsed" = "Прошло: %lld с";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow to resist brute-force attacks." = "Формирование ключа намеренно замедлено для защиты от атак методом перебора.";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "Формирование ключа намеренно замедлено. Чтобы открыть том быстрее, выберите способ в разделе «Параметры».";
-
-/* MountSheet.swift */
 "Select Device" = "Выбор устройства";
 
 /* MountSheet.swift */
@@ -579,12 +558,6 @@
 "Key Derivation" = "Формирование ключа";
 
 /* PreferencesView.swift */
-"Don't prompt to upgrade legacy volumes" = "Не предлагать обновление устаревших томов";
-
-/* PreferencesView.swift */
-"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "Отключает предложение обновить старые тома TrueCrypt до более надежного формирования ключа.";
-
-/* PreferencesView.swift */
 "Default Mount Options" = "Параметры монтирования по умолчанию";
 
 /* PreferencesView.swift */
@@ -647,7 +620,7 @@
 /* VolumeManager.swift */
 "Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "Сработала защита скрытого тома!\n\nОперация записи попыталась перезаписать область скрытого тома. Запись заблокирована, и скрытый том в безопасности, но файловая система внешнего тома может быть повреждена.\n\nНемедленно размонтируйте этот том. Больше не записывайте на него никаких данных.";
 
-/* VolumeManager.swift */
+/* VolumeManager.swift, TCCoreBridge.mm */
 "Mount failed" = "Ошибка монтирования";
 
 /* VolumeManager.swift */
@@ -795,9 +768,6 @@
 "This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "Этот заголовок тома создан в Basalt 1.1 или более ранней версии (%@). В этих версиях использовалась реализация Argon2id, отклоняющаяся от стандарта RFC 9106.\n\nПри обновлении заголовок тома будет повторно зашифрован с использованием %@ в соответствии со стандартом. Ваши данные, пароль и шифрование не изменятся.";
 
 /* TCCoreBridge.mm */
-"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "В этом томе используется устаревшее формирование ключа (%@, итераций: %@).\n\nВ современных томах используется %@ итераций — это значительно затрудняет подбор вашего пароля методом перебора.\n\nПри обновлении заголовок тома будет повторно зашифрован с более надежным формированием ключа. Ваши данные, пароль и шифрование не изменятся.\n\n⚠ После обновления том больше нельзя будет открыть в TrueCrypt 7.1a. Если вы не уверены, выберите «Не сейчас».";
-
-/* TCCoreBridge.mm */
 "Upgrade Volume Key Derivation?" = "Обновить формирование ключа тома?";
 
 /* TCCoreBridge.mm */
@@ -819,9 +789,6 @@
 "Volume header upgraded successfully.\nNew key derivation: %@" = "Заголовок тома успешно обновлен.\nНовый способ формирования ключа: %@";
 
 /* TCCoreBridge.mm */
-"Volume header upgraded successfully.\nNew iterations: %@" = "Заголовок тома успешно обновлен.\nНовое число итераций: %@";
-
-/* TCCoreBridge.mm */
 "Header upgrade failed: %@" = "Не удалось обновить заголовок: %@";
 
 /* TCCoreBridge.mm */
@@ -836,9 +803,6 @@
 /* TCCoreBridge.mm */
 "The backup file size is incorrect. This may not be a valid volume header backup." = "Неверный размер файла резервной копии. Возможно, это не резервная копия заголовка тома.";
 
-/* VolumeManager.swift */
-"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "Проверен только способ формирования ключа, выбранный в разделе «Параметры». Если не уверены, выберите «Автоопределение».";
-
 /* BasaltApp.swift */
 "Volumes could not be dismounted" = "Не удалось размонтировать тома";
 
@@ -850,3 +814,12 @@
 
 /* VolumeManager.swift */
 "Dismounting did not finish in time." = "Размонтирование не завершилось вовремя.";
+
+/* PreferencesView.swift */
+"Don't offer key derivation upgrades" = "Не предлагать смену способа формирования ключа";
+
+/* PreferencesView.swift */
+"Stops the offer to switch TrueCrypt and VeraCrypt volumes to Argon2id-Max and volumes from Basalt 1.1 to standard Argon2id." = "Больше не предлагать перевод томов TrueCrypt и VeraCrypt на Argon2id-Max и томов Basalt 1.1 на стандартный Argon2id.";
+
+/* TCCoreBridge.mm */
+"This volume uses %@ with %@ iterations, the key derivation of TrueCrypt and VeraCrypt.\n\nSwitching to %@ makes password guessing on graphics cards far more expensive, and Basalt opens the volume faster.\n\nOnly the volume header is re-encrypted. Your data, password and encryption remain unchanged.\n\n⚠ Afterwards, TrueCrypt and VeraCrypt can no longer open this volume. If you still need it there, choose \"Not Now\"." = "В этом томе используется %@ (итераций: %@) — способ формирования ключа TrueCrypt и VeraCrypt.\n\nПереход на %@ делает подбор пароля на видеокартах намного дороже, а Basalt будет открывать том быстрее.\n\nПовторно шифруется только заголовок тома. Ваши данные, пароль и шифрование не изменятся.\n\n⚠ После этого TrueCrypt и VeraCrypt больше не смогут открыть этот том. Если он ещё нужен вам там, выберите «Не сейчас».";
