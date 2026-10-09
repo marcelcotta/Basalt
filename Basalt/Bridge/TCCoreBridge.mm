@@ -441,6 +441,17 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     }
 }
 
+- (void)shutdownCore
+{
+    if (!_initialized) return;
+
+    try
+    {
+        CoreService::Stop ();
+    }
+    catch (...) { }
+}
+
 // ---- Mount / Dismount ----
 
 - (nullable TCVolumeInfo *)mountVolume:(TCMountOptions *)options error:(NSError **)error

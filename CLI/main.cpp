@@ -1026,6 +1026,12 @@ int main (int argc, char *argv[])
 		}
 
 		CoreService::Start ();
+
+		// Tell the service on every way out of here that this is a regular end,
+		// so volumes mounted by this run stay mounted. If the process is killed
+		// instead, the service dismounts them.
+		struct ServiceStopper { ~ServiceStopper () { try { CoreService::Stop (); } catch (...) { } } } serviceStopper;
+
 		Core->Init ();
 #endif
 

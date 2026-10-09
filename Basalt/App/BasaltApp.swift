@@ -286,13 +286,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateCancel
     }
 
-    /// Fallback for terminations that bypass applicationShouldTerminate.
-    /// (willTerminate is posted on the main thread.)
+    /// Last step of a regular quit (willTerminate is posted on the main thread).
     @MainActor
     @objc private func appWillTerminate(_ notification: Notification) {
-        guard !quitDismountAttempted, let prefs = preferences, let vm = volumeManager,
-              shouldDismountOnQuit else { return }
-        _ = vm.dismountAllBeforeQuit(force: prefs.forceDismount, timeout: 30)
+        // Fallback for terminations that bypass applicationShouldTerminate
+        if !quitDismountAttempted, let prefs = preferences, let vm = volumeManager,
+           shouldDismountOnQuit {
+            _ = vm.dismountAllBeforeQuit(force: prefs.forceDismount, timeout: 30)
+        }
+
+        // A regular quit keeps volumes that are still mounted (dismount on quit
+        // off, or "Quit Anyway"). If Basalt is killed or crashes instead, the
+        // core service sees no shutdown message and dismounts its volumes.
+        TCCoreBridge.shared().shutdownCore()
     }
 
     // MARK: - System Sleep
