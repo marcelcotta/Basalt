@@ -15,6 +15,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 extern NSErrorDomain const TCErrorDomain;
 
+/// NSError codes in TCErrorDomain.
+typedef NS_ENUM(NSInteger, TCErrorCode) {
+    TCErrorCodeGeneric = -1,
+    TCErrorCodePasswordIncorrect = 1,   // wrong password or keyfiles (not the hidden-volume protection password)
+};
+
 // ---- Volume Info (read-only snapshot of a mounted volume) ----
 
 @interface TCVolumeInfo : NSObject
@@ -64,6 +70,10 @@ extern NSErrorDomain const TCErrorDomain;
 @property (nonatomic) BOOL noFilesystem;
 @property (nonatomic) BOOL preserveTimestamps;
 @property (nonatomic) BOOL sharedAccessAllowed;
+
+// Restrict key derivation tried on mount: nil = all, @"Argon2id-Max",
+// @"Argon2id" or @"PBKDF2" (TrueCrypt/VeraCrypt). Speeds up opening.
+@property (nonatomic, copy, nullable) NSString *kdfHint;
 
 // Hidden volume protection
 @property (nonatomic) BOOL protectHiddenVolume;
