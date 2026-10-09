@@ -280,6 +280,13 @@ static int do_mount_nfs(uint16_t port, const char *socket_path,
     return 0;
 }
 
+/* pthread start routine for the server event loop (the int result is unused) */
+static void *server_thread_main(void *arg)
+{
+    nfs4_server_run((darwinfuse_server_t *)arg);
+    return NULL;
+}
+
 /*
  * Start the server event loop in a background thread (so it can answer the
  * kernel's requests during mount) and run mount_nfs. On failure the server
@@ -291,8 +298,7 @@ static int serve_and_mount(darwinfuse_server_t *srv, uint16_t port,
 {
     g_server = srv;
 
-    if (pthread_create(srv_thread, NULL,
-                       (void *(*)(void *))nfs4_server_run, srv) != 0) {
+    if (pthread_create(srv_thread, NULL, server_thread_main, srv) != 0) {
         DFUSE_ERR("Failed to create server thread");
         nfs4_server_destroy(srv);
         g_server = NULL;
