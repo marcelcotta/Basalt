@@ -33,11 +33,11 @@ window dressing — just solid encryption with modern key derivation.
 ## Key Features
 
 - **Argon2id key derivation** — 1 GB memory cost, 8 threads. GPU-resistant by design.
-- **Opens TrueCrypt & VeraCrypt volumes** — plus automatic KDF upgrade prompt for legacy iterations.
+- **Opens TrueCrypt & VeraCrypt volumes** — and offers to switch them to Argon2id-Max on the first mount.
 - **Hidden volumes** — create and mount with plausible deniability, with write protection for the outer volume.
 - **Native SwiftUI app** — no wxWidgets, no Qt on macOS. Clean, dark-mode interface.
 - **CLI included** — `basalt-cli` for scripting and headless use, with `--password-stdin` so passwords stay out of the process list.
-- **Faster mounting** — pick the key derivation (Argon2id-Max, Argon2id or PBKDF2) under Options or as a default, and only that one is tried. A wrong password is reported in seconds instead of a minute.
+- **Faster mounting** — Argon2id is tried first and the PBKDF2 key derivations run in parallel on all cores. A wrong password is reported in about a third of the time it used to take.
 - **Strong passwords made easy** — strength meter for new passwords and a Diceware passphrase generator (EFF wordlist, system CSPRNG).
 - **DarwinFUSE built-in** — no macFUSE, no kernel extension, no SIP changes.
 - **Zero-state design** — no password cache, no favorites, no history. Forensic analysis reveals nothing.
@@ -86,8 +86,9 @@ but costs $50,000+ instead of $1,600.
 | TrueCrypt 7.1a | ✓ | ✓ (legacy mode) |
 | VeraCrypt | ✓* | — |
 
-Existing volumes just work. Legacy TrueCrypt volumes get an automatic upgrade
-prompt for modern key derivation.
+Existing volumes just work. TrueCrypt and VeraCrypt volumes get an offer to
+switch to Argon2id-Max. Only the header is re-encrypted, but afterwards only
+Basalt can open the volume — choose "Not Now" if you still need it elsewhere.
 
 *VeraCrypt volumes using Camellia or Kuznyechik are not supported — see
 [SECURITY.md](SECURITY.md#cipher-selection-why-not-camellia-or-kuznyechik) for

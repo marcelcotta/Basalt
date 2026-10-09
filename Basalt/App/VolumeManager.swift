@@ -29,8 +29,6 @@ class VolumeManager: ObservableObject {
     @Published var infoMessage: String?
     @Published var isLoading = false
     @Published var loadingStatus = String(localized: "Mounting...")
-    /// Set while a mount is in progress (drives the elapsed-time display)
-    @Published var mountStartedAt: Date?
 
     // Sheet presentation
     @Published var showMountSheet = false
@@ -189,11 +187,9 @@ class VolumeManager: ObservableObject {
                      useBackupHeaders: Bool = false,
                      protectHiddenVolume: Bool = false,
                      hiddenVolumePassword: String? = nil,
-                     hiddenVolumeKeyfiles: [String]? = nil,
-                     kdfHint: String? = nil) {
+                     hiddenVolumeKeyfiles: [String]? = nil) {
         isLoading = true
         loadingStatus = String(localized: "Mounting...")
-        mountStartedAt = Date()
         errorMessage = nil
 
         let options = TCMountOptions()
@@ -206,13 +202,11 @@ class VolumeManager: ObservableObject {
         options.protectHiddenVolume = protectHiddenVolume
         if let hvp = hiddenVolumePassword { options.protectionPassword = hvp }
         if let hvk = hiddenVolumeKeyfiles, !hvk.isEmpty { options.protectionKeyfilePaths = hvk }
-        if let hint = kdfHint, !hint.isEmpty { options.kdfHint = hint }
         preferences?.applyToMountOptions(options)
         // Explicit user choices override defaults
         if readOnly { options.readOnly = true }
 
         let shouldOpenFinder = preferences?.openFinderAfterMount ?? false
-        let kdfRestricted = !(kdfHint ?? "").isEmpty
 
         Task.detached { [bridge] in
             var vol: TCVolumeInfo?
@@ -222,12 +216,6 @@ class VolumeManager: ObservableObject {
                 vol = try bridge.mountVolume(options)
             } catch {
                 errMsg = error.localizedDescription
-                let nsError = error as NSError
-                if kdfRestricted && nsError.domain == TCErrorDomain
-                    && nsError.code == TCErrorCode.passwordIncorrect.rawValue {
-                    errMsg = error.localizedDescription + "\n\n"
-                        + String(localized: "Only the key derivation selected under Options was tried. If unsure, choose Auto-detect.")
-                }
             }
 
             let resultVol = vol
@@ -235,7 +223,6 @@ class VolumeManager: ObservableObject {
 
             await MainActor.run { [weak self] in
                 self?.isLoading = false
-                self?.mountStartedAt = nil
                 if let vol = resultVol {
                     self?.refreshVolumes()
                     self?.showMountSheet = false

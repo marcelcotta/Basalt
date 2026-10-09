@@ -320,9 +320,6 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         opts.ProtectionKeyfiles = ToKeyfileList (self.protectionKeyfilePaths);
     }
 
-    if (self.kdfHint.length > 0)
-        opts.KdfHint = ToWide (self.kdfHint);
-
     opts.UseBackupHeaders = self.useBackupHeaders;
     opts.NoFilesystem = self.noFilesystem;
     opts.PreserveTimestamps = self.preserveTimestamps;
@@ -497,8 +494,16 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 
         shared_ptr <VolumeInfo> vol = Core->MountVolume (cppOpts);
 
-        // Offer KDF upgrade for legacy volumes (TrueCrypt iterations, pre-RFC Argon2id)
+        // Offer to switch PBKDF2 volumes (TrueCrypt, VeraCrypt) to Argon2id-Max and
+        // pre-RFC Argon2id volumes of Basalt <= 1.1.x to standard Argon2id
         [self offerKdfUpgrade:vol options:cppOpts];
+
+        if (!vol)   // upgrade failed and the volume could not be remounted
+        {
+            if (error) *error = [NSError errorWithDomain:TCErrorDomain code:TCErrorCodeGeneric
+                userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString (@"Mount failed", nil)}];
+            return nil;
+        }
 
         return [[TCVolumeInfo alloc] initWithCppInfo:vol];
     }
@@ -509,22 +514,22 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     }
 }
 
-// Show a 3-button dialog for legacy KDF upgrade:
+// Show a 3-button dialog for a key derivation upgrade:
 //   "Upgrade" / "Not Now" / "Never Ask Again"
-// If user chooses Upgrade: dismount, re-encrypt header with modern iterations, remount.
+// If user chooses Upgrade: dismount, re-encrypt header with the new KDF, remount.
 //
 // Threading: Called from background thread (Swift Task). All UI via dispatch_sync to main.
-// The PBKDF2 work runs on the calling (background) thread; a progress window is shown
+// The key derivation runs on the calling (background) thread; a progress window is shown
 // on the main thread via performSelectorOnMainThread (no dispatch_sync needed during work).
 - (void)offerKdfUpgrade:(shared_ptr <VolumeInfo> &)vol options:(MountOptions &)opts
 {
     if (!vol)
         return;
 
-    // Legacy KDFs: TrueCrypt iteration counts and the non-standard Argon2id of
-    // Basalt <= 1.1.x. Everything else needs no upgrade.
+    // PBKDF2 (TrueCrypt, VeraCrypt) -> Argon2id-Max; non-standard Argon2id of
+    // Basalt <= 1.1.x -> standard Argon2id. Argon2id volumes need nothing.
     shared_ptr <Pkcs5Kdf> newKdf;
-    try { newKdf = Pkcs5Kdf::GetUpgradeTarget (vol->Pkcs5PrfName, (int) vol->Pkcs5IterationCount); }
+    try { newKdf = Pkcs5Kdf::GetUpgradeTarget (*vol, true); }
     catch (...) { return; }
 
     if (!newKdf)
@@ -540,7 +545,6 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     bool argon2Migration = vol->Pkcs5PrfName.find (L"Argon2id") == 0;
 
     NSString *currentIter = [NSString stringWithFormat:@"%u", (unsigned) vol->Pkcs5IterationCount];
-    NSString *modernIter = [NSString stringWithFormat:@"%u", (unsigned) newKdf->GetIterationCount ()];
     NSString *hashName = ToNS (vol->Pkcs5PrfName);
     NSString *newKdfName = ToNS (newKdf->GetName ());
 
@@ -554,8 +558,8 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     else
     {
         message = [NSString stringWithFormat:
-            NSLocalizedString (@"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\".", nil),
-            hashName, currentIter, modernIter];
+            NSLocalizedString (@"This volume uses %@ with %@ iterations, the key derivation of TrueCrypt and VeraCrypt.\n\nSwitching to %@ makes password guessing on graphics cards far more expensive, and Basalt opens the volume faster.\n\nOnly the volume header is re-encrypted. Your data, password and encryption remain unchanged.\n\n⚠ Afterwards, TrueCrypt and VeraCrypt can no longer open this volume. If you still need it there, choose \"Not Now\".", nil),
+            hashName, currentIter, newKdfName];
     }
 
     // Show 3-button dialog on main thread
@@ -623,11 +627,8 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         vol = Core->MountVolume (opts);
 
         // Show success
-        NSString *successMsg = argon2Migration
-            ? [NSString stringWithFormat:
-                NSLocalizedString (@"Volume header upgraded successfully.\nNew key derivation: %@", nil), newKdfName]
-            : [NSString stringWithFormat:
-                NSLocalizedString (@"Volume header upgraded successfully.\nNew iterations: %@", nil), modernIter];
+        NSString *successMsg = [NSString stringWithFormat:
+            NSLocalizedString (@"Volume header upgraded successfully.\nNew key derivation: %@", nil), newKdfName];
 
         dispatch_block_t infoBlock = ^{
             NSAlert *alert = [[NSAlert alloc] init];
@@ -645,6 +646,13 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     catch (exception &e)
     {
         NSString *errMsg = [NSString stringWithFormat:NSLocalizedString (@"Header upgrade failed: %@", nil), ExceptionToError (e).localizedDescription];
+
+        // Failed after the dismount: mount the volume again as it was
+        if (!vol)
+        {
+            try { vol = Core->MountVolume (opts); }
+            catch (...) { }
+        }
 
         dispatch_block_t errBlock = ^{
             NSAlert *alert = [[NSAlert alloc] init];

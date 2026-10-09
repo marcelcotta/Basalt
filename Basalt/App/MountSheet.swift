@@ -58,7 +58,6 @@ struct MountSheet: View {
     @State private var hiddenVolumePassword = ""
     @State private var hiddenVolumeKeyfiles: [String] = []
     @State private var showOptions = false
-    @State private var kdfHint = ""
     @State private var showDevicePicker = false
     @State private var availableDevices: [TCHostDevice] = []
     @State private var loadingDevices = false
@@ -165,8 +164,6 @@ struct MountSheet: View {
                         }
                     }
 
-                    KdfHintPicker(selection: $kdfHint)
-
                     Toggle("Read-only", isOn: $readOnly)
                         .help("Files can be read but not modified or deleted.")
                     Toggle("Use backup headers", isOn: $useBackupHeaders)
@@ -236,13 +233,8 @@ struct MountSheet: View {
                 if vm.isLoading {
                     ProgressView()
                         .controlSize(.small)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(vm.loadingStatus)
-                            .foregroundColor(.secondary)
-                        if let started = vm.mountStartedAt {
-                            MountElapsedView(started: started, kdfHintSet: !kdfHint.isEmpty)
-                        }
-                    }
+                    Text(vm.loadingStatus)
+                        .foregroundColor(.secondary)
                 }
 
                 Spacer()
@@ -263,8 +255,7 @@ struct MountSheet: View {
                         useBackupHeaders: useBackupHeaders,
                         protectHiddenVolume: protectHiddenVolume,
                         hiddenVolumePassword: protectHiddenVolume ? hiddenVolumePassword : nil,
-                        hiddenVolumeKeyfiles: protectHiddenVolume ? hiddenVolumeKeyfiles : nil,
-                        kdfHint: kdfHint
+                        hiddenVolumeKeyfiles: protectHiddenVolume ? hiddenVolumeKeyfiles : nil
                     )
                 }
                 .keyboardShortcut(.defaultAction)
@@ -277,8 +268,6 @@ struct MountSheet: View {
         .screenCaptureProtection()
         .onAppear {
             readOnly = prefs.defaultReadOnly
-            kdfHint = prefs.defaultKdfHint
-            if !kdfHint.isEmpty { showOptions = true }
             if let path = vm.mountPath {
                 volumePath = path
                 vm.mountPath = nil
@@ -290,51 +279,6 @@ struct MountSheet: View {
         }
         .onDisappear {
             vm.errorMessage = nil
-        }
-    }
-}
-
-// MARK: - Key Derivation Hint
-
-/// Restricts which key derivation functions are tried when mounting.
-/// Trying all of them is slow for a wrong password and for hidden volumes,
-/// because each Argon2id and PBKDF2 variant is deliberately expensive.
-struct KdfHintPicker: View {
-    @Binding var selection: String
-
-    var body: some View {
-        Picker("Key derivation:", selection: $selection) {
-            Text("Auto-detect (slowest)").tag("")
-            Text("Argon2id-Max").tag("Argon2id-Max")
-            Text("Argon2id").tag("Argon2id")
-            Text("PBKDF2 (TrueCrypt / VeraCrypt)").tag("PBKDF2")
-        }
-        .pickerStyle(.menu)
-        .help("Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices.")
-    }
-}
-
-/// Elapsed time while mounting, with a hint after a few seconds.
-struct MountElapsedView: View {
-    let started: Date
-    let kdfHintSet: Bool
-
-    var body: some View {
-        TimelineView(.periodic(from: started, by: 1)) { context in
-            let seconds = max(0, Int(context.date.timeIntervalSince(started)))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(seconds) s elapsed")
-                    .font(.caption.monospacedDigit())
-                    .foregroundColor(.secondary)
-                if seconds >= 5 {
-                    Text(kdfHintSet
-                         ? "Key derivation is deliberately slow to resist brute-force attacks."
-                         : "Key derivation is deliberately slow. Choosing it under Options makes opening faster.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
         }
     }
 }

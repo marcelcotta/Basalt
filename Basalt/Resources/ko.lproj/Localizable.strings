@@ -438,27 +438,6 @@
 "Prevents the outer volume from overwriting the hidden volume's data area." = "외부 볼륨이 숨겨진 볼륨의 데이터 영역을 덮어쓰지 않도록 방지합니다.";
 
 /* MountSheet.swift */
-"Key derivation:" = "키 파생:";
-
-/* MountSheet.swift */
-"Auto-detect (slowest)" = "자동 감지(가장 느림)";
-
-/* MountSheet.swift */
-"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2(TrueCrypt/VeraCrypt)";
-
-/* MountSheet.swift */
-"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "선택한 키 파생 방식만 시도하므로 볼륨을 훨씬 빠르게 열 수 있습니다. 자동 감지는 모든 방식을 시도합니다. Basalt 1.1 이하 버전에서 생성된 볼륨은 Argon2id 항목에 포함되어 있습니다.";
-
-/* MountSheet.swift */
-"%lld s elapsed" = "%lld초 경과";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow to resist brute-force attacks." = "키 파생은 무차별 대입 공격에 대응하기 위해 의도적으로 느리게 설계되었습니다.";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "키 파생은 의도적으로 느리게 설계되었습니다. ‘옵션’에서 방식을 선택하면 더 빠르게 열 수 있습니다.";
-
-/* MountSheet.swift */
 "Select Device" = "장치 선택";
 
 /* MountSheet.swift */
@@ -579,12 +558,6 @@
 "Key Derivation" = "키 파생";
 
 /* PreferencesView.swift */
-"Don't prompt to upgrade legacy volumes" = "레거시 볼륨 업그레이드 확인 안 함";
-
-/* PreferencesView.swift */
-"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "이전 TrueCrypt 볼륨을 더 강력한 키 파생 방식으로 업그레이드하라는 메시지를 표시하지 않습니다.";
-
-/* PreferencesView.swift */
 "Default Mount Options" = "기본 마운트 옵션";
 
 /* PreferencesView.swift */
@@ -647,7 +620,7 @@
 /* VolumeManager.swift */
 "Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "숨겨진 볼륨 보호 기능이 작동했습니다!\n\n숨겨진 볼륨 영역을 덮어쓰려는 쓰기 작업이 있었습니다. 쓰기가 차단되어 숨겨진 볼륨은 안전하지만 외부 볼륨의 파일 시스템이 손상되었을 수 있습니다.\n\n이 볼륨을 즉시 마운트 해제하십시오. 더 이상 데이터를 기록하지 마십시오.";
 
-/* VolumeManager.swift */
+/* VolumeManager.swift, TCCoreBridge.mm */
 "Mount failed" = "마운트 실패";
 
 /* VolumeManager.swift */
@@ -795,9 +768,6 @@
 "This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "이 볼륨 헤더는 Basalt 1.1 이하 버전(%@)에서 생성되었습니다. 해당 버전은 RFC 9106 표준과 다른 Argon2id 구현을 사용했습니다.\n\n업그레이드하면 표준 %@ 방식으로 볼륨 헤더를 다시 암호화합니다. 데이터, 암호 및 암호화 방식은 변경되지 않습니다.";
 
 /* TCCoreBridge.mm */
-"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "이 볼륨은 레거시 키 파생 방식(%@, %@회 반복)을 사용합니다.\n\n최신 볼륨은 %@회 반복을 사용하므로 암호에 대한 무차별 대입 공격이 훨씬 어려워집니다.\n\n업그레이드하면 더 강력한 키 파생 방식으로 볼륨 헤더를 다시 암호화합니다. 데이터, 암호 및 암호화 방식은 변경되지 않습니다.\n\n⚠ 업그레이드한 후에는 TrueCrypt 7.1a에서 이 볼륨을 더 이상 열 수 없습니다. 확실하지 않으면 ‘나중에’를 선택하십시오.";
-
-/* TCCoreBridge.mm */
 "Upgrade Volume Key Derivation?" = "볼륨 키 파생 방식을 업그레이드하겠습니까?";
 
 /* TCCoreBridge.mm */
@@ -819,9 +789,6 @@
 "Volume header upgraded successfully.\nNew key derivation: %@" = "볼륨 헤더를 업그레이드했습니다.\n새 키 파생 방식: %@";
 
 /* TCCoreBridge.mm */
-"Volume header upgraded successfully.\nNew iterations: %@" = "볼륨 헤더를 업그레이드했습니다.\n새 반복 횟수: %@";
-
-/* TCCoreBridge.mm */
 "Header upgrade failed: %@" = "헤더 업그레이드 실패: %@";
 
 /* TCCoreBridge.mm */
@@ -836,9 +803,6 @@
 /* TCCoreBridge.mm */
 "The backup file size is incorrect. This may not be a valid volume header backup." = "백업 파일 크기가 올바르지 않습니다. 유효한 볼륨 헤더 백업이 아닐 수 있습니다.";
 
-/* VolumeManager.swift */
-"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "‘옵션’에서 선택한 키 파생 방식만 시도했습니다. 잘 모르는 경우 ‘자동 감지’를 선택하십시오.";
-
 /* BasaltApp.swift */
 "Volumes could not be dismounted" = "볼륨을 마운트 해제할 수 없습니다";
 
@@ -850,3 +814,12 @@
 
 /* VolumeManager.swift */
 "Dismounting did not finish in time." = "마운트 해제가 제한 시간 내에 완료되지 않았습니다.";
+
+/* PreferencesView.swift */
+"Don't offer key derivation upgrades" = "키 파생 방식 전환 제안 안 함";
+
+/* PreferencesView.swift */
+"Stops the offer to switch TrueCrypt and VeraCrypt volumes to Argon2id-Max and volumes from Basalt 1.1 to standard Argon2id." = "TrueCrypt 및 VeraCrypt 볼륨을 Argon2id-Max로, Basalt 1.1 볼륨을 표준 Argon2id로 전환하자는 제안을 더 이상 표시하지 않습니다.";
+
+/* TCCoreBridge.mm */
+"This volume uses %@ with %@ iterations, the key derivation of TrueCrypt and VeraCrypt.\n\nSwitching to %@ makes password guessing on graphics cards far more expensive, and Basalt opens the volume faster.\n\nOnly the volume header is re-encrypted. Your data, password and encryption remain unchanged.\n\n⚠ Afterwards, TrueCrypt and VeraCrypt can no longer open this volume. If you still need it there, choose \"Not Now\"." = "이 볼륨은 TrueCrypt 및 VeraCrypt의 키 파생 방식인 %@(%@회 반복)를 사용합니다.\n\n%@(으)로 전환하면 그래픽 카드로 암호를 추측하는 비용이 크게 늘어나고, Basalt에서 볼륨을 더 빠르게 열 수 있습니다.\n\n볼륨 헤더만 다시 암호화됩니다. 데이터, 암호 및 암호화 방식은 변경되지 않습니다.\n\n⚠ 전환한 후에는 TrueCrypt 및 VeraCrypt에서 이 볼륨을 더 이상 열 수 없습니다. 그곳에서 계속 사용해야 하면 ‘나중에’를 선택하십시오.";

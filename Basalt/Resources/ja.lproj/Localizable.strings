@@ -438,27 +438,6 @@
 "Prevents the outer volume from overwriting the hidden volume's data area." = "外殻ボリュームへの書き込みで隠しボリュームのデータ領域が上書きされるのを防ぎます。";
 
 /* MountSheet.swift */
-"Key derivation:" = "鍵導出：";
-
-/* MountSheet.swift */
-"Auto-detect (slowest)" = "自動検出（最も低速）";
-
-/* MountSheet.swift */
-"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2（TrueCrypt / VeraCrypt）";
-
-/* MountSheet.swift */
-"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "選択した鍵導出のみを試行するため、ボリュームをはるかに速く開くことができます。「自動検出」ではすべての方式を試行します。Basalt 1.1 以前のボリュームは Argon2id の選択肢に含まれています。";
-
-/* MountSheet.swift */
-"%lld s elapsed" = "%lld 秒経過";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow to resist brute-force attacks." = "鍵導出は、総当たり攻撃に対抗するために意図的に低速になっています。";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "鍵導出は意図的に低速になっています。「オプション」で方式を選択すると、より速く開くことができます。";
-
-/* MountSheet.swift */
 "Select Device" = "デバイスを選択";
 
 /* MountSheet.swift */
@@ -579,12 +558,6 @@
 "Key Derivation" = "鍵導出";
 
 /* PreferencesView.swift */
-"Don't prompt to upgrade legacy volumes" = "旧形式のボリュームのアップグレードを確認しない";
-
-/* PreferencesView.swift */
-"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "古い TrueCrypt ボリュームを、より強力な鍵導出にアップグレードするよう促すメッセージを表示しません。";
-
-/* PreferencesView.swift */
 "Default Mount Options" = "デフォルトのマウントオプション";
 
 /* PreferencesView.swift */
@@ -647,7 +620,7 @@
 /* VolumeManager.swift */
 "Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "隠しボリュームの保護機能が作動しました！\n\n隠しボリュームの領域を上書きしようとする書き込みがありました。書き込みはブロックされ、隠しボリュームは無事ですが、外殻ボリュームのファイルシステムが破損している可能性があります。\n\nこのボリュームを直ちにマウント解除してください。これ以上データを書き込まないでください。";
 
-/* VolumeManager.swift */
+/* VolumeManager.swift, TCCoreBridge.mm */
 "Mount failed" = "マウントに失敗しました";
 
 /* VolumeManager.swift */
@@ -795,9 +768,6 @@
 "This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "このボリュームヘッダは Basalt 1.1 以前（%@）で作成されました。これらのバージョンでは、RFC 9106 標準に準拠していない Argon2id の実装が使用されていました。\n\nアップグレードすると、ボリュームヘッダが標準の %@ で再暗号化されます。データ、パスワード、暗号化方式は変更されません。";
 
 /* TCCoreBridge.mm */
-"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "このボリュームは旧形式の鍵導出（%@、反復回数 %@ 回）を使用しています。\n\n最新のボリュームでは %@ 回の反復が使用されるため、パスワードに対する総当たり攻撃が大幅に困難になります。\n\nアップグレードすると、より強力な鍵導出でボリュームヘッダが再暗号化されます。データ、パスワード、暗号化方式は変更されません。\n\n⚠ アップグレード後は、このボリュームを TrueCrypt 7.1a で開くことはできなくなります。よくわからない場合は「今はしない」を選択してください。";
-
-/* TCCoreBridge.mm */
 "Upgrade Volume Key Derivation?" = "ボリュームの鍵導出をアップグレードしますか？";
 
 /* TCCoreBridge.mm */
@@ -819,9 +789,6 @@
 "Volume header upgraded successfully.\nNew key derivation: %@" = "ボリュームヘッダをアップグレードしました。\n新しい鍵導出：%@";
 
 /* TCCoreBridge.mm */
-"Volume header upgraded successfully.\nNew iterations: %@" = "ボリュームヘッダをアップグレードしました。\n新しい反復回数：%@";
-
-/* TCCoreBridge.mm */
 "Header upgrade failed: %@" = "ヘッダのアップグレードに失敗しました：%@";
 
 /* TCCoreBridge.mm */
@@ -836,9 +803,6 @@
 /* TCCoreBridge.mm */
 "The backup file size is incorrect. This may not be a valid volume header backup." = "バックアップファイルのサイズが正しくありません。有効なボリュームヘッダのバックアップではない可能性があります。";
 
-/* VolumeManager.swift */
-"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "「オプション」で選択した鍵導出方式のみを試しました。不明な場合は「自動検出」を選択してください。";
-
 /* BasaltApp.swift */
 "Volumes could not be dismounted" = "ボリュームをマウント解除できませんでした";
 
@@ -850,3 +814,12 @@
 
 /* VolumeManager.swift */
 "Dismounting did not finish in time." = "マウント解除が時間内に完了しませんでした。";
+
+/* PreferencesView.swift */
+"Don't offer key derivation upgrades" = "鍵導出の切り替えを提案しない";
+
+/* PreferencesView.swift */
+"Stops the offer to switch TrueCrypt and VeraCrypt volumes to Argon2id-Max and volumes from Basalt 1.1 to standard Argon2id." = "TrueCrypt と VeraCrypt のボリュームを Argon2id-Max に、Basalt 1.1 のボリュームを標準の Argon2id に切り替える提案を表示しません。";
+
+/* TCCoreBridge.mm */
+"This volume uses %@ with %@ iterations, the key derivation of TrueCrypt and VeraCrypt.\n\nSwitching to %@ makes password guessing on graphics cards far more expensive, and Basalt opens the volume faster.\n\nOnly the volume header is re-encrypted. Your data, password and encryption remain unchanged.\n\n⚠ Afterwards, TrueCrypt and VeraCrypt can no longer open this volume. If you still need it there, choose \"Not Now\"." = "このボリュームは、TrueCrypt と VeraCrypt の鍵導出である %@（反復回数 %@ 回）を使用しています。\n\n%@ に切り替えると、グラフィックカードによるパスワードの推測にかかるコストが大幅に増え、Basalt でボリュームをより速く開けるようになります。\n\n再暗号化されるのはボリュームヘッダのみです。データ、パスワード、暗号化方式は変更されません。\n\n⚠ 切り替え後は、TrueCrypt と VeraCrypt でこのボリュームを開くことはできなくなります。引き続きそちらで使用する場合は「今はしない」を選択してください。";

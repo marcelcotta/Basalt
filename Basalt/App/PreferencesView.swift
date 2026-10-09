@@ -61,8 +61,8 @@ struct PreferencesView: View {
             Divider()
 
             Section("Key Derivation") {
-                Toggle("Don't prompt to upgrade legacy volumes", isOn: $prefs.suppressKdfUpgradePrompt)
-                    .help("Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation.")
+                Toggle("Don't offer key derivation upgrades", isOn: $prefs.suppressKdfUpgradePrompt)
+                    .help("Stops the offer to switch TrueCrypt and VeraCrypt volumes to Argon2id-Max and volumes from Basalt 1.1 to standard Argon2id.")
             }
         }
         .padding(20)
@@ -76,7 +76,6 @@ struct PreferencesView: View {
                 Toggle("Preserve file timestamps", isOn: $prefs.defaultPreserveTimestamps)
                     .help("Keeps original file dates unchanged when accessing files on the volume.")
                 Toggle("Mount as read-only", isOn: $prefs.defaultReadOnly)
-                KdfHintPicker(selection: $prefs.defaultKdfHint)
             }
 
             Divider()

@@ -438,27 +438,6 @@
 "Prevents the outer volume from overwriting the hidden volume's data area." = "防止外层宗卷覆盖隐藏宗卷的数据区域。";
 
 /* MountSheet.swift */
-"Key derivation:" = "密钥派生：";
-
-/* MountSheet.swift */
-"Auto-detect (slowest)" = "自动检测（最慢）";
-
-/* MountSheet.swift */
-"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2（TrueCrypt / VeraCrypt）";
-
-/* MountSheet.swift */
-"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "仅尝试所选的密钥派生方式，因此打开速度会快得多。“自动检测”会逐一尝试所有方式。Basalt 1.1 及更早版本创建的宗卷包含在 Argon2id 选项中。";
-
-/* MountSheet.swift */
-"%lld s elapsed" = "已用时 %lld 秒";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow to resist brute-force attacks." = "密钥派生有意设计得较慢，以抵御暴力破解攻击。";
-
-/* MountSheet.swift */
-"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "密钥派生有意设计得较慢。在“选项”中指定密钥派生方式可加快打开速度。";
-
-/* MountSheet.swift */
 "Select Device" = "选择设备";
 
 /* MountSheet.swift */
@@ -579,12 +558,6 @@
 "Key Derivation" = "密钥派生";
 
 /* PreferencesView.swift */
-"Don't prompt to upgrade legacy volumes" = "不提示升级旧版宗卷";
-
-/* PreferencesView.swift */
-"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "不再提示将旧版 TrueCrypt 宗卷升级为更强的密钥派生。";
-
-/* PreferencesView.swift */
 "Default Mount Options" = "默认装载选项";
 
 /* PreferencesView.swift */
@@ -647,7 +620,7 @@
 /* VolumeManager.swift */
 "Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "隐藏宗卷保护已触发！\n\n有写入操作试图覆盖隐藏宗卷区域。该写入已被阻止，隐藏宗卷是安全的，但外层宗卷的文件系统可能已损坏。\n\n请立即卸载此宗卷，不要再向其写入任何数据。";
 
-/* VolumeManager.swift */
+/* VolumeManager.swift, TCCoreBridge.mm */
 "Mount failed" = "装载失败";
 
 /* VolumeManager.swift */
@@ -795,9 +768,6 @@
 "This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "此宗卷头由 Basalt 1.1 或更早版本创建（%@）。这些版本使用的 Argon2id 实现与 RFC 9106 标准存在偏差。\n\n升级将使用标准 %@ 重新加密宗卷头。您的数据、密码和加密方式均保持不变。";
 
 /* TCCoreBridge.mm */
-"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "此宗卷使用旧版密钥派生（%@，%@ 次迭代）。\n\n新式宗卷使用 %@ 次迭代——这会大幅提高针对您密码的暴力破解攻击难度。\n\n升级将使用更强的密钥派生重新加密宗卷头。您的数据、密码和加密方式均保持不变。\n\n⚠ 升级后，TrueCrypt 7.1a 将无法再打开此宗卷。如果不确定，请选择“以后”。";
-
-/* TCCoreBridge.mm */
 "Upgrade Volume Key Derivation?" = "要升级宗卷的密钥派生吗？";
 
 /* TCCoreBridge.mm */
@@ -819,9 +789,6 @@
 "Volume header upgraded successfully.\nNew key derivation: %@" = "已成功升级宗卷头。\n新的密钥派生：%@";
 
 /* TCCoreBridge.mm */
-"Volume header upgraded successfully.\nNew iterations: %@" = "已成功升级宗卷头。\n新的迭代次数：%@";
-
-/* TCCoreBridge.mm */
 "Header upgrade failed: %@" = "宗卷头升级失败：%@";
 
 /* TCCoreBridge.mm */
@@ -836,9 +803,6 @@
 /* TCCoreBridge.mm */
 "The backup file size is incorrect. This may not be a valid volume header backup." = "备份文件大小不正确。它可能不是有效的宗卷头备份。";
 
-/* VolumeManager.swift */
-"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "仅尝试了在“选项”中选择的密钥派生方式。如不确定，请选择“自动检测”。";
-
 /* BasaltApp.swift */
 "Volumes could not be dismounted" = "无法卸载宗卷";
 
@@ -850,3 +814,12 @@
 
 /* VolumeManager.swift */
 "Dismounting did not finish in time." = "卸载未能及时完成。";
+
+/* PreferencesView.swift */
+"Don't offer key derivation upgrades" = "不提示切换密钥派生";
+
+/* PreferencesView.swift */
+"Stops the offer to switch TrueCrypt and VeraCrypt volumes to Argon2id-Max and volumes from Basalt 1.1 to standard Argon2id." = "不再提示将 TrueCrypt 和 VeraCrypt 宗卷切换为 Argon2id-Max，以及将 Basalt 1.1 宗卷切换为标准 Argon2id。";
+
+/* TCCoreBridge.mm */
+"This volume uses %@ with %@ iterations, the key derivation of TrueCrypt and VeraCrypt.\n\nSwitching to %@ makes password guessing on graphics cards far more expensive, and Basalt opens the volume faster.\n\nOnly the volume header is re-encrypted. Your data, password and encryption remain unchanged.\n\n⚠ Afterwards, TrueCrypt and VeraCrypt can no longer open this volume. If you still need it there, choose \"Not Now\"." = "此宗卷使用 %@（%@ 次迭代），这是 TrueCrypt 和 VeraCrypt 的密钥派生方式。\n\n切换为 %@ 后，利用显卡猜测密码的成本将大幅提高，且 Basalt 打开此宗卷的速度更快。\n\n只会重新加密宗卷头。您的数据、密码和加密方式均保持不变。\n\n⚠ 切换后，TrueCrypt 和 VeraCrypt 将无法再打开此宗卷。如果仍需在其中使用，请选择“以后”。";
