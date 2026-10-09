@@ -88,7 +88,12 @@ prompt for modern key derivation.
 
 *VeraCrypt volumes using Camellia or Kuznyechik are not supported — see
 [SECURITY.md](SECURITY.md#cipher-selection-why-not-camellia-or-kuznyechik) for
-the rationale.
+the rationale. VeraCrypt volumes using the SHA-256, BLAKE2s-256 or Streebog PRF,
+or a non-default PIM, cannot be opened either.
+
+Volumes created with Basalt 1.1.x and Argon2id still open; on mount Basalt offers
+to upgrade their header to standard (RFC 9106) Argon2id — see
+[SECURITY.md](SECURITY.md#35-argon2id-now-conforms-to-rfc-9106-existing-volumes-stay-openable).
 
 
 ## Download
