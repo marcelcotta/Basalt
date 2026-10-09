@@ -41,7 +41,7 @@ window dressing — just solid encryption with modern key derivation.
 - **Strong passwords made easy** — strength meter for new passwords and a Diceware passphrase generator (EFF wordlist, system CSPRNG).
 - **DarwinFUSE built-in** — no macFUSE, no kernel extension, no SIP changes.
 - **Zero-state design** — no password cache, no favorites, no history. Forensic analysis reveals nothing.
-- **Auto-dismount** — on inactivity, screen lock, sleep, quit, and logout. The Mac only goes to sleep once the volumes are dismounted.
+- **Auto-dismount** — on inactivity, screen lock, sleep, quit, and logout, and when Basalt is killed or crashes. The Mac only goes to sleep once the volumes are dismounted.
 - **11 languages** — English, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese, Korean and Chinese (Simplified).
 - **Screen capture protection** — the entire app is invisible to screenshots, screen recording, and AirPlay.
 - **Codebase reduced by 75%** — from 195k to 47k lines. Boot loader, kernel driver, PKCS#11, wxWidgets, Win32 all deleted.
@@ -163,7 +163,7 @@ basalt-cli (C++)              Standalone terminal tool
 
 | Document | Contents |
 |----------|----------|
-| **[SECURITY.md](SECURITY.md)** | All 51 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
+| **[SECURITY.md](SECURITY.md)** | All 52 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
 | **[docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md)** | Source audit of Basalt 1.1.1 and DarwinFUSE (October 2026): findings, fixes, macOS verification checklist |
 | **[License.txt](License.txt)** | TrueCrypt License 3.0 |
 

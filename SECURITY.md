@@ -609,6 +609,22 @@ closes the volume and wipes the keys (`fuse_service_destroy`). A kernel reconnec
 the volume is still mounted does not end the daemon.
 
 
+### 52. Volumes Are Dismounted When Basalt Is Killed or Crashes
+**Files:** `Core/Unix/CoreService.*`, `Basalt/Bridge/TCCoreBridge.*`, `Basalt/App/BasaltApp.swift`,
+`CLI/main.cpp`
+**Problem:** Found in testing: killing the Basalt process (or a crash) left mounted
+volumes mounted and readable/writable, with nothing left on screen to dismount them.
+None of the quit handlers run in that case.
+**Fix:** The core service (a child process that does the mounting) remembers the volumes
+it mounted for its client. A client that quits regularly now says so (`ExitRequest`: the
+app when it terminates, the CLI on every return path); volumes that are still mounted
+then stay mounted as before ("dismount on quit" off, "Quit Anyway", or a CLI mount).
+If the connection ends without that message — the app or CLI was killed or crashed —
+the service force-dismounts the volumes it mounted before it exits. The elevated
+service for device volumes does the same when the regular service goes away. SIGPIPE is
+ignored in the service, so a vanished client cannot end it before the cleanup. A
+`kill -9` of all Basalt processes at once still leaves the mount behind (dead).
+
 ## Attack Surface Reduction
 
 The original TrueCrypt 7.1a codebase included several subsystems designed for

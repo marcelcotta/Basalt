@@ -8,6 +8,7 @@
 
 #include "CoreService.h"
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include "Platform/FileStream.h"
 #include "Platform/MemoryStream.h"
@@ -83,9 +84,19 @@ namespace Basalt
 
 	void CoreService::ProcessRequests (int inputFD, int outputFD)
 	{
+		// Volumes mounted for this client. If the client goes away without an
+		// ExitRequest (it crashed or was killed), they are dismounted before the
+		// service exits, so that no volume stays accessible without a program
+		// that controls it.
+		VolumeInfoList clientVolumes;
+
 		try
 		{
 			Core = CoreDirect;
+
+			// A vanished client must show up as a failed write, not end the
+			// service with SIGPIPE before it has cleaned up.
+			signal (SIGPIPE, SIG_IGN);
 
 			shared_ptr <Stream> inputStream (new FileStream (inputFD != -1 ? inputFD : InputPipe->GetReadFD()));
 			shared_ptr <Stream> outputStream (new FileStream (outputFD != -1 ? outputFD : OutputPipe->GetWriteFD()));
@@ -145,6 +156,10 @@ namespace Basalt
 					{
 						DismountVolumeResponse response;
 						response.DismountedVolumeInfo = Core->DismountVolume (dismountRequest->MountedVolumeInfo, dismountRequest->IgnoreOpenFiles, dismountRequest->SyncVolumeInfo);
+
+						VolumeSlotNumber slot = dismountRequest->MountedVolumeInfo->SlotNumber;
+						clientVolumes.remove_if ([slot] (const shared_ptr <VolumeInfo> &v) { return v->SlotNumber == slot; });
+
 						response.Serialize (outputStream);
 						continue;
 					}
@@ -183,7 +198,9 @@ namespace Basalt
 					MountVolumeRequest *mountRequest = dynamic_cast <MountVolumeRequest*> (request.get());
 					if (mountRequest)
 					{
-						MountVolumeResponse (Core->MountVolume (*mountRequest->Options)).Serialize (outputStream);
+						shared_ptr <VolumeInfo> mountedVolume = Core->MountVolume (*mountRequest->Options);
+						clientVolumes.push_back (mountedVolume);	// before replying: the client may be gone
+						MountVolumeResponse (mountedVolume).Serialize (outputStream);
 						continue;
 					}
 
@@ -217,7 +234,41 @@ namespace Basalt
 #ifdef DEBUG
 			SystemLog::WriteException (e);
 #endif
+			// End of input or a failed reply without ExitRequest: the client is gone.
+			DismountClientVolumes (clientVolumes);
 			throw;
+		}
+	}
+
+	void CoreService::DismountClientVolumes (const VolumeInfoList &clientVolumes)
+	{
+		if (clientVolumes.empty())
+			return;
+
+		VolumeInfoList mountedVolumes;
+		try
+		{
+			mountedVolumes = Core->GetMountedVolumes();
+		}
+		catch (...)
+		{
+			return;
+		}
+
+		for (const auto &own : clientVolumes)
+		{
+			for (const auto &mounted : mountedVolumes)
+			{
+				if (mounted->SlotNumber == own->SlotNumber && wstring (mounted->Path) == wstring (own->Path))
+				{
+					try
+					{
+						Core->DismountVolume (mounted, true);
+					}
+					catch (...) { }
+					break;
+				}
+			}
 		}
 	}
 
@@ -541,8 +592,14 @@ namespace Basalt
 
 	void CoreService::Stop ()
 	{
+		// Regular end of the client: volumes it mounted stay mounted. Safe to
+		// call more than once.
+		if (!ServiceInputStream)
+			return;
+
 		ExitRequest exitRequest;
 		exitRequest.Serialize (ServiceInputStream);
+		ServiceInputStream.reset();
 	}
 	
 	shared_ptr <GetStringFunctor> CoreService::AdminPasswordCallback;

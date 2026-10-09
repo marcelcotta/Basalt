@@ -37,6 +37,7 @@ namespace Basalt
 		static void Stop ();
 
 	protected:
+		static void DismountClientVolumes (const VolumeInfoList &clientVolumes);
 		template <class T> static unique_ptr <T> GetResponse ();
 		template <class T> static unique_ptr <T> SendRequest (CoreServiceRequest &request);
 		static void StartElevated (const CoreServiceRequest &request);

@@ -130,6 +130,11 @@ typedef NS_ENUM(NSInteger, TCFilesystemType) {
 // Lifecycle
 - (BOOL)initializeCore:(NSError **)error;
 
+/// Tells the core service that the app is quitting regularly, so volumes that
+/// are still mounted stay mounted. Without this (crash, kill) the service
+/// dismounts the volumes it mounted. Call once, when the app terminates.
+- (void)shutdownCore;
+
 // Volume mounting/dismounting
 - (nullable TCVolumeInfo *)mountVolume:(TCMountOptions *)options
                                  error:(NSError **)error;
