@@ -121,6 +121,11 @@ static NSError *ExceptionToError (const std::exception &e)
         desc = @"The password is too long.";
     else if (dynamic_cast <const PasswordEmpty *> (&e))
         desc = @"No password was provided.";
+    else if (dynamic_cast <const UnportablePassword *> (&e))
+        desc = @"The new password contains characters that cannot be stored without losing "
+               @"information (characters beyond Latin-1, e.g. €, Cyrillic, Greek, CJK or emoji). "
+               @"They would be truncated and silently weaken the password. "
+               @"Please use letters, digits and symbols from the Latin-1 range.";
 
     // --- User abort (cancelled dialog) ---
     else if (dynamic_cast <const UserAbort *> (&e))

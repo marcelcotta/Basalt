@@ -176,6 +176,11 @@ namespace Basalt
 
 	void VolumeCreator::CreateVolume (shared_ptr <VolumeCreationOptions> options)
 	{
+		// Characters above U+00FF cannot be represented in the (TrueCrypt-compatible)
+		// password encoding and would silently weaken the password.
+		if (options->Password)
+			options->Password->CheckNoTruncatedChars();
+
 		EncryptionTest::TestAll();
 
 		{

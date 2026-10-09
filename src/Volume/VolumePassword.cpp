@@ -13,7 +13,7 @@
 
 namespace Basalt
 {
-	VolumePassword::VolumePassword () : PasswordSize (0), Unportable (false)
+	VolumePassword::VolumePassword () : PasswordSize (0), Unportable (false), TruncatedChars (false)
 	{
 		AllocateBuffer ();
 	}
@@ -51,6 +51,12 @@ namespace Basalt
 	void VolumePassword::CheckPortability () const
 	{
 		if (Unportable || !IsPortable())
+			throw UnportablePassword (SRC_POS);
+	}
+
+	void VolumePassword::CheckNoTruncatedChars () const
+	{
+		if (TruncatedChars)
 			throw UnportablePassword (SRC_POS);
 	}
 
@@ -100,6 +106,7 @@ namespace Basalt
 		PasswordSize = size;
 
 		Unportable = !IsPortable();
+		TruncatedChars = false;
 	}
 	
 	void VolumePassword::Set (const wchar_t *password, size_t charCount)
@@ -146,7 +153,10 @@ namespace Basalt
 		burn (passwordBuf, sizeof (passwordBuf));
 
 		if (unportable)
+		{
 			Unportable = true;
+			TruncatedChars = true;
+		}
 	}
 
 	void VolumePassword::Set (const ConstBufferPtr &password)
@@ -157,6 +167,7 @@ namespace Basalt
 	void VolumePassword::Set (const VolumePassword &password)
 	{
 		Set (password.DataPtr(), password.Size());
+		TruncatedChars = password.TruncatedChars;
 	}
 
 	TC_SERIALIZER_FACTORY_ADD_CLASS (VolumePassword);

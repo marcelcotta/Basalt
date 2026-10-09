@@ -1541,6 +1541,16 @@ int main (int argc, char *argv[])
 #endif
 		return 1;
 	}
+	catch (UnportablePassword &)
+	{
+		std::cerr << ansiRed << "Error: " << ansiReset
+			<< "The new password contains characters beyond Latin-1 (e.g. €, Cyrillic, Greek, CJK, emoji)." << std::endl
+			<< "  They would be truncated and silently weaken the password. Please use Latin-1 characters only." << std::endl;
+#ifndef TC_WINDOWS
+		try { CoreService::Stop (); } catch (...) {}
+#endif
+		return 1;
+	}
 #ifdef TC_WINDOWS
 	catch (DriveLetterUnavailable &)
 	{

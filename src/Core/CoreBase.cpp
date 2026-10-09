@@ -82,6 +82,11 @@ namespace Basalt
 
 	void CoreBase::ChangePassword (shared_ptr <VolumePath> volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, shared_ptr <VolumePassword> newPassword, shared_ptr <KeyfileList> newKeyfiles, shared_ptr <Pkcs5Kdf> newPkcs5Kdf, int wipePassCount) const
 	{
+		// Refuse to introduce a new password whose non-Latin-1 characters would be
+		// truncated (a KDF upgrade re-uses the existing password and is allowed).
+		if (newPassword && (!password || *newPassword != *password))
+			newPassword->CheckNoTruncatedChars();
+
 		shared_ptr <Volume> volume = OpenVolume (volumePath, preserveTimestamps, password, keyfiles);
 		ChangePassword (volume, newPassword, newKeyfiles, newPkcs5Kdf, wipePassCount);
 	}

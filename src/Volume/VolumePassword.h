@@ -32,6 +32,10 @@ namespace Basalt
 		operator BufferPtr () const { return BufferPtr (PasswordBuffer); }
 
 		void CheckPortability () const;
+		// Throws UnportablePassword if Set (wchar_t*) had to drop the high bits of
+		// characters above U+00FF (e.g. "€", Cyrillic, CJK). Such passwords lose
+		// entropy silently, so they are refused for new headers.
+		void CheckNoTruncatedChars () const;
 		byte *DataPtr () const { return PasswordBuffer; }
 		bool IsEmpty () const { return PasswordSize == 0; }
 		size_t Size () const { return PasswordSize; }
@@ -53,6 +57,7 @@ namespace Basalt
 
 		size_t PasswordSize;
 		bool Unportable;
+		bool TruncatedChars;
 	};
 
 	struct PasswordException : public Exception
