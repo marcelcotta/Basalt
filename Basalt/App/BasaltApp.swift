@@ -251,6 +251,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         powerOffRequestedAt.map { Date().timeIntervalSince($0) < 120 } ?? false
     }
 
+    @MainActor
     private var shouldDismountOnQuit: Bool {
         guard let prefs = preferences else { return false }
         return prefs.dismountOnQuit || (isPoweringOff && prefs.dismountOnLogOff)
@@ -286,6 +287,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Fallback for terminations that bypass applicationShouldTerminate.
+    /// (willTerminate is posted on the main thread.)
+    @MainActor
     @objc private func appWillTerminate(_ notification: Notification) {
         guard !quitDismountAttempted, let prefs = preferences, let vm = volumeManager,
               shouldDismountOnQuit else { return }
