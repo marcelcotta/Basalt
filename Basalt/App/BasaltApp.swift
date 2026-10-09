@@ -7,6 +7,7 @@
 */
 
 import SwiftUI
+import IOKit.pwr_mgt
 
 /// Custom entry point: intercept --core-service before SwiftUI starts.
 ///
@@ -98,6 +99,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var volumeObserver: NSObjectProtocol?
 
+    // System power notifications (IORegisterForSystemPower)
+    private var powerRootPort: io_connect_t = 0
+    private var powerNotifyPort: IONotificationPortRef?
+    private var powerNotifier: io_object_t = 0
+
+    /// Set when logout/shutdown/restart was requested (willPowerOff); the
+    /// following terminate request then waits for the dismount.
+    private var powerOffRequestedAt: Date?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         // SECURITY: Prevent screen capture of ALL windows (including alerts/dialogs).
@@ -127,13 +137,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
 
-        // Observe system sleep for auto-dismount
-        NSWorkspace.shared.notificationCenter.addObserver(
-            self,
-            selector: #selector(systemWillSleep),
-            name: NSWorkspace.willSleepNotification,
-            object: nil
-        )
+        // Observe system sleep for auto-dismount. IOKit lets us delay the
+        // sleep until the volumes are dismounted (NSWorkspace.willSleep does not).
+        registerForSystemPowerNotifications()
 
         // Observe logout/shutdown/restart for auto-dismount
         NSWorkspace.shared.notificationCenter.addObserver(
@@ -171,7 +177,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
 
         if volumes.isEmpty {
-            let item = NSMenuItem(title: "No Volumes Mounted", action: nil, keyEquivalent: "")
+            let item = NSMenuItem(title: String(localized: "No Volumes Mounted"), action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
         } else {
@@ -181,7 +187,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 item.isEnabled = false
                 menu.addItem(item)
 
-                let dismountItem = NSMenuItem(title: "  Dismount", action: #selector(statusMenuDismount(_:)), keyEquivalent: "")
+                let dismountItem = NSMenuItem(title: "  " + String(localized: "Dismount"), action: #selector(statusMenuDismount(_:)), keyEquivalent: "")
                 dismountItem.target = self
                 dismountItem.representedObject = vol
                 menu.addItem(dismountItem)
@@ -189,20 +195,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             menu.addItem(NSMenuItem.separator())
 
-            let dismountAll = NSMenuItem(title: "Dismount All", action: #selector(statusMenuDismountAll), keyEquivalent: "")
+            let dismountAll = NSMenuItem(title: String(localized: "Dismount All"), action: #selector(statusMenuDismountAll), keyEquivalent: "")
             dismountAll.target = self
             menu.addItem(dismountAll)
         }
 
         menu.addItem(NSMenuItem.separator())
 
-        let mount = NSMenuItem(title: "Mount Volume...", action: #selector(statusMenuMount), keyEquivalent: "")
+        let mount = NSMenuItem(title: String(localized: "Mount Volume..."), action: #selector(statusMenuMount), keyEquivalent: "")
         mount.target = self
         menu.addItem(mount)
 
         menu.addItem(NSMenuItem.separator())
 
-        let quit = NSMenuItem(title: "Quit Basalt", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quit = NSMenuItem(title: String(localized: "Quit Basalt"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
 
         statusItem?.menu = menu
@@ -233,15 +239,70 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let prefs = preferences, let vm = volumeManager else { return .terminateNow }
 
-        if prefs.dismountOnQuit && !vm.mountedVolumes.isEmpty {
+        // Logout/shutdown asks running apps to quit right after willPowerOff.
+        let poweringOff = powerOffRequestedAt.map { Date().timeIntervalSince($0) < 120 } ?? false
+
+        if (prefs.dismountOnQuit || (poweringOff && prefs.dismountOnLogOff)) && !vm.mountedVolumes.isEmpty {
+            // Quit only after the dismount has finished
             Task { @MainActor in
-                vm.dismountAll(force: prefs.forceDismount)
-                NSApp.reply(toApplicationShouldTerminate: true)
+                vm.dismountAll(force: prefs.forceDismount) {
+                    NSApp.reply(toApplicationShouldTerminate: true)
+                }
             }
             return .terminateLater
         }
 
         return .terminateNow
+    }
+
+    // MARK: - System Sleep
+
+    // IOKit message constants (iokit_common_msg(...)); the C macros are not
+    // imported into Swift.
+    private static let kIOMessageCanSystemSleep: UInt32 = 0xE000_0270
+    private static let kIOMessageSystemWillSleep: UInt32 = 0xE000_0280
+
+    private func registerForSystemPowerNotifications() {
+        let refcon = Unmanaged.passUnretained(self).toOpaque()
+        powerRootPort = IORegisterForSystemPower(refcon, &powerNotifyPort, { refcon, _, messageType, messageArgument in
+            // C callback on the main run loop; hop onto the main actor explicitly.
+            guard let refcon else { return }
+            let delegate = Unmanaged<AppDelegate>.fromOpaque(refcon).takeUnretainedValue()
+            let notificationID = Int(bitPattern: messageArgument)
+            Task { @MainActor in
+                delegate.handlePowerMessage(messageType, notificationID: notificationID)
+            }
+        }, &powerNotifier)
+
+        guard powerRootPort != 0, let port = powerNotifyPort else { return }
+        CFRunLoopAddSource(CFRunLoopGetMain(),
+                           IONotificationPortGetRunLoopSource(port).takeUnretainedValue(),
+                           .commonModes)
+    }
+
+    /// The system waits (up to ~30 s) for IOAllowPowerChange before sleeping,
+    /// which gives the dismount time to finish.
+    @MainActor
+    private func handlePowerMessage(_ messageType: UInt32, notificationID: Int) {
+        switch messageType {
+        case Self.kIOMessageCanSystemSleep:
+            IOAllowPowerChange(powerRootPort, notificationID)
+
+        case Self.kIOMessageSystemWillSleep:
+            guard let prefs = preferences, prefs.dismountOnSleep,
+                  let vm = volumeManager, !vm.mountedVolumes.isEmpty
+            else {
+                IOAllowPowerChange(powerRootPort, notificationID)
+                return
+            }
+            let rootPort = powerRootPort
+            vm.dismountAll(force: prefs.forceDismount) {
+                IOAllowPowerChange(rootPort, notificationID)
+            }
+
+        default:
+            break
+        }
     }
 
     @objc private func screenSaverDidStart(_ notification: Notification) {
@@ -251,18 +312,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func systemWillSleep(_ notification: Notification) {
-        Task { @MainActor in
-            guard let prefs = preferences, prefs.dismountOnSleep else { return }
-            volumeManager?.dismountAll(force: prefs.forceDismount)
-        }
-    }
-
     @objc private func systemWillPowerOff(_ notification: Notification) {
-        Task { @MainActor in
-            guard let prefs = preferences, prefs.dismountOnLogOff else { return }
-            volumeManager?.dismountAll(force: prefs.forceDismount)
-        }
+        // The dismount itself happens in applicationShouldTerminate, which the
+        // system calls next and which can delay quitting until it is done.
+        powerOffRequestedAt = Date()
     }
 }
 

@@ -12,12 +12,12 @@ import SwiftUI
 /// Uses native SecureField (NSSecureTextField) — solves the wxWidgets
 /// SecurePasswordInput problem completely via the OS-managed secure text field.
 struct PasswordView: View {
-    let label: String
+    let label: LocalizedStringKey
     @Binding var password: String
     @State private var showPassword = false
     var focused: FocusState<Bool>.Binding?
 
-    init(_ label: String = "Password", text: Binding<String>, focused: FocusState<Bool>.Binding? = nil) {
+    init(_ label: LocalizedStringKey = "Password", text: Binding<String>, focused: FocusState<Bool>.Binding? = nil) {
         self.label = label
         self._password = text
         self.focused = focused
