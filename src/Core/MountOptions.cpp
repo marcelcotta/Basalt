@@ -19,6 +19,7 @@ namespace Basalt
 
 		TC_CLONE (FilesystemOptions);
 		TC_CLONE (FilesystemType);
+		TC_CLONE (KdfHint);
 		TC_CLONE_SHARED (KeyfileList, Keyfiles);
 		TC_CLONE_SHARED (DirectoryPath, MountPoint);
 		TC_CLONE (NoFilesystem);
@@ -43,6 +44,7 @@ namespace Basalt
 
 		sr.Deserialize ("FilesystemOptions", FilesystemOptions);
 		sr.Deserialize ("FilesystemType", FilesystemType);
+		KdfHint = sr.DeserializeWString ("KdfHint");
 
 		Keyfiles = Keyfile::DeserializeList (stream, "Keyfiles");
 
@@ -89,6 +91,7 @@ namespace Basalt
 
 		sr.Serialize ("FilesystemOptions", FilesystemOptions);
 		sr.Serialize ("FilesystemType", FilesystemType);
+		sr.Serialize ("KdfHint", KdfHint);
 		Keyfile::SerializeList (stream, "Keyfiles", Keyfiles);
 
 		sr.Serialize ("MountPointNull", MountPoint == nullptr);

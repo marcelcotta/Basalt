@@ -43,6 +43,7 @@ namespace Basalt
 
 		wstring FilesystemOptions;
 		wstring FilesystemType;
+		wstring KdfHint;	// See Pkcs5Kdf::FilterByHint (empty = try all KDFs)
 		shared_ptr <KeyfileList> Keyfiles;
 		shared_ptr <DirectoryPath> MountPoint;
 		bool NoFilesystem;

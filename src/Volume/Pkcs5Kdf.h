@@ -29,6 +29,9 @@ namespace Basalt
 		static shared_ptr <Pkcs5Kdf> GetAlgorithm (const Hash &hash, bool allowLegacy = false);
 		static Pkcs5KdfList GetAvailableAlgorithms ();
 		static shared_ptr <Pkcs5Kdf> GetUpgradeTarget (const wstring &name, int iterationCount);
+		// Restricts the KDFs tried when opening a volume. Hint: empty (all),
+		// "Argon2id-Max" or "Argon2id" (each including its pre-RFC variant), "PBKDF2".
+		static Pkcs5KdfList FilterByHint (const Pkcs5KdfList &kdfs, const wstring &hint);
 		virtual shared_ptr <Hash> GetHash () const = 0;
 		virtual int GetIterationCount () const = 0;
 		virtual wstring GetName () const = 0;

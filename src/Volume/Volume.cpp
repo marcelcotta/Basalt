@@ -63,7 +63,7 @@ namespace Basalt
 		return EA->GetMode();
 	}
 
-	void Volume::Open (const VolumePath &volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, VolumeProtection::Enum protection, shared_ptr <VolumePassword> protectionPassword, shared_ptr <KeyfileList> protectionKeyfiles, bool sharedAccessAllowed, VolumeType::Enum volumeType, bool useBackupHeaders, bool partitionInSystemEncryptionScope)
+	void Volume::Open (const VolumePath &volumePath, bool preserveTimestamps, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, VolumeProtection::Enum protection, shared_ptr <VolumePassword> protectionPassword, shared_ptr <KeyfileList> protectionKeyfiles, bool sharedAccessAllowed, VolumeType::Enum volumeType, bool useBackupHeaders, bool partitionInSystemEncryptionScope, const wstring &kdfHint)
 	{
 		make_shared_auto (File, file);
 
@@ -94,10 +94,10 @@ namespace Basalt
 				throw;
 		}
 
-		return Open (file, password, keyfiles, protection, protectionPassword, protectionKeyfiles, volumeType, useBackupHeaders, partitionInSystemEncryptionScope);
+		return Open (file, password, keyfiles, protection, protectionPassword, protectionKeyfiles, volumeType, useBackupHeaders, partitionInSystemEncryptionScope, kdfHint);
 	}
 
-	void Volume::Open (shared_ptr <File> volumeFile, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, VolumeProtection::Enum protection, shared_ptr <VolumePassword> protectionPassword, shared_ptr <KeyfileList> protectionKeyfiles, VolumeType::Enum volumeType, bool useBackupHeaders, bool partitionInSystemEncryptionScope)
+	void Volume::Open (shared_ptr <File> volumeFile, shared_ptr <VolumePassword> password, shared_ptr <KeyfileList> keyfiles, VolumeProtection::Enum protection, shared_ptr <VolumePassword> protectionPassword, shared_ptr <KeyfileList> protectionKeyfiles, VolumeType::Enum volumeType, bool useBackupHeaders, bool partitionInSystemEncryptionScope, const wstring &kdfHint)
 	{
 		if (!volumeFile)
 			throw ParameterIncorrect (SRC_POS);
@@ -190,7 +190,11 @@ namespace Basalt
 
 				shared_ptr <VolumeHeader> header = layout->GetHeader();
 
-				if (header->Decrypt (headerBuffer, *passwordKey, layout->GetSupportedKeyDerivationFunctions(), layoutEncryptionAlgorithms, layoutEncryptionModes))
+				// The hint only applies to this volume's own header; the protected
+				// (hidden) volume below may use a different KDF.
+				Pkcs5KdfList layoutKdfs = Pkcs5Kdf::FilterByHint (layout->GetSupportedKeyDerivationFunctions(), kdfHint);
+
+				if (header->Decrypt (headerBuffer, *passwordKey, layoutKdfs, layoutEncryptionAlgorithms, layoutEncryptionModes))
 				{
 					// Header decrypted
 
