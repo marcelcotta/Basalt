@@ -1,0 +1,840 @@
+/* Basalt: Japanese localization.
+   Keys are the English UI texts from Basalt/App/*.swift and Basalt/Bridge/*.mm.
+   en.lproj lists every key and serves as the template for new languages. */
+
+/* BackupHeaderSheet.swift */
+"Backup Volume Headers" = "ボリュームヘッダのバックアップ";
+
+/* BackupHeaderSheet.swift */
+"Creates an external backup of the volume header. This allows recovery if the header becomes corrupted." = "ボリュームヘッダの外部バックアップを作成します。ヘッダが破損した場合に復旧できるようになります。";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, RestoreHeaderSheet.swift */
+"Volume path" = "ボリュームのパス";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Browse..." = "選択...";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Select Encrypted Volume" = "暗号化ボリュームを選択";
+
+/* BackupHeaderSheet.swift */
+"Volume password" = "ボリュームのパスワード";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Keyfiles:" = "キーファイル：";
+
+/* BackupHeaderSheet.swift */
+"Volume contains a hidden volume" = "ボリュームに隠しボリュームが含まれている";
+
+/* BackupHeaderSheet.swift, MountSheet.swift */
+"Hidden volume password" = "隠しボリュームのパスワード";
+
+/* BackupHeaderSheet.swift, MountSheet.swift */
+"Hidden keyfiles:" = "隠しボリュームのキーファイル：";
+
+/* BackupHeaderSheet.swift, RestoreHeaderSheet.swift */
+"Backup file:" = "バックアップファイル：";
+
+/* BackupHeaderSheet.swift, RestoreHeaderSheet.swift */
+"Backup file path" = "バックアップファイルのパス";
+
+/* BackupHeaderSheet.swift */
+"Save Header Backup" = "ヘッダのバックアップを保存";
+
+/* BackupHeaderSheet.swift */
+"Backing up headers..." = "ヘッダをバックアップ中...";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+"Cancel" = "キャンセル";
+
+/* BackupHeaderSheet.swift */
+"Backup" = "バックアップ";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"None" = "なし";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"%lld selected" = "%lld 個選択済み";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"Add..." = "追加...";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, TCCocoaCallback.mm */
+"Select Keyfiles" = "キーファイルを選択";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"Clear" = "クリア";
+
+/* BasaltApp.swift */
+"Run Self-Test..." = "セルフテストを実行...";
+
+/* BasaltApp.swift */
+"Mount Volume..." = "ボリュームをマウント...";
+
+/* BasaltApp.swift */
+"Create Volume..." = "ボリュームを作成...";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Change Password..." = "パスワードを変更...";
+
+/* BasaltApp.swift */
+"Backup Volume Headers..." = "ボリュームヘッダをバックアップ...";
+
+/* BasaltApp.swift */
+"Restore Volume Headers..." = "ボリュームヘッダを復元...";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Dismount All" = "すべてマウント解除";
+
+/* BasaltApp.swift, MainWindow.swift */
+"No Volumes Mounted" = "マウントされているボリュームはありません";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Dismount" = "マウント解除";
+
+/* BasaltApp.swift */
+"Quit Basalt" = "Basalt を終了";
+
+/* ChangePasswordSheet.swift */
+"Change Volume Password" = "ボリュームのパスワードを変更";
+
+/* ChangePasswordSheet.swift */
+"Current Credentials" = "現在の認証情報";
+
+/* ChangePasswordSheet.swift */
+"Current password" = "現在のパスワード";
+
+/* ChangePasswordSheet.swift */
+"Current keyfiles:" = "現在のキーファイル：";
+
+/* ChangePasswordSheet.swift */
+"New Credentials" = "新しい認証情報";
+
+/* ChangePasswordSheet.swift */
+"New password" = "新しいパスワード";
+
+/* ChangePasswordSheet.swift */
+"Confirm new password" = "新しいパスワードを確認";
+
+/* ChangePasswordSheet.swift, CreateVolumeSheet.swift */
+"Passwords do not match" = "パスワードが一致しません";
+
+/* ChangePasswordSheet.swift, CreateVolumeSheet.swift */
+"Characters beyond Latin-1 (e.g. €, Cyrillic, Greek, CJK or emoji) cannot be stored in a volume password without losing information. Please remove them." = "Latin-1 以外の文字（€、キリル文字、ギリシャ文字、CJK 文字、絵文字など）は、情報を失わずにボリュームのパスワードに保存することはできません。これらの文字を削除してください。";
+
+/* ChangePasswordSheet.swift */
+"New keyfiles:" = "新しいキーファイル：";
+
+/* ChangePasswordSheet.swift */
+"PKCS-5 PRF:" = "PKCS-5 PRF：";
+
+/* ChangePasswordSheet.swift */
+"(unchanged)" = "（変更なし）";
+
+/* ChangePasswordSheet.swift */
+"The hash algorithm used for key derivation. Select '(unchanged)' to keep the current setting." = "鍵導出に使用するハッシュアルゴリズムです。現在の設定を維持するには「（変更なし）」を選択してください。";
+
+/* ChangePasswordSheet.swift */
+"Changing password..." = "パスワードを変更中...";
+
+/* ChangePasswordSheet.swift */
+"Change" = "変更";
+
+/* CreateVolumeSheet.swift */
+"Create Hidden Volume" = "隠しボリュームを作成";
+
+/* CreateVolumeSheet.swift */
+"Location" = "場所";
+
+/* CreateVolumeSheet.swift */
+"Encryption" = "暗号化";
+
+/* CreateVolumeSheet.swift, MountSheet.swift, PasswordView.swift, RestoreHeaderSheet.swift */
+"Password" = "パスワード";
+
+/* CreateVolumeSheet.swift */
+"Format" = "フォーマット";
+
+/* CreateVolumeSheet.swift */
+"Choose where to create the encrypted volume." = "暗号化ボリュームを作成する場所を選択してください。";
+
+/* CreateVolumeSheet.swift */
+"Volume type:" = "ボリュームの種類：";
+
+/* CreateVolumeSheet.swift */
+"Standard volume" = "標準ボリューム";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume" = "隠しボリューム";
+
+/* CreateVolumeSheet.swift */
+"A hidden volume is stored inside another volume. If coerced, you can reveal the outer volume while the hidden one stays secret." = "隠しボリュームは別のボリュームの内部に格納されます。強要された場合でも、外殻ボリュームだけを明かし、隠しボリュームは秘密にしておくことができます。";
+
+/* CreateVolumeSheet.swift */
+"A hidden volume is created inside an existing Basalt volume. It provides plausible deniability — even under coercion, the hidden volume's existence cannot be proven." = "隠しボリュームは既存の Basalt ボリュームの内部に作成されます。これにより、もっともらしい否認が可能になります。強要された場合でも、隠しボリュームの存在を証明することはできません。";
+
+/* CreateVolumeSheet.swift */
+"Existing outer volume file" = "既存の外殻ボリュームファイル";
+
+/* CreateVolumeSheet.swift */
+"Select Outer Volume" = "外殻ボリュームを選択";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume size:" = "隠しボリュームのサイズ：";
+
+/* CreateVolumeSheet.swift */
+"Size" = "サイズ";
+
+/* CreateVolumeSheet.swift */
+"Must fit inside the outer volume. Leave space for decoy files on the outer volume." = "外殻ボリューム内に収まるサイズにする必要があります。外殻ボリュームにはおとりファイル用の空き容量を残してください。";
+
+/* CreateVolumeSheet.swift */
+"The hidden volume must be smaller than the outer volume. Leave enough room for decoy files in the outer volume." = "隠しボリュームは外殻ボリュームより小さくする必要があります。外殻ボリュームにはおとりファイル用の十分な空き容量を残してください。";
+
+/* CreateVolumeSheet.swift */
+"Container:" = "コンテナ：";
+
+/* CreateVolumeSheet.swift */
+"File container" = "ファイルコンテナ";
+
+/* CreateVolumeSheet.swift */
+"Entire device / partition" = "デバイス／パーティション全体";
+
+/* CreateVolumeSheet.swift */
+"Device path" = "デバイスのパス";
+
+/* CreateVolumeSheet.swift */
+"Select Device..." = "デバイスを選択...";
+
+/* CreateVolumeSheet.swift */
+"Device size: %@" = "デバイスのサイズ：%@";
+
+/* CreateVolumeSheet.swift */
+"All data on this device will be irrecoverably destroyed!" = "このデバイス上のすべてのデータが完全に消去され、復元できなくなります！";
+
+/* CreateVolumeSheet.swift */
+"Volume file path" = "ボリュームファイルのパス";
+
+/* CreateVolumeSheet.swift */
+"Create Basalt Volume" = "Basalt ボリュームを作成";
+
+/* CreateVolumeSheet.swift */
+"Volume size:" = "ボリュームのサイズ：";
+
+/* CreateVolumeSheet.swift */
+"Choose the encryption and hash algorithms." = "暗号化アルゴリズムとハッシュアルゴリズムを選択してください。";
+
+/* CreateVolumeSheet.swift */
+"Encryption Algorithm:" = "暗号化アルゴリズム：";
+
+/* CreateVolumeSheet.swift */
+"AES is fastest (hardware-accelerated). Cascades like AES-Twofish-Serpent encrypt with multiple algorithms for defense-in-depth." = "AES が最も高速です（ハードウェアアクセラレーション対応）。AES-Twofish-Serpent などのカスケード暗号は、複数のアルゴリズムで暗号化することで多層防御を実現します。";
+
+/* CreateVolumeSheet.swift */
+"Hash Algorithm:" = "ハッシュアルゴリズム：";
+
+/* CreateVolumeSheet.swift */
+"Determines how your password is converted into an encryption key." = "パスワードを暗号鍵に変換する方法を決定します。";
+
+/* CreateVolumeSheet.swift */
+"Argon2id (512 MB, 4 threads) — strong protection against brute-force attacks." = "Argon2id（512 MB、4 スレッド）— 総当たり攻撃に対する強力な保護。";
+
+/* CreateVolumeSheet.swift */
+"Uses 512 MB of RAM per attempt. Strong GPU resistance." = "1 回の試行につき 512 MB の RAM を使用します。GPU による攻撃への耐性が高くなります。";
+
+/* CreateVolumeSheet.swift */
+"Argon2id Maximum Security (1 GB, 8 threads) — strongest protection for high-value data." = "Argon2id 最大セキュリティ（1 GB、8 スレッド）— 重要なデータのための最も強力な保護。";
+
+/* CreateVolumeSheet.swift */
+"Uses 1 GB of RAM per attempt. Maximum brute-force resistance — slower mount times." = "1 回の試行につき 1 GB の RAM を使用します。総当たり攻撃への耐性は最大になりますが、マウントに時間がかかります。";
+
+/* CreateVolumeSheet.swift */
+"TrueCrypt 7.1a compatible (legacy iterations)" = "TrueCrypt 7.1a 互換（旧形式の反復回数）";
+
+/* CreateVolumeSheet.swift */
+"Uses weaker key derivation (1,000 iterations instead of 500,000+). Only enable if you need to open this volume with TrueCrypt 7.1a." = "より弱い鍵導出（反復回数は 500,000 回以上ではなく 1,000 回）を使用します。このボリュームを TrueCrypt 7.1a で開く必要がある場合にのみ有効にしてください。";
+
+/* CreateVolumeSheet.swift */
+"Uses original TrueCrypt 7.1a iteration counts (1000–2000). The volume can be opened with TrueCrypt 7.1a but has weaker key derivation." = "TrueCrypt 7.1a 本来の反復回数（1000〜2000）を使用します。このボリュームは TrueCrypt 7.1a で開くことができますが、鍵導出は弱くなります。";
+
+/* CreateVolumeSheet.swift */
+"AES with SHA-512 is recommended for most users. Cascade ciphers provide additional security layers." = "ほとんどのユーザには、AES と SHA-512 の組み合わせをお勧めします。カスケード暗号はセキュリティの層をさらに追加します。";
+
+/* CreateVolumeSheet.swift */
+"Choose a password for the hidden volume. This must be different from the outer volume's password." = "隠しボリュームのパスワードを設定してください。外殻ボリュームのパスワードとは異なるパスワードにする必要があります。";
+
+/* CreateVolumeSheet.swift */
+"Choose a strong password for the volume." = "ボリュームに強力なパスワードを設定してください。";
+
+/* CreateVolumeSheet.swift */
+"Confirm password" = "パスワードを確認";
+
+/* CreateVolumeSheet.swift */
+"Move your mouse randomly over the area below to add extra entropy to the random number generator." = "下の領域でマウスをランダムに動かして、乱数ジェネレータにエントロピーを追加してください。";
+
+/* CreateVolumeSheet.swift */
+"Move the mouse here..." = "ここでマウスを動かしてください...";
+
+/* CreateVolumeSheet.swift */
+"%lld bytes collected" = "%lld バイト収集済み";
+
+/* CreateVolumeSheet.swift */
+"Extra entropy" = "追加のエントロピー";
+
+/* CreateVolumeSheet.swift */
+"Move your mouse randomly to add extra randomness to key generation." = "マウスをランダムに動かすと、鍵の生成にランダム性が追加されます。";
+
+/* CreateVolumeSheet.swift */
+"(optional)" = "（オプション）";
+
+/* CreateVolumeSheet.swift */
+"Choose a filesystem for the hidden volume and start formatting." = "隠しボリュームのファイルシステムを選択して、フォーマットを開始してください。";
+
+/* CreateVolumeSheet.swift */
+"Choose a filesystem and start formatting." = "ファイルシステムを選択して、フォーマットを開始してください。";
+
+/* CreateVolumeSheet.swift */
+"Filesystem:" = "ファイルシステム：";
+
+/* CreateVolumeSheet.swift */
+"Mac OS Extended (HFS+)" = "Mac OS 拡張（HFS+）";
+
+/* CreateVolumeSheet.swift */
+"FAT: cross-platform, 4 GB file size limit. HFS+: macOS native, no file size limit. None: raw encrypted storage." = "FAT：クロスプラットフォーム、ファイルサイズの上限 4 GB。HFS+：macOS ネイティブ、ファイルサイズの上限なし。なし：フォーマットなしの暗号化ストレージ。";
+
+/* CreateVolumeSheet.swift */
+"FAT does not support files larger than 4 GB. Consider Mac OS Extended for larger files." = "FAT は 4 GB を超えるファイルに対応していません。大きなファイルを扱う場合は Mac OS 拡張を検討してください。";
+
+/* CreateVolumeSheet.swift */
+"Quick format" = "クイックフォーマット";
+
+/* CreateVolumeSheet.swift */
+"Quick format initializes headers only (instant). Full format writes random data across the volume (slower but more secure)." = "クイックフォーマットはヘッダのみを初期化します（すぐに完了）。フルフォーマットはボリューム全体にランダムなデータを書き込みます（時間はかかりますが、より安全です）。";
+
+/* CreateVolumeSheet.swift */
+"Full format writes encrypted random data to the entire volume. This is more secure but takes longer." = "フルフォーマットでは、暗号化されたランダムなデータがボリューム全体に書き込まれます。より安全ですが、時間がかかります。";
+
+/* CreateVolumeSheet.swift */
+"ALL DATA on %@ will be permanently destroyed!" = "%@ 上のすべてのデータが完全に消去されます！";
+
+/* CreateVolumeSheet.swift */
+"Type the device path to confirm:" = "確認のため、デバイスのパスを入力してください：";
+
+/* CreateVolumeSheet.swift */
+"Does not match. Please type exactly: %@" = "一致しません。次のとおり正確に入力してください：%@";
+
+/* CreateVolumeSheet.swift */
+"Creating hidden volume..." = "隠しボリュームを作成中...";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume created successfully!" = "隠しボリュームを作成しました！";
+
+/* CreateVolumeSheet.swift */
+"Volume created successfully!" = "ボリュームを作成しました！";
+
+/* CreateVolumeSheet.swift */
+"To mount the hidden volume, use the hidden volume's password when mounting the outer container." = "隠しボリュームをマウントするには、外殻ボリュームをマウントする際に隠しボリュームのパスワードを使用してください。";
+
+/* CreateVolumeSheet.swift */
+"Recommended: back up the volume header now and keep the backup on a separate drive. If the header gets damaged, the backup is the only way to recover your data." = "推奨：今すぐボリュームヘッダをバックアップし、バックアップは別のドライブに保管してください。ヘッダが破損した場合、データを復旧する唯一の手段はこのバックアップです。";
+
+/* CreateVolumeSheet.swift */
+"Back Up Headers…" = "ヘッダをバックアップ…";
+
+/* CreateVolumeSheet.swift */
+"Abort" = "中止";
+
+/* CreateVolumeSheet.swift */
+"Done" = "完了";
+
+/* CreateVolumeSheet.swift */
+"Back" = "戻る";
+
+/* CreateVolumeSheet.swift */
+"Next" = "次へ";
+
+/* CreateVolumeSheet.swift */
+"Create" = "作成";
+
+/* MainWindow.swift, MountSheet.swift */
+"Mount" = "マウント";
+
+/* MainWindow.swift */
+"Click Mount or drop a volume file here" = "「マウント」をクリックするか、ボリュームファイルをここにドロップしてください";
+
+/* MainWindow.swift */
+"Show in Finder" = "Finder で表示";
+
+/* MainWindow.swift */
+"Backup Headers..." = "ヘッダをバックアップ...";
+
+/* MainWindow.swift */
+"Restore Headers..." = "ヘッダを復元...";
+
+/* MainWindow.swift */
+"Error" = "エラー";
+
+/* MainWindow.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+"OK" = "OK";
+
+/* MainWindow.swift */
+"Info" = "情報";
+
+/* MainWindow.swift */
+"Protection Triggered" = "保護機能が作動";
+
+/* MainWindow.swift */
+"Hidden" = "隠し";
+
+/* MainWindow.swift */
+"Read-Only" = "読み出し専用";
+
+/* MountSheet.swift */
+"Mount Volume" = "ボリュームをマウント";
+
+/* MountSheet.swift */
+"Volume path or device" = "ボリュームのパスまたはデバイス";
+
+/* MountSheet.swift */
+"Device..." = "デバイス...";
+
+/* MountSheet.swift */
+"Files used as part of your authentication. The volume requires both the password and the keyfiles to open." = "認証の一部として使用するファイルです。ボリュームを開くには、パスワードとキーファイルの両方が必要です。";
+
+/* MountSheet.swift */
+"Options" = "オプション";
+
+/* MountSheet.swift */
+"Mount point (optional)" = "マウントポイント（オプション）";
+
+/* MountSheet.swift */
+"Where the volume appears in Finder. Leave empty for automatic placement." = "Finder でボリュームが表示される場所です。自動的に配置する場合は空欄のままにしてください。";
+
+/* MountSheet.swift */
+"Select Mount Point" = "マウントポイントを選択";
+
+/* MountSheet.swift */
+"Read-only" = "読み出し専用";
+
+/* MountSheet.swift */
+"Files can be read but not modified or deleted." = "ファイルの読み出しはできますが、変更や削除はできません。";
+
+/* MountSheet.swift */
+"Use backup headers" = "バックアップヘッダを使用";
+
+/* MountSheet.swift */
+"Use the backup copy of the volume header, stored at the end of the file. Try this if the volume won't open normally." = "ファイルの末尾に格納されているボリュームヘッダのバックアップコピーを使用します。ボリュームが正常に開けない場合に試してください。";
+
+/* MountSheet.swift */
+"Protect hidden volume when mounting outer" = "外殻ボリュームのマウント時に隠しボリュームを保護";
+
+/* MountSheet.swift */
+"Prevents the outer volume from accidentally overwriting hidden volume data. Requires the hidden volume password." = "外殻ボリュームへの書き込みで隠しボリュームのデータが誤って上書きされるのを防ぎます。隠しボリュームのパスワードが必要です。";
+
+/* MountSheet.swift */
+"Select Hidden Volume Keyfiles" = "隠しボリュームのキーファイルを選択";
+
+/* MountSheet.swift */
+"Prevents the outer volume from overwriting the hidden volume's data area." = "外殻ボリュームへの書き込みで隠しボリュームのデータ領域が上書きされるのを防ぎます。";
+
+/* MountSheet.swift */
+"Key derivation:" = "鍵導出：";
+
+/* MountSheet.swift */
+"Auto-detect (slowest)" = "自動検出（最も低速）";
+
+/* MountSheet.swift */
+"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2（TrueCrypt / VeraCrypt）";
+
+/* MountSheet.swift */
+"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "選択した鍵導出のみを試行するため、ボリュームをはるかに速く開くことができます。「自動検出」ではすべての方式を試行します。Basalt 1.1 以前のボリュームは Argon2id の選択肢に含まれています。";
+
+/* MountSheet.swift */
+"%lld s elapsed" = "%lld 秒経過";
+
+/* MountSheet.swift */
+"Key derivation is deliberately slow to resist brute-force attacks." = "鍵導出は、総当たり攻撃に対抗するために意図的に低速になっています。";
+
+/* MountSheet.swift */
+"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "鍵導出は意図的に低速になっています。「オプション」で方式を選択すると、より速く開くことができます。";
+
+/* MountSheet.swift */
+"Select Device" = "デバイスを選択";
+
+/* MountSheet.swift */
+"No removable devices found." = "リムーバブルデバイスが見つかりません。";
+
+/* MountSheet.swift */
+"Internal disks are hidden for safety." = "安全のため、内蔵ディスクは表示されていません。";
+
+/* MountSheet.swift */
+"Device enumeration may require admin privileges." = "デバイスの一覧を取得するには管理者権限が必要な場合があります。";
+
+/* MountSheet.swift */
+"Show internal disks" = "内蔵ディスクを表示";
+
+/* MountSheet.swift */
+"Reveals your Mac's internal disk in the device list. Use with caution." = "Mac の内蔵ディスクをデバイスリストに表示します。注意して使用してください。";
+
+/* MountSheet.swift */
+"Selecting an internal disk can destroy your system!" = "内蔵ディスクを選択すると、システムが破壊されるおそれがあります！";
+
+/* PasswordStrengthView.swift */
+"about %lld bits" = "約 %lld ビット";
+
+/* PasswordStrengthView.swift */
+"Easy to guess. Use a longer password or generate a passphrase." = "推測されやすいパスワードです。より長いパスワードを使用するか、パスフレーズを生成してください。";
+
+/* PasswordStrengthView.swift */
+"Rough estimate of how many guesses an attacker needs (2^bits). Argon2id makes each guess expensive, but cannot make a weak password strong." = "攻撃者に必要な推測回数の大まかな見積もりです（2^ビット数）。Argon2id は推測 1 回あたりのコストを高くしますが、弱いパスワードを強くすることはできません。";
+
+/* PasswordStrengthView.swift */
+"Weak" = "弱い";
+
+/* PasswordStrengthView.swift */
+"Fair" = "普通";
+
+/* PasswordStrengthView.swift */
+"Good" = "良い";
+
+/* PasswordStrengthView.swift */
+"Strong" = "強い";
+
+/* PasswordStrengthView.swift */
+"Generate Passphrase…" = "パスフレーズを生成…";
+
+/* PasswordStrengthView.swift */
+"Creates a random passphrase from the EFF Diceware list. Easy to remember, hard to guess." = "EFF Diceware の単語リストからランダムなパスフレーズを作成します。覚えやすく、推測されにくいのが特長です。";
+
+/* PasswordStrengthView.swift */
+"Random Passphrase" = "ランダムなパスフレーズ";
+
+/* PasswordStrengthView.swift */
+"%lld words (about %lld bits)" = "%lld 語（約 %lld ビット）";
+
+/* PasswordStrengthView.swift */
+"Write it down or memorize it before you continue. There is no way to recover a forgotten password." = "続ける前に、書き留めるか暗記してください。忘れたパスワードを復旧する方法はありません。";
+
+/* PasswordStrengthView.swift */
+"Regenerate" = "再生成";
+
+/* PasswordStrengthView.swift */
+"Use Passphrase" = "パスフレーズを使用";
+
+/* PasswordView.swift */
+"Hide password" = "パスワードを隠す";
+
+/* PreferencesView.swift */
+"Security" = "セキュリティ";
+
+/* PreferencesView.swift */
+"Mount Defaults" = "マウントのデフォルト";
+
+/* PreferencesView.swift */
+"Auto-Dismount" = "自動マウント解除";
+
+/* PreferencesView.swift */
+"Dismount all when screen saver starts or screen locks" = "スクリーンセーバの開始時または画面のロック時にすべてマウント解除";
+
+/* PreferencesView.swift */
+"Dismount all when system sleeps" = "システムのスリープ時にすべてマウント解除";
+
+/* PreferencesView.swift */
+"Dismount all after" = "操作のない状態が";
+
+/* PreferencesView.swift */
+"5 min" = "5 分";
+
+/* PreferencesView.swift */
+"10 min" = "10 分";
+
+/* PreferencesView.swift */
+"30 min" = "30 分";
+
+/* PreferencesView.swift */
+"1 hour" = "1 時間";
+
+/* PreferencesView.swift */
+"2 hours" = "2 時間";
+
+/* PreferencesView.swift */
+"of inactivity" = "続いたらすべてマウント解除";
+
+/* PreferencesView.swift */
+"Dismount all on logout/shutdown" = "ログアウト／システム終了時にすべてマウント解除";
+
+/* PreferencesView.swift */
+"Force dismount (even if files are open)" = "強制的にマウント解除（ファイルが開いている場合も）";
+
+/* PreferencesView.swift */
+"Unmounts volumes even if applications still have open files. Disable to be warned about open files first." = "アプリケーションがファイルを開いたままでも、ボリュームをマウント解除します。無効にすると、開いているファイルがある場合はまず警告が表示されます。";
+
+/* PreferencesView.swift */
+"On Quit" = "終了時";
+
+/* PreferencesView.swift */
+"Dismount all volumes when Basalt quits" = "Basalt の終了時にすべてのボリュームをマウント解除";
+
+/* PreferencesView.swift */
+"Key Derivation" = "鍵導出";
+
+/* PreferencesView.swift */
+"Don't prompt to upgrade legacy volumes" = "旧形式のボリュームのアップグレードを確認しない";
+
+/* PreferencesView.swift */
+"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "古い TrueCrypt ボリュームを、より強力な鍵導出にアップグレードするよう促すメッセージを表示しません。";
+
+/* PreferencesView.swift */
+"Default Mount Options" = "デフォルトのマウントオプション";
+
+/* PreferencesView.swift */
+"Preserve file timestamps" = "ファイルのタイムスタンプを保持";
+
+/* PreferencesView.swift */
+"Keeps original file dates unchanged when accessing files on the volume." = "ボリューム上のファイルにアクセスしても、ファイルの元の日付を変更しません。";
+
+/* PreferencesView.swift */
+"Mount as read-only" = "読み出し専用としてマウント";
+
+/* PreferencesView.swift */
+"After Mounting" = "マウント後";
+
+/* PreferencesView.swift */
+"Open Finder at mount point" = "マウントポイントを Finder で開く";
+
+/* PreferencesView.swift */
+"On Dismount" = "マウント解除時";
+
+/* PreferencesView.swift */
+"Close Finder windows of dismounted volumes" = "マウント解除したボリュームの Finder ウインドウを閉じる";
+
+/* RestoreHeaderSheet.swift */
+"Restore Volume Headers" = "ボリュームヘッダの復元";
+
+/* RestoreHeaderSheet.swift */
+"Restores a damaged volume header from a backup. This can help if the volume cannot be mounted due to header corruption." = "破損したボリュームヘッダをバックアップから復元します。ヘッダの破損が原因でボリュームをマウントできない場合に役立ちます。";
+
+/* RestoreHeaderSheet.swift */
+"Restore from:" = "復元元：";
+
+/* RestoreHeaderSheet.swift */
+"Internal backup (embedded in volume)" = "内部バックアップ（ボリュームに埋め込み）";
+
+/* RestoreHeaderSheet.swift */
+"External backup file" = "外部バックアップファイル";
+
+/* RestoreHeaderSheet.swift */
+"The volume header will be restored from the backup copy stored at the end of the volume file." = "ボリュームファイルの末尾に格納されているバックアップコピーからボリュームヘッダが復元されます。";
+
+/* RestoreHeaderSheet.swift */
+"Select Header Backup File" = "ヘッダのバックアップファイルを選択";
+
+/* RestoreHeaderSheet.swift */
+"Restoring headers..." = "ヘッダを復元中...";
+
+/* RestoreHeaderSheet.swift */
+"Restore" = "復元";
+
+/* RestoreHeaderSheet.swift */
+"Confirm Header Restore" = "ヘッダの復元を確認";
+
+/* RestoreHeaderSheet.swift */
+"This will overwrite the current volume header. Make sure you have a backup of the current header before proceeding.\n\nAre you sure you want to restore the volume header?" = "現在のボリュームヘッダが上書きされます。続行する前に、現在のヘッダのバックアップがあることを確認してください。\n\nボリュームヘッダを復元してもよろしいですか？";
+
+/* VolumeManager.swift */
+"Mounting..." = "マウント中...";
+
+/* VolumeManager.swift */
+"Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "隠しボリュームの保護機能が作動しました！\n\n隠しボリュームの領域を上書きしようとする書き込みがありました。書き込みはブロックされ、隠しボリュームは無事ですが、外殻ボリュームのファイルシステムが破損している可能性があります。\n\nこのボリュームを直ちにマウント解除してください。これ以上データを書き込まないでください。";
+
+/* VolumeManager.swift */
+"Mount failed" = "マウントに失敗しました";
+
+/* VolumeManager.swift */
+"Password changed successfully" = "パスワードを変更しました";
+
+/* VolumeManager.swift */
+"Keyfile created: %@" = "キーファイルを作成しました：%@";
+
+/* VolumeManager.swift */
+"All self-tests passed" = "すべてのセルフテストに合格しました";
+
+/* VolumeManager.swift */
+"Volume created but filesystem formatting failed: %@" = "ボリュームは作成されましたが、ファイルシステムのフォーマットに失敗しました：%@";
+
+/* VolumeManager.swift */
+"Volume headers backed up successfully." = "ボリュームヘッダをバックアップしました。";
+
+/* VolumeManager.swift */
+"Volume headers restored successfully from internal backup." = "内部バックアップからボリュームヘッダを復元しました。";
+
+/* VolumeManager.swift */
+"Volume headers restored successfully from backup file." = "バックアップファイルからボリュームヘッダを復元しました。";
+
+/* App */
+"Show password" = "パスワードを表示";
+
+/* App */
+"Creating volume..." = "ボリュームを作成中...";
+
+/* TCCocoaCallback.mm */
+"Enter password:" = "パスワードを入力：";
+
+/* TCCocoaCallback.mm */
+"Select File" = "ファイルを選択";
+
+/* TCCocoaCallback.mm */
+"Save File" = "ファイルを保存";
+
+/* TCCocoaCallback.mm */
+"Yes" = "はい";
+
+/* TCCocoaCallback.mm */
+"No" = "いいえ";
+
+/* TCCocoaCallback.mm */
+"Select an option:" = "オプションを選択：";
+
+/* TCCoreBridge.mm */
+"Administrator privileges required" = "管理者権限が必要です";
+
+/* TCCoreBridge.mm */
+"Basalt needs administrator privileges to mount volumes. Enter your macOS password:" = "Basalt がボリュームをマウントするには管理者権限が必要です。macOS のパスワードを入力してください：";
+
+/* TCCoreBridge.mm */
+"The volume is already mounted." = "このボリュームはすでにマウントされています。";
+
+/* TCCoreBridge.mm */
+"The mount point is already in use." = "このマウントポイントはすでに使用されています。";
+
+/* TCCoreBridge.mm */
+"A mount point is required." = "マウントポイントが必要です。";
+
+/* TCCoreBridge.mm */
+"A newer version of FUSE is required." = "より新しいバージョンの FUSE が必要です。";
+
+/* TCCoreBridge.mm */
+"The volume slot is unavailable." = "ボリュームスロットを使用できません。";
+
+/* TCCoreBridge.mm */
+"Failed to create a temporary directory." = "一時ディレクトリを作成できませんでした。";
+
+/* TCCoreBridge.mm */
+"Incorrect password or keyfile(s) for the hidden volume." = "隠しボリュームのパスワードまたはキーファイルが正しくありません。";
+
+/* TCCoreBridge.mm */
+"Incorrect password for the hidden volume." = "隠しボリュームのパスワードが正しくありません。";
+
+/* TCCoreBridge.mm */
+"Incorrect password or keyfile(s)." = "パスワードまたはキーファイルが正しくありません。";
+
+/* TCCoreBridge.mm */
+"Incorrect password." = "パスワードが正しくありません。";
+
+/* TCCoreBridge.mm */
+"The password is too long." = "パスワードが長すぎます。";
+
+/* TCCoreBridge.mm */
+"No password was provided." = "パスワードが入力されていません。";
+
+/* TCCoreBridge.mm */
+"The new password contains characters that cannot be stored without losing information (characters beyond Latin-1, e.g. €, Cyrillic, Greek, CJK or emoji). They would be truncated and silently weaken the password. Please use letters, digits and symbols from the Latin-1 range." = "新しいパスワードに、情報を失わずに保存できない文字（Latin-1 以外の文字。€、キリル文字、ギリシャ文字、CJK 文字、絵文字など）が含まれています。これらの文字は切り捨てられ、気付かないうちにパスワードが弱くなります。Latin-1 の範囲内の英字、数字、記号を使用してください。";
+
+/* TCCoreBridge.mm */
+"The volume is in use. Close all files on it, or enable force dismount in Settings." = "ボリュームは使用中です。ボリューム上のファイルをすべて閉じるか、「設定」で強制マウント解除を有効にしてください。";
+
+/* TCCoreBridge.mm */
+"The volume file is in use by another application." = "ボリュームファイルが別のアプリケーションで使用されています。";
+
+/* TCCoreBridge.mm */
+"The write was blocked to protect the hidden volume." = "隠しボリュームを保護するため、書き込みがブロックされました。";
+
+/* TCCoreBridge.mm */
+"The volume is read-only." = "ボリュームは読み出し専用です。";
+
+/* TCCoreBridge.mm */
+"The volume file is incomplete or damaged." = "ボリュームファイルが不完全か、破損しています。";
+
+/* TCCoreBridge.mm */
+"The volume uses an unsupported sector size." = "このボリュームはサポートされていないセクタサイズを使用しています。";
+
+/* TCCoreBridge.mm */
+"This volume was created by a newer version of Basalt." = "このボリュームは、より新しいバージョンの Basalt で作成されています。";
+
+/* TCCoreBridge.mm */
+"A keyfile is empty or too small." = "キーファイルが空か、小さすぎます。";
+
+/* TCCoreBridge.mm */
+"The selected keyfile folder contains no usable files." = "選択したキーファイルフォルダに使用できるファイルがありません。";
+
+/* TCCoreBridge.mm */
+"Administrator authentication failed." = "管理者認証に失敗しました。";
+
+/* TCCoreBridge.mm */
+"A self-test failed. Do not use this build of Basalt." = "セルフテストに失敗しました。このビルドの Basalt は使用しないでください。";
+
+/* TCCoreBridge.mm */
+"Operation cancelled." = "操作はキャンセルされました。";
+
+/* TCCoreBridge.mm */
+"%@ failed:\n%@" = "%@ に失敗しました：\n%@";
+
+/* TCCoreBridge.mm */
+"%@ failed (exit code %lld)." = "%@ に失敗しました（終了コード %lld）。";
+
+/* TCCoreBridge.mm */
+"System error: %@" = "システムエラー：%@";
+
+/* TCCoreBridge.mm */
+"The operation could not be completed because of an invalid parameter (%@)." = "無効なパラメータ（%@）のため、操作を完了できませんでした。";
+
+/* TCCoreBridge.mm */
+"An unknown error occurred." = "不明なエラーが発生しました。";
+
+/* TCCoreBridge.mm */
+"This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "このボリュームヘッダは Basalt 1.1 以前（%@）で作成されました。これらのバージョンでは、RFC 9106 標準に準拠していない Argon2id の実装が使用されていました。\n\nアップグレードすると、ボリュームヘッダが標準の %@ で再暗号化されます。データ、パスワード、暗号化方式は変更されません。";
+
+/* TCCoreBridge.mm */
+"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "このボリュームは旧形式の鍵導出（%@、反復回数 %@ 回）を使用しています。\n\n最新のボリュームでは %@ 回の反復が使用されるため、パスワードに対する総当たり攻撃が大幅に困難になります。\n\nアップグレードすると、より強力な鍵導出でボリュームヘッダが再暗号化されます。データ、パスワード、暗号化方式は変更されません。\n\n⚠ アップグレード後は、このボリュームを TrueCrypt 7.1a で開くことはできなくなります。よくわからない場合は「今はしない」を選択してください。";
+
+/* TCCoreBridge.mm */
+"Upgrade Volume Key Derivation?" = "ボリュームの鍵導出をアップグレードしますか？";
+
+/* TCCoreBridge.mm */
+"Upgrade" = "アップグレード";
+
+/* TCCoreBridge.mm */
+"Not Now" = "今はしない";
+
+/* TCCoreBridge.mm */
+"Never Ask Again" = "今後確認しない";
+
+/* TCCoreBridge.mm */
+"Upgrading volume header..." = "ボリュームヘッダをアップグレード中...";
+
+/* TCCoreBridge.mm */
+"Remounting..." = "再マウント中...";
+
+/* TCCoreBridge.mm */
+"Volume header upgraded successfully.\nNew key derivation: %@" = "ボリュームヘッダをアップグレードしました。\n新しい鍵導出：%@";
+
+/* TCCoreBridge.mm */
+"Volume header upgraded successfully.\nNew iterations: %@" = "ボリュームヘッダをアップグレードしました。\n新しい反復回数：%@";
+
+/* TCCoreBridge.mm */
+"Header upgrade failed: %@" = "ヘッダのアップグレードに失敗しました：%@";
+
+/* TCCoreBridge.mm */
+"Volume not found" = "ボリュームが見つかりません";
+
+/* TCCoreBridge.mm */
+"Unknown hash algorithm: %@" = "不明なハッシュアルゴリズム：%@";
+
+/* TCCoreBridge.mm */
+"This volume format does not contain a backup header." = "このボリューム形式にはバックアップヘッダが含まれていません。";
+
+/* TCCoreBridge.mm */
+"The backup file size is incorrect. This may not be a valid volume header backup." = "バックアップファイルのサイズが正しくありません。有効なボリュームヘッダのバックアップではない可能性があります。";
+
+/* VolumeManager.swift */
+"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "「オプション」で選択した鍵導出方式のみを試しました。不明な場合は「自動検出」を選択してください。";

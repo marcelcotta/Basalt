@@ -1,0 +1,840 @@
+/* Basalt: German localization.
+   Keys are the English UI texts from Basalt/App/*.swift and Basalt/Bridge/*.mm.
+   en.lproj lists every key and serves as the template for new languages. */
+
+/* BackupHeaderSheet.swift */
+"Backup Volume Headers" = "Volume-Header sichern";
+
+/* BackupHeaderSheet.swift */
+"Creates an external backup of the volume header. This allows recovery if the header becomes corrupted." = "Erstellt eine externe Sicherung des Volume-Headers. Damit lässt sich das Volume wiederherstellen, falls der Header beschädigt wird.";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, RestoreHeaderSheet.swift */
+"Volume path" = "Volume-Pfad";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Browse..." = "Durchsuchen...";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Select Encrypted Volume" = "Verschlüsseltes Volume auswählen";
+
+/* BackupHeaderSheet.swift */
+"Volume password" = "Volume-Passwort";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Keyfiles:" = "Schlüsseldateien:";
+
+/* BackupHeaderSheet.swift */
+"Volume contains a hidden volume" = "Volume enthält ein verstecktes Volume";
+
+/* BackupHeaderSheet.swift, MountSheet.swift */
+"Hidden volume password" = "Passwort des versteckten Volumes";
+
+/* BackupHeaderSheet.swift, MountSheet.swift */
+"Hidden keyfiles:" = "Schlüsseldateien (versteckt):";
+
+/* BackupHeaderSheet.swift, RestoreHeaderSheet.swift */
+"Backup file:" = "Sicherungsdatei:";
+
+/* BackupHeaderSheet.swift, RestoreHeaderSheet.swift */
+"Backup file path" = "Pfad der Sicherungsdatei";
+
+/* BackupHeaderSheet.swift */
+"Save Header Backup" = "Header-Sicherung speichern";
+
+/* BackupHeaderSheet.swift */
+"Backing up headers..." = "Header werden gesichert...";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+"Cancel" = "Abbrechen";
+
+/* BackupHeaderSheet.swift */
+"Backup" = "Sichern";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"None" = "Keine";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"%lld selected" = "%lld ausgewählt";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"Add..." = "Hinzufügen...";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, TCCocoaCallback.mm */
+"Select Keyfiles" = "Schlüsseldateien auswählen";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"Clear" = "Leeren";
+
+/* BasaltApp.swift */
+"Run Self-Test..." = "Selbsttest ausführen...";
+
+/* BasaltApp.swift */
+"Mount Volume..." = "Volume einbinden...";
+
+/* BasaltApp.swift */
+"Create Volume..." = "Volume erstellen...";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Change Password..." = "Passwort ändern...";
+
+/* BasaltApp.swift */
+"Backup Volume Headers..." = "Volume-Header sichern...";
+
+/* BasaltApp.swift */
+"Restore Volume Headers..." = "Volume-Header wiederherstellen...";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Dismount All" = "Alle trennen";
+
+/* BasaltApp.swift, MainWindow.swift */
+"No Volumes Mounted" = "Keine Volumes eingebunden";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Dismount" = "Trennen";
+
+/* BasaltApp.swift */
+"Quit Basalt" = "Basalt beenden";
+
+/* ChangePasswordSheet.swift */
+"Change Volume Password" = "Volume-Passwort ändern";
+
+/* ChangePasswordSheet.swift */
+"Current Credentials" = "Aktuelle Zugangsdaten";
+
+/* ChangePasswordSheet.swift */
+"Current password" = "Aktuelles Passwort";
+
+/* ChangePasswordSheet.swift */
+"Current keyfiles:" = "Aktuelle Schlüsseldateien:";
+
+/* ChangePasswordSheet.swift */
+"New Credentials" = "Neue Zugangsdaten";
+
+/* ChangePasswordSheet.swift */
+"New password" = "Neues Passwort";
+
+/* ChangePasswordSheet.swift */
+"Confirm new password" = "Neues Passwort bestätigen";
+
+/* ChangePasswordSheet.swift, CreateVolumeSheet.swift */
+"Passwords do not match" = "Passwörter stimmen nicht überein";
+
+/* ChangePasswordSheet.swift, CreateVolumeSheet.swift */
+"Characters beyond Latin-1 (e.g. €, Cyrillic, Greek, CJK or emoji) cannot be stored in a volume password without losing information. Please remove them." = "Zeichen außerhalb von Latin-1 (z. B. €, kyrillische, griechische oder CJK-Zeichen oder Emoji) können in einem Volume-Passwort nicht verlustfrei gespeichert werden. Bitte entfernen Sie sie.";
+
+/* ChangePasswordSheet.swift */
+"New keyfiles:" = "Neue Schlüsseldateien:";
+
+/* ChangePasswordSheet.swift */
+"PKCS-5 PRF:" = "PKCS-5 PRF:";
+
+/* ChangePasswordSheet.swift */
+"(unchanged)" = "(unverändert)";
+
+/* ChangePasswordSheet.swift */
+"The hash algorithm used for key derivation. Select '(unchanged)' to keep the current setting." = "Der Hash-Algorithmus für die Schlüsselableitung. Wählen Sie „(unverändert)“, um die aktuelle Einstellung beizubehalten.";
+
+/* ChangePasswordSheet.swift */
+"Changing password..." = "Passwort wird geändert...";
+
+/* ChangePasswordSheet.swift */
+"Change" = "Ändern";
+
+/* CreateVolumeSheet.swift */
+"Create Hidden Volume" = "Verstecktes Volume erstellen";
+
+/* CreateVolumeSheet.swift */
+"Location" = "Speicherort";
+
+/* CreateVolumeSheet.swift */
+"Encryption" = "Verschlüsselung";
+
+/* CreateVolumeSheet.swift, MountSheet.swift, PasswordView.swift, RestoreHeaderSheet.swift */
+"Password" = "Passwort";
+
+/* CreateVolumeSheet.swift */
+"Format" = "Formatieren";
+
+/* CreateVolumeSheet.swift */
+"Choose where to create the encrypted volume." = "Wählen Sie, wo das verschlüsselte Volume erstellt werden soll.";
+
+/* CreateVolumeSheet.swift */
+"Volume type:" = "Volume-Typ:";
+
+/* CreateVolumeSheet.swift */
+"Standard volume" = "Standard-Volume";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume" = "Verstecktes Volume";
+
+/* CreateVolumeSheet.swift */
+"A hidden volume is stored inside another volume. If coerced, you can reveal the outer volume while the hidden one stays secret." = "Ein verstecktes Volume liegt innerhalb eines anderen Volumes. Unter Zwang können Sie das äußere Volume preisgeben, während das versteckte geheim bleibt.";
+
+/* CreateVolumeSheet.swift */
+"A hidden volume is created inside an existing Basalt volume. It provides plausible deniability — even under coercion, the hidden volume's existence cannot be proven." = "Ein verstecktes Volume wird innerhalb eines bestehenden Basalt-Volumes erstellt. Es bietet glaubhafte Abstreitbarkeit – selbst unter Zwang lässt sich seine Existenz nicht beweisen.";
+
+/* CreateVolumeSheet.swift */
+"Existing outer volume file" = "Bestehende äußere Volume-Datei";
+
+/* CreateVolumeSheet.swift */
+"Select Outer Volume" = "Äußeres Volume auswählen";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume size:" = "Größe des versteckten Volumes:";
+
+/* CreateVolumeSheet.swift */
+"Size" = "Größe";
+
+/* CreateVolumeSheet.swift */
+"Must fit inside the outer volume. Leave space for decoy files on the outer volume." = "Muss in das äußere Volume passen. Lassen Sie Platz für Täuschungsdateien im äußeren Volume.";
+
+/* CreateVolumeSheet.swift */
+"The hidden volume must be smaller than the outer volume. Leave enough room for decoy files in the outer volume." = "Das versteckte Volume muss kleiner als das äußere Volume sein. Lassen Sie genug Platz für Täuschungsdateien im äußeren Volume.";
+
+/* CreateVolumeSheet.swift */
+"Container:" = "Container:";
+
+/* CreateVolumeSheet.swift */
+"File container" = "Dateicontainer";
+
+/* CreateVolumeSheet.swift */
+"Entire device / partition" = "Gesamtes Gerät / Partition";
+
+/* CreateVolumeSheet.swift */
+"Device path" = "Gerätepfad";
+
+/* CreateVolumeSheet.swift */
+"Select Device..." = "Gerät auswählen...";
+
+/* CreateVolumeSheet.swift */
+"Device size: %@" = "Gerätegröße: %@";
+
+/* CreateVolumeSheet.swift */
+"All data on this device will be irrecoverably destroyed!" = "Alle Daten auf diesem Gerät werden unwiderruflich gelöscht!";
+
+/* CreateVolumeSheet.swift */
+"Volume file path" = "Pfad der Volume-Datei";
+
+/* CreateVolumeSheet.swift */
+"Create Basalt Volume" = "Basalt-Volume erstellen";
+
+/* CreateVolumeSheet.swift */
+"Volume size:" = "Volume-Größe:";
+
+/* CreateVolumeSheet.swift */
+"Choose the encryption and hash algorithms." = "Wählen Sie den Verschlüsselungs- und den Hash-Algorithmus.";
+
+/* CreateVolumeSheet.swift */
+"Encryption Algorithm:" = "Verschlüsselungsalgorithmus:";
+
+/* CreateVolumeSheet.swift */
+"AES is fastest (hardware-accelerated). Cascades like AES-Twofish-Serpent encrypt with multiple algorithms for defense-in-depth." = "AES ist am schnellsten (hardwarebeschleunigt). Kaskaden wie AES-Twofish-Serpent verschlüsseln nacheinander mit mehreren Algorithmen für zusätzliche Sicherheit.";
+
+/* CreateVolumeSheet.swift */
+"Hash Algorithm:" = "Hash-Algorithmus:";
+
+/* CreateVolumeSheet.swift */
+"Determines how your password is converted into an encryption key." = "Legt fest, wie Ihr Passwort in einen Schlüssel umgewandelt wird.";
+
+/* CreateVolumeSheet.swift */
+"Argon2id (512 MB, 4 threads) — strong protection against brute-force attacks." = "Argon2id (512 MB, 4 Threads) – starker Schutz gegen Brute-Force-Angriffe.";
+
+/* CreateVolumeSheet.swift */
+"Uses 512 MB of RAM per attempt. Strong GPU resistance." = "Benötigt 512 MB RAM pro Versuch. Hohe Resistenz gegen GPU-Angriffe.";
+
+/* CreateVolumeSheet.swift */
+"Argon2id Maximum Security (1 GB, 8 threads) — strongest protection for high-value data." = "Argon2id Maximale Sicherheit (1 GB, 8 Threads) – stärkster Schutz für besonders schützenswerte Daten.";
+
+/* CreateVolumeSheet.swift */
+"Uses 1 GB of RAM per attempt. Maximum brute-force resistance — slower mount times." = "Benötigt 1 GB RAM pro Versuch. Maximaler Schutz gegen Brute-Force-Angriffe – längeres Einbinden.";
+
+/* CreateVolumeSheet.swift */
+"TrueCrypt 7.1a compatible (legacy iterations)" = "TrueCrypt-7.1a-kompatibel (alte Iterationszahlen)";
+
+/* CreateVolumeSheet.swift */
+"Uses weaker key derivation (1,000 iterations instead of 500,000+). Only enable if you need to open this volume with TrueCrypt 7.1a." = "Verwendet eine schwächere Schlüsselableitung (1.000 statt über 500.000 Iterationen). Nur aktivieren, wenn das Volume mit TrueCrypt 7.1a geöffnet werden muss.";
+
+/* CreateVolumeSheet.swift */
+"Uses original TrueCrypt 7.1a iteration counts (1000–2000). The volume can be opened with TrueCrypt 7.1a but has weaker key derivation." = "Verwendet die ursprünglichen Iterationszahlen von TrueCrypt 7.1a (1000–2000). Das Volume lässt sich mit TrueCrypt 7.1a öffnen, hat aber eine schwächere Schlüsselableitung.";
+
+/* CreateVolumeSheet.swift */
+"AES with SHA-512 is recommended for most users. Cascade ciphers provide additional security layers." = "AES mit SHA-512 ist für die meisten Nutzer empfehlenswert. Kaskaden bieten zusätzliche Sicherheitsebenen.";
+
+/* CreateVolumeSheet.swift */
+"Choose a password for the hidden volume. This must be different from the outer volume's password." = "Wählen Sie ein Passwort für das versteckte Volume. Es muss sich vom Passwort des äußeren Volumes unterscheiden.";
+
+/* CreateVolumeSheet.swift */
+"Choose a strong password for the volume." = "Wählen Sie ein starkes Passwort für das Volume.";
+
+/* CreateVolumeSheet.swift */
+"Confirm password" = "Passwort bestätigen";
+
+/* CreateVolumeSheet.swift */
+"Move your mouse randomly over the area below to add extra entropy to the random number generator." = "Bewegen Sie die Maus zufällig über den Bereich unten, um dem Zufallszahlengenerator zusätzliche Entropie hinzuzufügen.";
+
+/* CreateVolumeSheet.swift */
+"Move the mouse here..." = "Maus hier bewegen...";
+
+/* CreateVolumeSheet.swift */
+"%lld bytes collected" = "%lld Bytes gesammelt";
+
+/* CreateVolumeSheet.swift */
+"Extra entropy" = "Zusätzliche Entropie";
+
+/* CreateVolumeSheet.swift */
+"Move your mouse randomly to add extra randomness to key generation." = "Bewegen Sie die Maus zufällig, um der Schlüsselerzeugung zusätzlichen Zufall hinzuzufügen.";
+
+/* CreateVolumeSheet.swift */
+"(optional)" = "(optional)";
+
+/* CreateVolumeSheet.swift */
+"Choose a filesystem for the hidden volume and start formatting." = "Wählen Sie ein Dateisystem für das versteckte Volume und starten Sie die Formatierung.";
+
+/* CreateVolumeSheet.swift */
+"Choose a filesystem and start formatting." = "Wählen Sie ein Dateisystem und starten Sie die Formatierung.";
+
+/* CreateVolumeSheet.swift */
+"Filesystem:" = "Dateisystem:";
+
+/* CreateVolumeSheet.swift */
+"Mac OS Extended (HFS+)" = "Mac OS Extended (HFS+)";
+
+/* CreateVolumeSheet.swift */
+"FAT: cross-platform, 4 GB file size limit. HFS+: macOS native, no file size limit. None: raw encrypted storage." = "FAT: plattformübergreifend, max. 4 GB pro Datei. HFS+: macOS-nativ, keine Dateigrößenbeschränkung. Keine: reiner verschlüsselter Speicher.";
+
+/* CreateVolumeSheet.swift */
+"FAT does not support files larger than 4 GB. Consider Mac OS Extended for larger files." = "FAT unterstützt keine Dateien über 4 GB. Für größere Dateien empfiehlt sich Mac OS Extended.";
+
+/* CreateVolumeSheet.swift */
+"Quick format" = "Schnellformatierung";
+
+/* CreateVolumeSheet.swift */
+"Quick format initializes headers only (instant). Full format writes random data across the volume (slower but more secure)." = "Die Schnellformatierung initialisiert nur die Header (sofort). Die vollständige Formatierung schreibt Zufallsdaten über das gesamte Volume (langsamer, aber sicherer).";
+
+/* CreateVolumeSheet.swift */
+"Full format writes encrypted random data to the entire volume. This is more secure but takes longer." = "Die vollständige Formatierung schreibt verschlüsselte Zufallsdaten auf das gesamte Volume. Das ist sicherer, dauert aber länger.";
+
+/* CreateVolumeSheet.swift */
+"ALL DATA on %@ will be permanently destroyed!" = "ALLE DATEN auf %@ werden unwiderruflich gelöscht!";
+
+/* CreateVolumeSheet.swift */
+"Type the device path to confirm:" = "Geben Sie zur Bestätigung den Gerätepfad ein:";
+
+/* CreateVolumeSheet.swift */
+"Does not match. Please type exactly: %@" = "Stimmt nicht überein. Bitte genau eingeben: %@";
+
+/* CreateVolumeSheet.swift */
+"Creating hidden volume..." = "Verstecktes Volume wird erstellt...";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume created successfully!" = "Verstecktes Volume erfolgreich erstellt!";
+
+/* CreateVolumeSheet.swift */
+"Volume created successfully!" = "Volume erfolgreich erstellt!";
+
+/* CreateVolumeSheet.swift */
+"To mount the hidden volume, use the hidden volume's password when mounting the outer container." = "Um das versteckte Volume einzubinden, verwenden Sie beim Einbinden des äußeren Containers das Passwort des versteckten Volumes.";
+
+/* CreateVolumeSheet.swift */
+"Recommended: back up the volume header now and keep the backup on a separate drive. If the header gets damaged, the backup is the only way to recover your data." = "Empfehlung: Sichern Sie jetzt den Volume-Header und bewahren Sie die Sicherung auf einem anderen Laufwerk auf. Wird der Header beschädigt, ist die Sicherung die einzige Möglichkeit, Ihre Daten wiederherzustellen.";
+
+/* CreateVolumeSheet.swift */
+"Back Up Headers…" = "Header sichern…";
+
+/* CreateVolumeSheet.swift */
+"Abort" = "Abbrechen";
+
+/* CreateVolumeSheet.swift */
+"Done" = "Fertig";
+
+/* CreateVolumeSheet.swift */
+"Back" = "Zurück";
+
+/* CreateVolumeSheet.swift */
+"Next" = "Weiter";
+
+/* CreateVolumeSheet.swift */
+"Create" = "Erstellen";
+
+/* MainWindow.swift, MountSheet.swift */
+"Mount" = "Einbinden";
+
+/* MainWindow.swift */
+"Click Mount or drop a volume file here" = "Klicken Sie auf „Einbinden“ oder ziehen Sie eine Volume-Datei hierher";
+
+/* MainWindow.swift */
+"Show in Finder" = "Im Finder zeigen";
+
+/* MainWindow.swift */
+"Backup Headers..." = "Header sichern...";
+
+/* MainWindow.swift */
+"Restore Headers..." = "Header wiederherstellen...";
+
+/* MainWindow.swift */
+"Error" = "Fehler";
+
+/* MainWindow.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+"OK" = "OK";
+
+/* MainWindow.swift */
+"Info" = "Info";
+
+/* MainWindow.swift */
+"Protection Triggered" = "Schutz ausgelöst";
+
+/* MainWindow.swift */
+"Hidden" = "Versteckt";
+
+/* MainWindow.swift */
+"Read-Only" = "Schreibgeschützt";
+
+/* MountSheet.swift */
+"Mount Volume" = "Volume einbinden";
+
+/* MountSheet.swift */
+"Volume path or device" = "Volume-Pfad oder Gerät";
+
+/* MountSheet.swift */
+"Device..." = "Gerät...";
+
+/* MountSheet.swift */
+"Files used as part of your authentication. The volume requires both the password and the keyfiles to open." = "Dateien, die zur Authentifizierung dienen. Zum Öffnen des Volumes werden sowohl das Passwort als auch die Schlüsseldateien benötigt.";
+
+/* MountSheet.swift */
+"Options" = "Optionen";
+
+/* MountSheet.swift */
+"Mount point (optional)" = "Einhängepunkt (optional)";
+
+/* MountSheet.swift */
+"Where the volume appears in Finder. Leave empty for automatic placement." = "Wo das Volume im Finder erscheint. Leer lassen für automatische Platzierung.";
+
+/* MountSheet.swift */
+"Select Mount Point" = "Einhängepunkt auswählen";
+
+/* MountSheet.swift */
+"Read-only" = "Schreibgeschützt";
+
+/* MountSheet.swift */
+"Files can be read but not modified or deleted." = "Dateien können gelesen, aber nicht geändert oder gelöscht werden.";
+
+/* MountSheet.swift */
+"Use backup headers" = "Sicherungs-Header verwenden";
+
+/* MountSheet.swift */
+"Use the backup copy of the volume header, stored at the end of the file. Try this if the volume won't open normally." = "Verwendet die Sicherungskopie des Volume-Headers am Ende der Datei. Versuchen Sie dies, wenn sich das Volume normal nicht öffnen lässt.";
+
+/* MountSheet.swift */
+"Protect hidden volume when mounting outer" = "Verstecktes Volume beim Einbinden des äußeren schützen";
+
+/* MountSheet.swift */
+"Prevents the outer volume from accidentally overwriting hidden volume data. Requires the hidden volume password." = "Verhindert, dass das äußere Volume versehentlich Daten des versteckten Volumes überschreibt. Erfordert das Passwort des versteckten Volumes.";
+
+/* MountSheet.swift */
+"Select Hidden Volume Keyfiles" = "Schlüsseldateien des versteckten Volumes auswählen";
+
+/* MountSheet.swift */
+"Prevents the outer volume from overwriting the hidden volume's data area." = "Verhindert, dass das äußere Volume den Datenbereich des versteckten Volumes überschreibt.";
+
+/* MountSheet.swift */
+"Key derivation:" = "Schlüsselableitung:";
+
+/* MountSheet.swift */
+"Auto-detect (slowest)" = "Automatisch erkennen (am langsamsten)";
+
+/* MountSheet.swift */
+"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2 (TrueCrypt / VeraCrypt)";
+
+/* MountSheet.swift */
+"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "Nur die gewählte Schlüsselableitung wird versucht, was das Öffnen deutlich beschleunigt. „Automatisch erkennen“ probiert alle aus. Volumes aus Basalt 1.1 und älter sind in den Argon2id-Optionen enthalten.";
+
+/* MountSheet.swift */
+"%lld s elapsed" = "%lld s vergangen";
+
+/* MountSheet.swift */
+"Key derivation is deliberately slow to resist brute-force attacks." = "Die Schlüsselableitung ist absichtlich langsam, um Brute-Force-Angriffen standzuhalten.";
+
+/* MountSheet.swift */
+"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "Die Schlüsselableitung ist absichtlich langsam. Wenn Sie sie unter „Optionen“ festlegen, geht das Öffnen schneller.";
+
+/* MountSheet.swift */
+"Select Device" = "Gerät auswählen";
+
+/* MountSheet.swift */
+"No removable devices found." = "Keine Wechseldatenträger gefunden.";
+
+/* MountSheet.swift */
+"Internal disks are hidden for safety." = "Interne Festplatten werden aus Sicherheitsgründen ausgeblendet.";
+
+/* MountSheet.swift */
+"Device enumeration may require admin privileges." = "Die Geräteerkennung erfordert möglicherweise Administratorrechte.";
+
+/* MountSheet.swift */
+"Show internal disks" = "Interne Festplatten anzeigen";
+
+/* MountSheet.swift */
+"Reveals your Mac's internal disk in the device list. Use with caution." = "Zeigt die internen Festplatten Ihres Mac in der Geräteliste an. Mit Vorsicht verwenden.";
+
+/* MountSheet.swift */
+"Selecting an internal disk can destroy your system!" = "Die Auswahl einer internen Festplatte kann Ihr System zerstören!";
+
+/* PasswordStrengthView.swift */
+"about %lld bits" = "ca. %lld Bit";
+
+/* PasswordStrengthView.swift */
+"Easy to guess. Use a longer password or generate a passphrase." = "Leicht zu erraten. Verwenden Sie ein längeres Passwort oder erzeugen Sie eine Passphrase.";
+
+/* PasswordStrengthView.swift */
+"Rough estimate of how many guesses an attacker needs (2^bits). Argon2id makes each guess expensive, but cannot make a weak password strong." = "Grobe Schätzung, wie viele Versuche ein Angreifer benötigt (2^Bit). Argon2id macht jeden Versuch teuer, kann aber aus einem schwachen Passwort kein starkes machen.";
+
+/* PasswordStrengthView.swift */
+"Weak" = "Schwach";
+
+/* PasswordStrengthView.swift */
+"Fair" = "Mittel";
+
+/* PasswordStrengthView.swift */
+"Good" = "Gut";
+
+/* PasswordStrengthView.swift */
+"Strong" = "Stark";
+
+/* PasswordStrengthView.swift */
+"Generate Passphrase…" = "Passphrase erzeugen…";
+
+/* PasswordStrengthView.swift */
+"Creates a random passphrase from the EFF Diceware list. Easy to remember, hard to guess." = "Erzeugt eine zufällige Passphrase aus der EFF-Diceware-Liste. Leicht zu merken, schwer zu erraten.";
+
+/* PasswordStrengthView.swift */
+"Random Passphrase" = "Zufällige Passphrase";
+
+/* PasswordStrengthView.swift */
+"%lld words (about %lld bits)" = "%lld Wörter (ca. %lld Bit)";
+
+/* PasswordStrengthView.swift */
+"Write it down or memorize it before you continue. There is no way to recover a forgotten password." = "Schreiben Sie sie auf oder merken Sie sie sich, bevor Sie fortfahren. Ein vergessenes Passwort lässt sich nicht wiederherstellen.";
+
+/* PasswordStrengthView.swift */
+"Regenerate" = "Neu erzeugen";
+
+/* PasswordStrengthView.swift */
+"Use Passphrase" = "Passphrase verwenden";
+
+/* PasswordView.swift */
+"Hide password" = "Passwort ausblenden";
+
+/* PreferencesView.swift */
+"Security" = "Sicherheit";
+
+/* PreferencesView.swift */
+"Mount Defaults" = "Einbinden";
+
+/* PreferencesView.swift */
+"Auto-Dismount" = "Automatisch trennen";
+
+/* PreferencesView.swift */
+"Dismount all when screen saver starts or screen locks" = "Alle trennen, wenn der Bildschirmschoner startet oder der Bildschirm gesperrt wird";
+
+/* PreferencesView.swift */
+"Dismount all when system sleeps" = "Alle trennen, wenn der Mac in den Ruhezustand wechselt";
+
+/* PreferencesView.swift */
+"Dismount all after" = "Alle trennen nach";
+
+/* PreferencesView.swift */
+"5 min" = "5 Min.";
+
+/* PreferencesView.swift */
+"10 min" = "10 Min.";
+
+/* PreferencesView.swift */
+"30 min" = "30 Min.";
+
+/* PreferencesView.swift */
+"1 hour" = "1 Stunde";
+
+/* PreferencesView.swift */
+"2 hours" = "2 Stunden";
+
+/* PreferencesView.swift */
+"of inactivity" = "Inaktivität";
+
+/* PreferencesView.swift */
+"Dismount all on logout/shutdown" = "Alle trennen beim Abmelden/Ausschalten";
+
+/* PreferencesView.swift */
+"Force dismount (even if files are open)" = "Trennen erzwingen (auch bei geöffneten Dateien)";
+
+/* PreferencesView.swift */
+"Unmounts volumes even if applications still have open files. Disable to be warned about open files first." = "Trennt Volumes auch dann, wenn Programme noch Dateien geöffnet haben. Deaktivieren, um vorher vor geöffneten Dateien gewarnt zu werden.";
+
+/* PreferencesView.swift */
+"On Quit" = "Beim Beenden";
+
+/* PreferencesView.swift */
+"Dismount all volumes when Basalt quits" = "Alle Volumes trennen, wenn Basalt beendet wird";
+
+/* PreferencesView.swift */
+"Key Derivation" = "Schlüsselableitung";
+
+/* PreferencesView.swift */
+"Don't prompt to upgrade legacy volumes" = "Nicht zum Aktualisieren alter Volumes auffordern";
+
+/* PreferencesView.swift */
+"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "Unterdrückt die Aufforderung, alte TrueCrypt-Volumes auf eine stärkere Schlüsselableitung zu aktualisieren.";
+
+/* PreferencesView.swift */
+"Default Mount Options" = "Standardoptionen beim Einbinden";
+
+/* PreferencesView.swift */
+"Preserve file timestamps" = "Zeitstempel von Dateien beibehalten";
+
+/* PreferencesView.swift */
+"Keeps original file dates unchanged when accessing files on the volume." = "Lässt die ursprünglichen Datumsangaben von Dateien beim Zugriff auf das Volume unverändert.";
+
+/* PreferencesView.swift */
+"Mount as read-only" = "Schreibgeschützt einbinden";
+
+/* PreferencesView.swift */
+"After Mounting" = "Nach dem Einbinden";
+
+/* PreferencesView.swift */
+"Open Finder at mount point" = "Finder am Einhängepunkt öffnen";
+
+/* PreferencesView.swift */
+"On Dismount" = "Beim Trennen";
+
+/* PreferencesView.swift */
+"Close Finder windows of dismounted volumes" = "Finder-Fenster getrennter Volumes schließen";
+
+/* RestoreHeaderSheet.swift */
+"Restore Volume Headers" = "Volume-Header wiederherstellen";
+
+/* RestoreHeaderSheet.swift */
+"Restores a damaged volume header from a backup. This can help if the volume cannot be mounted due to header corruption." = "Stellt einen beschädigten Volume-Header aus einer Sicherung wieder her. Das kann helfen, wenn sich das Volume wegen eines beschädigten Headers nicht einbinden lässt.";
+
+/* RestoreHeaderSheet.swift */
+"Restore from:" = "Wiederherstellen aus:";
+
+/* RestoreHeaderSheet.swift */
+"Internal backup (embedded in volume)" = "Interne Sicherung (im Volume eingebettet)";
+
+/* RestoreHeaderSheet.swift */
+"External backup file" = "Externe Sicherungsdatei";
+
+/* RestoreHeaderSheet.swift */
+"The volume header will be restored from the backup copy stored at the end of the volume file." = "Der Volume-Header wird aus der Sicherungskopie am Ende der Volume-Datei wiederhergestellt.";
+
+/* RestoreHeaderSheet.swift */
+"Select Header Backup File" = "Header-Sicherungsdatei auswählen";
+
+/* RestoreHeaderSheet.swift */
+"Restoring headers..." = "Header werden wiederhergestellt...";
+
+/* RestoreHeaderSheet.swift */
+"Restore" = "Wiederherstellen";
+
+/* RestoreHeaderSheet.swift */
+"Confirm Header Restore" = "Header-Wiederherstellung bestätigen";
+
+/* RestoreHeaderSheet.swift */
+"This will overwrite the current volume header. Make sure you have a backup of the current header before proceeding.\n\nAre you sure you want to restore the volume header?" = "Dadurch wird der aktuelle Volume-Header überschrieben. Stellen Sie sicher, dass Sie eine Sicherung des aktuellen Headers haben, bevor Sie fortfahren.\n\nMöchten Sie den Volume-Header wirklich wiederherstellen?";
+
+/* VolumeManager.swift */
+"Mounting..." = "Wird eingebunden...";
+
+/* VolumeManager.swift */
+"Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "Schutz des versteckten Volumes ausgelöst!\n\nEin Schreibvorgang hat versucht, den Bereich des versteckten Volumes zu überschreiben. Der Schreibvorgang wurde blockiert und das versteckte Volume ist sicher, aber das Dateisystem des äußeren Volumes ist möglicherweise beschädigt.\n\nTrennen Sie dieses Volume sofort. Schreiben Sie keine weiteren Daten darauf.";
+
+/* VolumeManager.swift */
+"Mount failed" = "Einbinden fehlgeschlagen";
+
+/* VolumeManager.swift */
+"Password changed successfully" = "Passwort erfolgreich geändert";
+
+/* VolumeManager.swift */
+"Keyfile created: %@" = "Schlüsseldatei erstellt: %@";
+
+/* VolumeManager.swift */
+"All self-tests passed" = "Alle Selbsttests bestanden";
+
+/* VolumeManager.swift */
+"Volume created but filesystem formatting failed: %@" = "Volume erstellt, aber die Formatierung des Dateisystems ist fehlgeschlagen: %@";
+
+/* VolumeManager.swift */
+"Volume headers backed up successfully." = "Volume-Header erfolgreich gesichert.";
+
+/* VolumeManager.swift */
+"Volume headers restored successfully from internal backup." = "Volume-Header erfolgreich aus der internen Sicherung wiederhergestellt.";
+
+/* VolumeManager.swift */
+"Volume headers restored successfully from backup file." = "Volume-Header erfolgreich aus der Sicherungsdatei wiederhergestellt.";
+
+/* App */
+"Show password" = "Passwort anzeigen";
+
+/* App */
+"Creating volume..." = "Volume wird erstellt...";
+
+/* TCCocoaCallback.mm */
+"Enter password:" = "Passwort eingeben:";
+
+/* TCCocoaCallback.mm */
+"Select File" = "Datei auswählen";
+
+/* TCCocoaCallback.mm */
+"Save File" = "Datei speichern";
+
+/* TCCocoaCallback.mm */
+"Yes" = "Ja";
+
+/* TCCocoaCallback.mm */
+"No" = "Nein";
+
+/* TCCocoaCallback.mm */
+"Select an option:" = "Option auswählen:";
+
+/* TCCoreBridge.mm */
+"Administrator privileges required" = "Administratorrechte erforderlich";
+
+/* TCCoreBridge.mm */
+"Basalt needs administrator privileges to mount volumes. Enter your macOS password:" = "Basalt benötigt Administratorrechte, um Volumes einzubinden. Geben Sie Ihr macOS-Passwort ein:";
+
+/* TCCoreBridge.mm */
+"The volume is already mounted." = "Das Volume ist bereits eingebunden.";
+
+/* TCCoreBridge.mm */
+"The mount point is already in use." = "Der Einhängepunkt wird bereits verwendet.";
+
+/* TCCoreBridge.mm */
+"A mount point is required." = "Ein Einhängepunkt ist erforderlich.";
+
+/* TCCoreBridge.mm */
+"A newer version of FUSE is required." = "Eine neuere FUSE-Version ist erforderlich.";
+
+/* TCCoreBridge.mm */
+"The volume slot is unavailable." = "Der Volume-Slot ist nicht verfügbar.";
+
+/* TCCoreBridge.mm */
+"Failed to create a temporary directory." = "Temporäres Verzeichnis konnte nicht erstellt werden.";
+
+/* TCCoreBridge.mm */
+"Incorrect password or keyfile(s) for the hidden volume." = "Falsches Passwort oder falsche Schlüsseldatei(en) für das versteckte Volume.";
+
+/* TCCoreBridge.mm */
+"Incorrect password for the hidden volume." = "Falsches Passwort für das versteckte Volume.";
+
+/* TCCoreBridge.mm */
+"Incorrect password or keyfile(s)." = "Falsches Passwort oder falsche Schlüsseldatei(en).";
+
+/* TCCoreBridge.mm */
+"Incorrect password." = "Falsches Passwort.";
+
+/* TCCoreBridge.mm */
+"The password is too long." = "Das Passwort ist zu lang.";
+
+/* TCCoreBridge.mm */
+"No password was provided." = "Es wurde kein Passwort angegeben.";
+
+/* TCCoreBridge.mm */
+"The new password contains characters that cannot be stored without losing information (characters beyond Latin-1, e.g. €, Cyrillic, Greek, CJK or emoji). They would be truncated and silently weaken the password. Please use letters, digits and symbols from the Latin-1 range." = "Das neue Passwort enthält Zeichen, die nicht verlustfrei gespeichert werden können (Zeichen außerhalb von Latin-1, z. B. €, kyrillische, griechische oder CJK-Zeichen oder Emoji). Sie würden abgeschnitten und das Passwort unbemerkt schwächen. Bitte verwenden Sie Buchstaben, Ziffern und Symbole aus dem Latin-1-Bereich.";
+
+/* TCCoreBridge.mm */
+"The volume is in use. Close all files on it, or enable force dismount in Settings." = "Das Volume wird verwendet. Schließen Sie alle Dateien darauf oder aktivieren Sie in den Einstellungen das erzwungene Trennen.";
+
+/* TCCoreBridge.mm */
+"The volume file is in use by another application." = "Die Volume-Datei wird von einem anderen Programm verwendet.";
+
+/* TCCoreBridge.mm */
+"The write was blocked to protect the hidden volume." = "Der Schreibvorgang wurde blockiert, um das versteckte Volume zu schützen.";
+
+/* TCCoreBridge.mm */
+"The volume is read-only." = "Das Volume ist schreibgeschützt.";
+
+/* TCCoreBridge.mm */
+"The volume file is incomplete or damaged." = "Die Volume-Datei ist unvollständig oder beschädigt.";
+
+/* TCCoreBridge.mm */
+"The volume uses an unsupported sector size." = "Das Volume verwendet eine nicht unterstützte Sektorgröße.";
+
+/* TCCoreBridge.mm */
+"This volume was created by a newer version of Basalt." = "Dieses Volume wurde mit einer neueren Version von Basalt erstellt.";
+
+/* TCCoreBridge.mm */
+"A keyfile is empty or too small." = "Eine Schlüsseldatei ist leer oder zu klein.";
+
+/* TCCoreBridge.mm */
+"The selected keyfile folder contains no usable files." = "Der ausgewählte Schlüsseldatei-Ordner enthält keine verwendbaren Dateien.";
+
+/* TCCoreBridge.mm */
+"Administrator authentication failed." = "Authentifizierung als Administrator fehlgeschlagen.";
+
+/* TCCoreBridge.mm */
+"A self-test failed. Do not use this build of Basalt." = "Ein Selbsttest ist fehlgeschlagen. Verwenden Sie diesen Build von Basalt nicht.";
+
+/* TCCoreBridge.mm */
+"Operation cancelled." = "Vorgang abgebrochen.";
+
+/* TCCoreBridge.mm */
+"%@ failed:\n%@" = "%@ fehlgeschlagen:\n%@";
+
+/* TCCoreBridge.mm */
+"%@ failed (exit code %lld)." = "%@ fehlgeschlagen (Exit-Code %lld).";
+
+/* TCCoreBridge.mm */
+"System error: %@" = "Systemfehler: %@";
+
+/* TCCoreBridge.mm */
+"The operation could not be completed because of an invalid parameter (%@)." = "Der Vorgang konnte wegen eines ungültigen Parameters nicht abgeschlossen werden (%@).";
+
+/* TCCoreBridge.mm */
+"An unknown error occurred." = "Ein unbekannter Fehler ist aufgetreten.";
+
+/* TCCoreBridge.mm */
+"This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "Dieser Volume-Header wurde mit Basalt 1.1 oder älter erstellt (%@). Diese Versionen verwendeten eine Argon2id-Implementierung, die vom Standard RFC 9106 abweicht.\n\nBeim Aktualisieren wird der Volume-Header mit standardkonformem %@ neu verschlüsselt. Ihre Daten, Ihr Passwort und die Verschlüsselung bleiben unverändert.";
+
+/* TCCoreBridge.mm */
+"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "Dieses Volume verwendet eine veraltete Schlüsselableitung (%@, %@ Iterationen).\n\nModerne Volumes verwenden %@ Iterationen – das macht Brute-Force-Angriffe auf Ihr Passwort deutlich schwerer.\n\nBeim Aktualisieren wird der Volume-Header mit einer stärkeren Schlüsselableitung neu verschlüsselt. Ihre Daten, Ihr Passwort und die Verschlüsselung bleiben unverändert.\n\n⚠ Nach dem Aktualisieren lässt sich das Volume nicht mehr mit TrueCrypt 7.1a öffnen. Wenn Sie unsicher sind, wählen Sie „Nicht jetzt“.";
+
+/* TCCoreBridge.mm */
+"Upgrade Volume Key Derivation?" = "Schlüsselableitung des Volumes aktualisieren?";
+
+/* TCCoreBridge.mm */
+"Upgrade" = "Aktualisieren";
+
+/* TCCoreBridge.mm */
+"Not Now" = "Nicht jetzt";
+
+/* TCCoreBridge.mm */
+"Never Ask Again" = "Nie wieder fragen";
+
+/* TCCoreBridge.mm */
+"Upgrading volume header..." = "Volume-Header wird aktualisiert...";
+
+/* TCCoreBridge.mm */
+"Remounting..." = "Wird erneut eingebunden...";
+
+/* TCCoreBridge.mm */
+"Volume header upgraded successfully.\nNew key derivation: %@" = "Volume-Header erfolgreich aktualisiert.\nNeue Schlüsselableitung: %@";
+
+/* TCCoreBridge.mm */
+"Volume header upgraded successfully.\nNew iterations: %@" = "Volume-Header erfolgreich aktualisiert.\nNeue Iterationszahl: %@";
+
+/* TCCoreBridge.mm */
+"Header upgrade failed: %@" = "Header-Aktualisierung fehlgeschlagen: %@";
+
+/* TCCoreBridge.mm */
+"Volume not found" = "Volume nicht gefunden";
+
+/* TCCoreBridge.mm */
+"Unknown hash algorithm: %@" = "Unbekannter Hash-Algorithmus: %@";
+
+/* TCCoreBridge.mm */
+"This volume format does not contain a backup header." = "Dieses Volume-Format enthält keinen Sicherungs-Header.";
+
+/* TCCoreBridge.mm */
+"The backup file size is incorrect. This may not be a valid volume header backup." = "Die Größe der Sicherungsdatei stimmt nicht. Möglicherweise ist dies keine gültige Volume-Header-Sicherung.";
+
+/* VolumeManager.swift */
+"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "Es wurde nur die unter „Optionen“ gewählte Schlüsselableitung versucht. Wählen Sie im Zweifel „Automatisch erkennen“.";
