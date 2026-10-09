@@ -41,6 +41,14 @@ namespace Basalt
 		// for creating headers (GetAlgorithm skips them).
 		virtual bool IsOpenOnly () const { return false; }
 
+		// PBKDF2 output consists of independent blocks of the PRF's digest size,
+		// which can be derived in parallel (VolumeHeader::Decrypt). 0 for other
+		// KDFs (Argon2id).
+		size_t GetPbkdf2BlockSize () const;
+		bool IsPbkdf2 () const { return GetPbkdf2BlockSize() != 0; }
+		// Derives PBKDF2 block 'blockNumber' (1-based, GetPbkdf2BlockSize() bytes).
+		void DerivePbkdf2Block (const BufferPtr &block, const VolumePassword &password, const ConstBufferPtr &salt, int blockNumber) const;
+
 	protected:
 		Pkcs5Kdf ();
 

@@ -38,7 +38,7 @@
 
 #ifndef TC_MINIMIZE_CODE_SIZE
 
-static byte PADDING[64] = {
+static const byte PADDING[64] = {
 	0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -58,7 +58,9 @@ void RMD160Init (RMD160_CTX *ctx)
 	ctx->state[2] = 0x98badcfe;
 	ctx->state[3] = 0x10325476;
 	ctx->state[4] = 0xc3d2e1f0;
+#ifdef TC_MINIMIZE_CODE_SIZE
 	PADDING[0] = 0x80;
+#endif
 }
 
 /*

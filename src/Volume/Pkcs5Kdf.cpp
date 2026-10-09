@@ -83,7 +83,7 @@ namespace Basalt
 			bool match;
 
 			if (hint == L"PBKDF2")
-				match = name.find (L"HMAC-") == 0;
+				match = kdf->IsPbkdf2();
 			else if (hint == L"Argon2id" || hint == L"Argon2id-Max")
 				match = name == hint || name == hint + L" (legacy)";
 			else
@@ -105,20 +105,67 @@ namespace Basalt
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacWhirlpool_Legacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1_Legacy ()));
 
-		// Argon2id: Basalt default (Max first — new volumes use this).
-		// Each RFC 9106 KDF is followed by its open-only Basalt <= 1.1.x variant.
+		// Argon2id: Basalt default (Max first — new volumes use this)
 		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idMax ()));
-		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idMaxLegacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2id ()));
-		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idLegacy ()));
 
-		// Modern PBKDF2: SHA-512 first (TC/VC default), then remaining
+		// Modern PBKDF2 (VeraCrypt): SHA-512 first (TC/VC default), then remaining.
+		// Consecutive PBKDF2 KDFs are derived in parallel (VolumeHeader::Decrypt).
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha512 ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacWhirlpool ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacRipemd160 ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1 ()));
 
+		// Open-only pre-RFC 9106 Argon2id of Basalt <= 1.1.x, last: these volumes
+		// are upgraded to standard Argon2id on mount.
+		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idMaxLegacy ()));
+		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idLegacy ()));
+
 		return l;
+	}
+
+	size_t Pkcs5Kdf::GetPbkdf2BlockSize () const
+	{
+		shared_ptr <Hash> hash = GetHash();
+		const Hash &h = *hash;
+
+		if (typeid (h) == typeid (Sha512) || typeid (h) == typeid (Whirlpool)
+			|| typeid (h) == typeid (Ripemd160) || typeid (h) == typeid (Sha1))
+		{
+			return hash->GetDigestSize();
+		}
+
+		return 0;
+	}
+
+	void Pkcs5Kdf::DerivePbkdf2Block (const BufferPtr &block, const VolumePassword &password, const ConstBufferPtr &salt, int blockNumber) const
+	{
+		shared_ptr <Hash> hash = GetHash();
+		const Hash &h = *hash;
+		int iterations = GetIterationCount();
+
+		if (block.Size() != GetPbkdf2BlockSize() || blockNumber < 1)
+			throw ParameterIncorrect (SRC_POS);
+
+		ValidateParameters (block, password, salt, iterations);
+
+		char *pwd = (char *) password.DataPtr();
+		int pwdLen = (int) password.Size();
+		char *s = (char *) salt.Get();
+		int saltLen = (int) salt.Size();
+		char *u = (char *) block.Get();
+
+		// Same blocks as derive_key_*(), which concatenates them
+		if (typeid (h) == typeid (Sha512))
+			derive_u_sha512 (pwd, pwdLen, s, saltLen, iterations, u, blockNumber);
+		else if (typeid (h) == typeid (Whirlpool))
+			derive_u_whirlpool (pwd, pwdLen, s, saltLen, iterations, u, blockNumber);
+		else if (typeid (h) == typeid (Ripemd160))
+			derive_u_ripemd160 (pwd, pwdLen, s, saltLen, iterations, u, blockNumber);
+		else if (typeid (h) == typeid (Sha1))
+			derive_u_sha1 (pwd, pwdLen, s, saltLen, iterations, u, blockNumber);
+		else
+			throw NotApplicable (SRC_POS);
 	}
 
 	void Pkcs5Kdf::ValidateParameters (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const
