@@ -27,7 +27,7 @@ struct PreferencesView: View {
     private var securityTab: some View {
         Form {
             Section("Auto-Dismount") {
-                Toggle("Dismount all when screen saver starts", isOn: $prefs.dismountOnScreenSaver)
+                Toggle("Dismount all when screen saver starts or screen locks", isOn: $prefs.dismountOnScreenSaver)
                 Toggle("Dismount all when system sleeps", isOn: $prefs.dismountOnSleep)
 
                 HStack {

@@ -112,11 +112,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // process: main window, sheets, alerts, settings, popovers, etc.
         NSWindow.installScreenCaptureProtection()
 
-        // Observe screen saver start for auto-dismount
+        // Observe screen saver start and screen lock for auto-dismount.
+        // A lock via Ctrl-Cmd-Q, the lid or Touch ID does not start the screen saver.
         DistributedNotificationCenter.default().addObserver(
             self,
             selector: #selector(screenSaverDidStart),
             name: NSNotification.Name("com.apple.screensaver.didstart"),
+            object: nil
+        )
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(screenSaverDidStart),
+            name: NSNotification.Name("com.apple.screenIsLocked"),
             object: nil
         )
 
