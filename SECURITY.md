@@ -451,9 +451,9 @@ directory (0700) and additionally rejects peers whose UID is neither root nor th
 owner (`LOCAL_PEERCRED`). `mount_nfs` connects via `proto=ticotsord,port=<socket>`,
 supported by the macOS NFS client since 10.15, with `nocallback` (the NFSv4 client's
 SETCLIENTID rejects a callback channel over a local socket with EINVAL; without
-callbacks the kernel also opens no NFSv4 callback listener). If the local mount fails, the
-previous TCP transport is used as a fallback (`DFUSE_TCP_FALLBACK`, to be disabled
-once verified on all supported macOS versions).
+callbacks the kernel also opens no NFSv4 callback listener). Verified on macOS (Apple
+Silicon, including a 5 GB copy); a failed local mount is now an error. The previous TCP
+transport is only available in builds with `-DDFUSE_TCP_FALLBACK=1`, for diagnosis.
 
 ### 37. Overflow-Safe Sector Bounds (Hidden Volume Header Overwrite)
 **Files:** `Volume/Volume.cpp`, `Fuse/FuseService.cpp`, `DarwinFUSE/src/nfs4_ops.c`
@@ -590,6 +590,23 @@ mounted with hidden volume protection.
 does not help if the whole container file is lost or overwritten.
 **Fix:** After a volume has been created, the wizard recommends an external header
 backup and opens the backup sheet with the new volume preselected.
+
+### 51. NFS Daemon Ends After Dismount (Keys No Longer Left in Memory)
+**Files:** `DarwinFUSE/src/nfs4_server.c`, `DarwinFUSE/src/darwinfuse.c`
+**Problem:** Found in testing: every mount left a `Basalt` process behind after the
+dismount. DarwinFUSE accepts the kernel's NFS connection while mounting and then hands
+the server over to a daemon process via `fork()`; `nfs4_server_restart()` reset the
+"a client has connected" flag, and since the kernel keeps using the existing connection
+the exit condition never became true. The orphaned daemon kept the volume open with its
+master keys in memory and kept serving the decrypted volume image; in 1.1.1 that was a
+loopback TCP port, so after "dismount" any local process could still read and write the
+volume. Present in 1.1.1; the standalone DarwinFUSE had the same
+defect.
+**Fix:** The flag survives the hand-over. The daemon exits when no client is connected
+and its mount is no longer in the mount table (read with `MNT_NOWAIT`, which never
+queries the server; for the local socket the mount source must match as well), then
+closes the volume and wipes the keys (`fuse_service_destroy`). A kernel reconnect while
+the volume is still mounted does not end the daemon.
 
 
 ## Attack Surface Reduction
@@ -731,9 +748,7 @@ These are known issues that may be addressed in future work:
    state (and `NSString` when passed to the bridge), which cannot be wiped. The bridge
    itself no longer creates unwiped copies (#46), but a password cannot be fully confined
    to `mlock()`-ed memory from SwiftUI.
-7. **Local TCP fallback:** Until `DFUSE_TCP_FALLBACK` is disabled, a failure of the local
-   NFS transport silently falls back to the loopback TCP transport (see #36).
-8. **CLI `--password`:** Passwords given on the command line are visible to other local
+7. **CLI `--password`:** Passwords given on the command line are visible to other local
    users via the process list. The CLI warns about it; use `--password-stdin` or the
    interactive prompt (#45).
 

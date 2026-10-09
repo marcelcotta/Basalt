@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <limits.h>
 #include <sys/wait.h>
 
 /* ---- Logging ---- */
@@ -166,12 +167,12 @@ static const char *detect_volume_path(void)
  * callbacks (no delegations), and without them the kernel does not open its
  * NFSv4 callback listener.
  *
- * DFUSE_TCP_FALLBACK=1 retries over loopback TCP if the local-socket mount
- * fails. Set it to 0 to fail closed once the local transport has been
- * verified on all supported macOS versions.
+ * The local socket is verified on macOS, so a failed local mount is an error
+ * (fail closed). Building with -DDFUSE_TCP_FALLBACK=1 restores the retry over
+ * loopback TCP for diagnosis; that transport is reachable by every local user.
  */
 #ifndef DFUSE_TCP_FALLBACK
-#define DFUSE_TCP_FALLBACK 1
+#define DFUSE_TCP_FALLBACK 0
 #endif
 
 static int do_mount_nfs(uint16_t port, const char *socket_path,
@@ -345,6 +346,15 @@ int fuse_main(int argc, char *argv[],
     DFUSE_LOG("fuse_main: uid=%u euid=%u mount_point=%s",
               getuid(), geteuid(), args.mount_point);
 
+    /*
+     * The mount table lists the resolved path (e.g. /private/var/... for
+     * /var/...). Resolve it now: once mounted, resolving it would query this
+     * server, which is not running at every point below.
+     */
+    char mount_point_real[PATH_MAX];
+    if (!realpath(args.mount_point, mount_point_real))
+        snprintf(mount_point_real, sizeof(mount_point_real), "%s", args.mount_point);
+
     /* Set initial FUSE context */
     darwinfuse_set_context(getuid(), getgid());
 
@@ -389,6 +399,7 @@ int fuse_main(int argc, char *argv[],
     int mounted = 0;
 
     srv = nfs4_server_create_local(&config, &socket_path);
+    nfs4_server_set_mount_point(srv, mount_point_real);
     if (srv && serve_and_mount(srv, 0, socket_path, &args, &srv_thread) == 0)
         mounted = 1;
 
@@ -398,6 +409,7 @@ int fuse_main(int argc, char *argv[],
                   "(reachable by other local users)");
         uint16_t port = 0;
         srv = nfs4_server_create(&config, &port);
+        nfs4_server_set_mount_point(srv, mount_point_real);
         if (srv && serve_and_mount(srv, port, NULL, &args, &srv_thread) == 0)
             mounted = 1;
     }

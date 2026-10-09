@@ -163,7 +163,7 @@ basalt-cli (C++)              Standalone terminal tool
 
 | Document | Contents |
 |----------|----------|
-| **[SECURITY.md](SECURITY.md)** | All 50 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
+| **[SECURITY.md](SECURITY.md)** | All 51 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
 | **[docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md)** | Source audit of Basalt 1.1.1 and DarwinFUSE (October 2026): findings, fixes, macOS verification checklist |
 | **[License.txt](License.txt)** | TrueCrypt License 3.0 |
 
