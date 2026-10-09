@@ -119,8 +119,8 @@ ifeq "$(TC_BUILD_CONFIG)" "Release"
 
 	export DISABLE_PRECOMPILED_HEADERS := 1
 
-	S := $(C_CXX_FLAGS)
-	C_CXX_FLAGS = $(subst -MMD,,$(S))
+	# -MMD stays on: without header dependencies an incremental release build
+	# keeps objects compiled against old headers.
 
 	C_CXX_FLAGS += -g
 	LFLAGS += -Wl,-dead_strip
@@ -144,11 +144,8 @@ CORE_DIRS := Platform Volume Fuse Core
 
 #------ DarwinFUSE (NFSv4 userspace FUSE) ------
 
-DARWINFUSE_LIB := $(SRC_DIR)/DarwinFUSE/libdarwinfuse.a
-
-darwinfuse: $(DARWINFUSE_LIB)
-
-$(DARWINFUSE_LIB):
+# Always descend; the DarwinFUSE Makefile decides what is out of date.
+darwinfuse:
 	$(MAKE) -C $(SRC_DIR)/DarwinFUSE TC_BUILD_CONFIG=$(TC_BUILD_CONFIG)
 
 #------ Core library (no UI dependency) ------
@@ -159,7 +156,7 @@ CORE_ARCHIVES := \
 	$(SRC_DIR)/Fuse/Fuse.a \
 	$(SRC_DIR)/Core/Core.a
 
-libBasaltCore: $(DARWINFUSE_LIB)
+libBasaltCore: darwinfuse
 	@for DIR in $(CORE_DIRS); do \
 		$(MAKE) -C $(SRC_DIR)/$$DIR -f $$DIR.make NAME=$$DIR || exit $$?; \
 	done

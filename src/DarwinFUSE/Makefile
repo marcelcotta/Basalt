@@ -9,7 +9,7 @@ RANLIB ?= ranlib
 
 CFLAGS += -Wall -Wextra -Wno-unused-parameter -std=c11 \
           -I$(CURDIR)/include -I$(CURDIR)/src \
-          -D_FILE_OFFSET_BITS=64
+          -D_FILE_OFFSET_BITS=64 -MMD -MP
 
 ifeq "$(TC_BUILD_CONFIG)" "Release"
     CFLAGS += -O2

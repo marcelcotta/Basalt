@@ -38,11 +38,10 @@ echo "SDK:       ${SDK_PATH}"
 echo "Core lib:  ${CORE_LIB}"
 echo ""
 
-# Step 0: Ensure libTrueCryptCore.a exists
-if [ ! -f "${CORE_LIB}" ]; then
-    echo "Building libBasaltCore.a first..."
-    make -C "${SYMLINK}" BASE_DIR="${SYMLINK}" NOASM=1 libBasaltCore
-fi
+# Step 0: Build libBasaltCore.a and libdarwinfuse.a. Always run make (it is
+# incremental): an existing library may stem from another checkout or branch.
+echo "Building libBasaltCore.a..."
+make -C "${SYMLINK}" BASE_DIR="${SYMLINK}" NOASM=1 libBasaltCore
 
 if [ ! -f "${CORE_LIB}" ]; then
     echo "Error: libBasaltCore.a not found"
