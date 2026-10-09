@@ -54,11 +54,11 @@ static bool AskAdminPassword (string &passwordOut)
 
     dispatch_block_t block = ^{
         NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = @"Administrator privileges required";
-        alert.informativeText = @"Basalt needs administrator privileges to mount volumes. Enter your macOS password:";
+        alert.messageText = NSLocalizedString (@"Administrator privileges required", nil);
+        alert.informativeText = NSLocalizedString (@"Basalt needs administrator privileges to mount volumes. Enter your macOS password:", nil);
         alert.alertStyle = NSAlertStyleWarning;
-        [alert addButtonWithTitle:@"OK"];
-        [alert addButtonWithTitle:@"Cancel"];
+        [alert addButtonWithTitle:NSLocalizedString (@"OK", nil)];
+        [alert addButtonWithTitle:NSLocalizedString (@"Cancel", nil)];
 
         NSSecureTextField *input = [[NSSecureTextField alloc] initWithFrame:NSMakeRect (0, 0, 300, 24)];
         alert.accessoryView = input;
@@ -92,61 +92,96 @@ static bool AskAdminPassword (string &passwordOut)
 static NSError *ExceptionToError (const std::exception &e)
 {
     NSString *desc = nil;
+    NSInteger code = TCErrorCodeGeneric;
 
     // --- Core exceptions (CoreException.h) ---
     if (dynamic_cast <const VolumeAlreadyMounted *> (&e))
-        desc = @"The volume is already mounted.";
+        desc = NSLocalizedString (@"The volume is already mounted.", nil);
     else if (dynamic_cast <const MountPointUnavailable *> (&e))
-        desc = @"The mount point is already in use.";
+        desc = NSLocalizedString (@"The mount point is already in use.", nil);
     else if (dynamic_cast <const MountPointRequired *> (&e))
-        desc = @"A mount point is required.";
+        desc = NSLocalizedString (@"A mount point is required.", nil);
     else if (dynamic_cast <const HigherFuseVersionRequired *> (&e))
-        desc = @"A newer version of FUSE is required.";
+        desc = NSLocalizedString (@"A newer version of FUSE is required.", nil);
     else if (dynamic_cast <const VolumeSlotUnavailable *> (&e))
-        desc = @"The volume slot is unavailable.";
+        desc = NSLocalizedString (@"The volume slot is unavailable.", nil);
     else if (dynamic_cast <const TemporaryDirectoryFailure *> (&e))
-        desc = @"Failed to create a temporary directory.";
+        desc = NSLocalizedString (@"Failed to create a temporary directory.", nil);
 
     // --- Password exceptions (VolumePassword.h) ---
     // Order matters: most-derived first (PasswordKeyfilesIncorrect before PasswordIncorrect).
     else if (dynamic_cast <const ProtectionPasswordKeyfilesIncorrect *> (&e))
-        desc = @"Incorrect password or keyfile(s) for the hidden volume.";
+        desc = NSLocalizedString (@"Incorrect password or keyfile(s) for the hidden volume.", nil);
     else if (dynamic_cast <const ProtectionPasswordIncorrect *> (&e))
-        desc = @"Incorrect password for the hidden volume.";
+        desc = NSLocalizedString (@"Incorrect password for the hidden volume.", nil);
     else if (dynamic_cast <const PasswordKeyfilesIncorrect *> (&e))
-        desc = @"Incorrect password or keyfile(s).";
+    {
+        desc = NSLocalizedString (@"Incorrect password or keyfile(s).", nil);
+        code = TCErrorCodePasswordIncorrect;
+    }
     else if (dynamic_cast <const PasswordIncorrect *> (&e))
-        desc = @"Incorrect password.";
+    {
+        desc = NSLocalizedString (@"Incorrect password.", nil);
+        code = TCErrorCodePasswordIncorrect;
+    }
     else if (dynamic_cast <const PasswordTooLong *> (&e))
-        desc = @"The password is too long.";
+        desc = NSLocalizedString (@"The password is too long.", nil);
     else if (dynamic_cast <const PasswordEmpty *> (&e))
-        desc = @"No password was provided.";
+        desc = NSLocalizedString (@"No password was provided.", nil);
     else if (dynamic_cast <const UnportablePassword *> (&e))
-        desc = @"The new password contains characters that cannot be stored without losing "
-               @"information (characters beyond Latin-1, e.g. €, Cyrillic, Greek, CJK or emoji). "
-               @"They would be truncated and silently weaken the password. "
-               @"Please use letters, digits and symbols from the Latin-1 range.";
+        desc = NSLocalizedString (@"The new password contains characters that cannot be stored without losing information (characters beyond Latin-1, e.g. €, Cyrillic, Greek, CJK or emoji). They would be truncated and silently weaken the password. Please use letters, digits and symbols from the Latin-1 range.", nil);
+
+    // --- Volume / keyfile / environment errors ---
+    else if (dynamic_cast <const MountedVolumeInUse *> (&e))
+        desc = NSLocalizedString (@"The volume is in use. Close all files on it, or enable force dismount in Settings.", nil);
+    else if (dynamic_cast <const VolumeHostInUse *> (&e))
+        desc = NSLocalizedString (@"The volume file is in use by another application.", nil);
+    else if (dynamic_cast <const VolumeProtected *> (&e))
+        desc = NSLocalizedString (@"The write was blocked to protect the hidden volume.", nil);
+    else if (dynamic_cast <const VolumeReadOnly *> (&e))
+        desc = NSLocalizedString (@"The volume is read-only.", nil);
+    else if (dynamic_cast <const MissingVolumeData *> (&e))
+        desc = NSLocalizedString (@"The volume file is incomplete or damaged.", nil);
+    else if (dynamic_cast <const UnsupportedSectorSize *> (&e))
+        desc = NSLocalizedString (@"The volume uses an unsupported sector size.", nil);
+    else if (dynamic_cast <const HigherVersionRequired *> (&e))
+        desc = NSLocalizedString (@"This volume was created by a newer version of Basalt.", nil);
+    else if (dynamic_cast <const InsufficientData *> (&e))
+        desc = NSLocalizedString (@"A keyfile is empty or too small.", nil);
+    else if (dynamic_cast <const KeyfilePathEmpty *> (&e))
+        desc = NSLocalizedString (@"The selected keyfile folder contains no usable files.", nil);
+    else if (dynamic_cast <const ElevationFailed *> (&e))
+        desc = NSLocalizedString (@"Administrator authentication failed.", nil);
+    else if (dynamic_cast <const TestFailed *> (&e))
+        desc = NSLocalizedString (@"A self-test failed. Do not use this build of Basalt.", nil);
 
     // --- User abort (cancelled dialog) ---
     else if (dynamic_cast <const UserAbort *> (&e))
-        desc = @"Operation cancelled.";
+        desc = NSLocalizedString (@"Operation cancelled.", nil);
 
     // --- External process failure (hdiutil, mount_nfs, etc.) ---
     else if (auto *epf = dynamic_cast <const ExecutedProcessFailed *> (&e)) {
         string errOut = epf->GetErrorOutput ();
         if (!errOut.empty ())
-            desc = [NSString stringWithFormat:@"%s failed:\n%s",
-                    epf->GetCommand ().c_str (), errOut.c_str ()];
+            desc = [NSString stringWithFormat:NSLocalizedString (@"%@ failed:\n%@", nil),
+                    @(epf->GetCommand ().c_str ()), @(errOut.c_str ())];
         else
-            desc = [NSString stringWithFormat:@"%s failed (exit code %lld).",
-                    epf->GetCommand ().c_str (), (long long) epf->GetExitCode ()];
+            desc = [NSString stringWithFormat:NSLocalizedString (@"%@ failed (exit code %lld).", nil),
+                    @(epf->GetCommand ().c_str ()), (long long) epf->GetExitCode ()];
     }
 
     // --- System exception: include errno text ---
     else if (auto *se = dynamic_cast <const SystemException *> (&e)) {
         wstring sysText = se->SystemText ();
         if (!sysText.empty ())
-            desc = [NSString stringWithFormat:@"System error: %@", ToNS (sysText)];
+            desc = [NSString stringWithFormat:NSLocalizedString (@"System error: %@", nil), ToNS (sysText)];
+    }
+
+    // --- Invalid parameter: generic text plus the technical detail ---
+    else if (dynamic_cast <const ParameterIncorrect *> (&e)) {
+        const char *where = e.what ();
+        desc = [NSString stringWithFormat:NSLocalizedString (@"The operation could not be completed because of an invalid parameter (%@).", nil),
+                where && *where ? @(where) : @"?"];
     }
 
     // --- Fallback: use what() as-is ---
@@ -155,11 +190,11 @@ static NSError *ExceptionToError (const std::exception &e)
         if (msg && *msg)
             desc = [NSString stringWithUTF8String:msg];
         else
-            desc = @"An unknown error occurred.";
+            desc = NSLocalizedString (@"An unknown error occurred.", nil);
     }
 
     return [NSError errorWithDomain:TCErrorDomain
-                               code:-1
+                               code:code
                            userInfo:@{NSLocalizedDescriptionKey: desc}];
 }
 
@@ -267,7 +302,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         opts.MountPoint = make_shared <DirectoryPath> (ToWide (self.mountPoint));
 
     if (self.password)
-        opts.Password = make_shared <VolumePassword> (ToWide (self.password));
+        opts.Password = PasswordFromNS (self.password);
 
     opts.Keyfiles = ToKeyfileList (self.keyfilePaths);
 
@@ -281,9 +316,12 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     {
         opts.Protection = Basalt::VolumeProtection::HiddenVolumeReadOnly;
         if (self.protectionPassword)
-            opts.ProtectionPassword = make_shared <VolumePassword> (ToWide (self.protectionPassword));
+            opts.ProtectionPassword = PasswordFromNS (self.protectionPassword);
         opts.ProtectionKeyfiles = ToKeyfileList (self.protectionKeyfilePaths);
     }
+
+    if (self.kdfHint.length > 0)
+        opts.KdfHint = ToWide (self.kdfHint);
 
     opts.UseBackupHeaders = self.useBackupHeaders;
     opts.NoFilesystem = self.noFilesystem;
@@ -411,6 +449,11 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     {
         MountOptions cppOpts = [options toCpp];
 
+        // The passwords now live in mlock()-ed VolumePassword buffers; drop the
+        // NSString references so they are not kept alive by the options object.
+        options.password = nil;
+        options.protectionPassword = nil;
+
         // Auto-dismount device filesystems before mounting an encrypted device.
         // The existing filesystem must be unmounted so Basalt can open it exclusively.
 #ifdef TC_MACOSX
@@ -494,23 +537,13 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     if (argon2Migration)
     {
         message = [NSString stringWithFormat:
-            @"This volume header was created by Basalt 1.1 or earlier (%@). "
-            @"Those versions used an Argon2id implementation that deviates from the "
-            @"RFC 9106 standard.\n\n"
-            @"Upgrading re-encrypts the volume header with standard %@. "
-            @"Your data, password, and encryption remain unchanged.",
+            NSLocalizedString (@"This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged.", nil),
             hashName, newKdfName];
     }
     else
     {
         message = [NSString stringWithFormat:
-            @"This volume uses legacy key derivation (%@, %@ iterations).\n\n"
-            @"Modern volumes use %@ iterations — this makes brute-force attacks against "
-            @"your password significantly harder.\n\n"
-            @"Upgrading re-encrypts the volume header with stronger key derivation. "
-            @"Your data, password, and encryption remain unchanged.\n\n"
-            @"⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. "
-            @"If you are unsure, choose \"Not Now\".",
+            NSLocalizedString (@"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\".", nil),
             hashName, currentIter, modernIter];
     }
 
@@ -519,12 +552,12 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 
     dispatch_block_t dialogBlock = ^{
         NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = @"Upgrade Volume Key Derivation?";
+        alert.messageText = NSLocalizedString (@"Upgrade Volume Key Derivation?", nil);
         alert.informativeText = message;
         alert.alertStyle = NSAlertStyleInformational;
-        [alert addButtonWithTitle:@"Upgrade"];
-        [alert addButtonWithTitle:@"Not Now"];
-        [alert addButtonWithTitle:@"Never Ask Again"];
+        [alert addButtonWithTitle:NSLocalizedString (@"Upgrade", nil)];
+        [alert addButtonWithTitle:NSLocalizedString (@"Not Now", nil)];
+        [alert addButtonWithTitle:NSLocalizedString (@"Never Ask Again", nil)];
 
         NSModalResponse resp = [alert runModal];
         choice = resp - NSAlertFirstButtonReturn;
@@ -557,7 +590,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 
     try
     {
-        postStatus (@"Upgrading volume header...");
+        postStatus (NSLocalizedString (@"Upgrading volume header...", nil));
 
         RandomNumberGenerator::Start ();
         RandomNumberGenerator::SetHash (newKdf->GetHash ());
@@ -575,21 +608,21 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
             newKdf, 1);
 
         // Remount the upgraded volume
-        postStatus (@"Remounting...");
+        postStatus (NSLocalizedString (@"Remounting...", nil));
         vol = Core->MountVolume (opts);
 
         // Show success
         NSString *successMsg = argon2Migration
             ? [NSString stringWithFormat:
-                @"Volume header upgraded successfully.\nNew key derivation: %@", newKdfName]
+                NSLocalizedString (@"Volume header upgraded successfully.\nNew key derivation: %@", nil), newKdfName]
             : [NSString stringWithFormat:
-                @"Volume header upgraded successfully.\nNew iterations: %@", modernIter];
+                NSLocalizedString (@"Volume header upgraded successfully.\nNew iterations: %@", nil), modernIter];
 
         dispatch_block_t infoBlock = ^{
             NSAlert *alert = [[NSAlert alloc] init];
             alert.messageText = successMsg;
             alert.alertStyle = NSAlertStyleInformational;
-            [alert addButtonWithTitle:@"OK"];
+            [alert addButtonWithTitle:NSLocalizedString (@"OK", nil)];
             [alert runModal];
         };
 
@@ -600,13 +633,13 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     }
     catch (exception &e)
     {
-        NSString *errMsg = [NSString stringWithFormat:@"Header upgrade failed: %s", e.what ()];
+        NSString *errMsg = [NSString stringWithFormat:NSLocalizedString (@"Header upgrade failed: %@", nil), ExceptionToError (e).localizedDescription];
 
         dispatch_block_t errBlock = ^{
             NSAlert *alert = [[NSAlert alloc] init];
             alert.messageText = errMsg;
             alert.alertStyle = NSAlertStyleWarning;
-            [alert addButtonWithTitle:@"OK"];
+            [alert addButtonWithTitle:NSLocalizedString (@"OK", nil)];
             [alert runModal];
         };
 
@@ -626,7 +659,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         if (!vol)
         {
             if (error) *error = [NSError errorWithDomain:TCErrorDomain code:-1
-                userInfo:@{NSLocalizedDescriptionKey: @"Volume not found"}];
+                userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString (@"Volume not found", nil)}];
             return NO;
         }
         Core->DismountVolume (vol, force);
@@ -717,9 +750,9 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     try
     {
         auto path = make_shared <VolumePath> (ToWide (volumePath));
-        auto pw = make_shared <VolumePassword> (ToWide (currentPassword));
+        auto pw = PasswordFromNS (currentPassword);
         auto kf = ToKeyfileList (keyfilePaths);
-        auto newPw = make_shared <VolumePassword> (ToWide (newPassword));
+        auto newPw = PasswordFromNS (newPassword);
         auto newKf = ToKeyfileList (newKeyfilePaths);
 
         shared_ptr <Pkcs5Kdf> newKdf;
@@ -826,7 +859,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         cppOpts->Size = options.size;
 
         if (options.password)
-            cppOpts->Password = make_shared <VolumePassword> (ToWide (options.password));
+            cppOpts->Password = PasswordFromNS (options.password);
 
         cppOpts->Keyfiles = ToKeyfileList (options.keyfilePaths);
         cppOpts->Quick = options.quickFormat;
@@ -878,7 +911,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         if (!cppOpts->VolumeHeaderKdf)
         {
             if (error) *error = [NSError errorWithDomain:@"Basalt" code:-1
-                userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:@"Unknown hash algorithm: %@", options.hashAlgorithm]}];
+                userInfo:@{NSLocalizedDescriptionKey: [NSString stringWithFormat:NSLocalizedString (@"Unknown hash algorithm: %@", nil), options.hashAlgorithm]}];
             return NO;
         }
 
@@ -956,7 +989,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         // 1. Mount the volume without filesystem (NoFilesystem = true)
         MountOptions opts;
         opts.Path = make_shared <VolumePath> (ToWide (volumePath));
-        opts.Password = make_shared <VolumePassword> (ToWide (password));
+        opts.Password = PasswordFromNS (password);
         opts.Keyfiles = ToKeyfileList (keyfilePaths);
         opts.NoFilesystem = true;
 
@@ -1040,7 +1073,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     try
     {
         auto path = make_shared <VolumePath> (ToWide (volumePath));
-        auto pw = make_shared <VolumePassword> (ToWide (password));
+        auto pw = PasswordFromNS (password);
         auto kf = ToKeyfileList (keyfilePaths);
 
 #ifdef TC_UNIX
@@ -1081,7 +1114,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 
         if (hiddenPassword)
         {
-            hidPw = make_shared <VolumePassword> (ToWide (hiddenPassword));
+            hidPw = PasswordFromNS (hiddenPassword);
             hidKf = ToKeyfileList (hiddenKeyfilePaths);
 
             hiddenVolume = Core->OpenVolume (
@@ -1152,7 +1185,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     try
     {
         auto path = make_shared <VolumePath> (ToWide (volumePath));
-        auto pw = make_shared <VolumePassword> (ToWide (password));
+        auto pw = PasswordFromNS (password);
         auto kf = ToKeyfileList (keyfilePaths);
 
 #ifdef TC_UNIX
@@ -1190,7 +1223,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         {
             if (error)
                 *error = [NSError errorWithDomain:TCErrorDomain code:-1
-                    userInfo:@{NSLocalizedDescriptionKey: @"This volume format does not contain a backup header."}];
+                    userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString (@"This volume format does not contain a backup header.", nil)}];
             return NO;
         }
 
@@ -1231,7 +1264,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     try
     {
         auto path = make_shared <VolumePath> (ToWide (volumePath));
-        auto pw = make_shared <VolumePassword> (ToWide (password));
+        auto pw = PasswordFromNS (password);
         auto kf = ToKeyfileList (keyfilePaths);
 
 #ifdef TC_UNIX
@@ -1267,7 +1300,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         default:
             if (error)
                 *error = [NSError errorWithDomain:TCErrorDomain code:-1
-                    userInfo:@{NSLocalizedDescriptionKey: @"The backup file size is incorrect. This may not be a valid volume header backup."}];
+                    userInfo:@{NSLocalizedDescriptionKey: NSLocalizedString (@"The backup file size is incorrect. This may not be a valid volume header backup.", nil)}];
             return NO;
         }
 

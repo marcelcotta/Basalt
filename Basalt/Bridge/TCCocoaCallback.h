@@ -20,6 +20,9 @@
 
 namespace Basalt
 {
+	// NSString → VolumePassword via a wiped stack buffer (no NSData/wstring copies).
+	shared_ptr <VolumePassword> PasswordFromNS (NSString *s);
+
 	class CocoaOperationCallback : public VolumeOperationCallback
 	{
 	public:
