@@ -1,0 +1,840 @@
+/* Basalt: Chinese (Simplified) localization.
+   Keys are the English UI texts from Basalt/App/*.swift and Basalt/Bridge/*.mm.
+   en.lproj lists every key and serves as the template for new languages. */
+
+/* BackupHeaderSheet.swift */
+"Backup Volume Headers" = "备份宗卷头";
+
+/* BackupHeaderSheet.swift */
+"Creates an external backup of the volume header. This allows recovery if the header becomes corrupted." = "为宗卷头创建外部备份。如果宗卷头损坏，可通过该备份进行恢复。";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, RestoreHeaderSheet.swift */
+"Volume path" = "宗卷路径";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Browse..." = "浏览...";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Select Encrypted Volume" = "选择加密宗卷";
+
+/* BackupHeaderSheet.swift */
+"Volume password" = "宗卷密码";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift */
+"Keyfiles:" = "密钥文件：";
+
+/* BackupHeaderSheet.swift */
+"Volume contains a hidden volume" = "宗卷包含隐藏宗卷";
+
+/* BackupHeaderSheet.swift, MountSheet.swift */
+"Hidden volume password" = "隐藏宗卷密码";
+
+/* BackupHeaderSheet.swift, MountSheet.swift */
+"Hidden keyfiles:" = "隐藏宗卷密钥文件：";
+
+/* BackupHeaderSheet.swift, RestoreHeaderSheet.swift */
+"Backup file:" = "备份文件：";
+
+/* BackupHeaderSheet.swift, RestoreHeaderSheet.swift */
+"Backup file path" = "备份文件路径";
+
+/* BackupHeaderSheet.swift */
+"Save Header Backup" = "存储宗卷头备份";
+
+/* BackupHeaderSheet.swift */
+"Backing up headers..." = "正在备份宗卷头...";
+
+/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+"Cancel" = "取消";
+
+/* BackupHeaderSheet.swift */
+"Backup" = "备份";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"None" = "无";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"%lld selected" = "已选择 %lld 个文件";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"Add..." = "添加...";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, TCCocoaCallback.mm */
+"Select Keyfiles" = "选择密钥文件";
+
+/* BackupHeaderSheet.swift, CreateVolumeSheet.swift, MountSheet.swift */
+"Clear" = "清除";
+
+/* BasaltApp.swift */
+"Run Self-Test..." = "运行自检...";
+
+/* BasaltApp.swift */
+"Mount Volume..." = "装载宗卷...";
+
+/* BasaltApp.swift */
+"Create Volume..." = "创建宗卷...";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Change Password..." = "更改密码...";
+
+/* BasaltApp.swift */
+"Backup Volume Headers..." = "备份宗卷头...";
+
+/* BasaltApp.swift */
+"Restore Volume Headers..." = "恢复宗卷头...";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Dismount All" = "全部卸载";
+
+/* BasaltApp.swift, MainWindow.swift */
+"No Volumes Mounted" = "未装载任何宗卷";
+
+/* BasaltApp.swift, MainWindow.swift */
+"Dismount" = "卸载";
+
+/* BasaltApp.swift */
+"Quit Basalt" = "退出 Basalt";
+
+/* ChangePasswordSheet.swift */
+"Change Volume Password" = "更改宗卷密码";
+
+/* ChangePasswordSheet.swift */
+"Current Credentials" = "当前凭证";
+
+/* ChangePasswordSheet.swift */
+"Current password" = "当前密码";
+
+/* ChangePasswordSheet.swift */
+"Current keyfiles:" = "当前密钥文件：";
+
+/* ChangePasswordSheet.swift */
+"New Credentials" = "新凭证";
+
+/* ChangePasswordSheet.swift */
+"New password" = "新密码";
+
+/* ChangePasswordSheet.swift */
+"Confirm new password" = "确认新密码";
+
+/* ChangePasswordSheet.swift, CreateVolumeSheet.swift */
+"Passwords do not match" = "密码不匹配";
+
+/* ChangePasswordSheet.swift, CreateVolumeSheet.swift */
+"Characters beyond Latin-1 (e.g. €, Cyrillic, Greek, CJK or emoji) cannot be stored in a volume password without losing information. Please remove them." = "宗卷密码无法无损存储 Latin-1 以外的字符（例如 €、西里尔字母、希腊字母、中日韩文字或表情符号）。请移除这些字符。";
+
+/* ChangePasswordSheet.swift */
+"New keyfiles:" = "新密钥文件：";
+
+/* ChangePasswordSheet.swift */
+"PKCS-5 PRF:" = "PKCS-5 PRF：";
+
+/* ChangePasswordSheet.swift */
+"(unchanged)" = "（不更改）";
+
+/* ChangePasswordSheet.swift */
+"The hash algorithm used for key derivation. Select '(unchanged)' to keep the current setting." = "用于密钥派生的哈希算法。选择“（不更改）”以保留当前设置。";
+
+/* ChangePasswordSheet.swift */
+"Changing password..." = "正在更改密码...";
+
+/* ChangePasswordSheet.swift */
+"Change" = "更改";
+
+/* CreateVolumeSheet.swift */
+"Create Hidden Volume" = "创建隐藏宗卷";
+
+/* CreateVolumeSheet.swift */
+"Location" = "位置";
+
+/* CreateVolumeSheet.swift */
+"Encryption" = "加密";
+
+/* CreateVolumeSheet.swift, MountSheet.swift, PasswordView.swift, RestoreHeaderSheet.swift */
+"Password" = "密码";
+
+/* CreateVolumeSheet.swift */
+"Format" = "格式化";
+
+/* CreateVolumeSheet.swift */
+"Choose where to create the encrypted volume." = "选择创建加密宗卷的位置。";
+
+/* CreateVolumeSheet.swift */
+"Volume type:" = "宗卷类型：";
+
+/* CreateVolumeSheet.swift */
+"Standard volume" = "标准宗卷";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume" = "隐藏宗卷";
+
+/* CreateVolumeSheet.swift */
+"A hidden volume is stored inside another volume. If coerced, you can reveal the outer volume while the hidden one stays secret." = "隐藏宗卷存储在另一个宗卷之中。如果遭到胁迫，您可以只公开外层宗卷，而隐藏宗卷依然保密。";
+
+/* CreateVolumeSheet.swift */
+"A hidden volume is created inside an existing Basalt volume. It provides plausible deniability — even under coercion, the hidden volume's existence cannot be proven." = "隐藏宗卷创建于现有的 Basalt 宗卷之中，可提供合理的可否认性——即使遭到胁迫，也无法证明隐藏宗卷的存在。";
+
+/* CreateVolumeSheet.swift */
+"Existing outer volume file" = "现有外层宗卷文件";
+
+/* CreateVolumeSheet.swift */
+"Select Outer Volume" = "选择外层宗卷";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume size:" = "隐藏宗卷大小：";
+
+/* CreateVolumeSheet.swift */
+"Size" = "大小";
+
+/* CreateVolumeSheet.swift */
+"Must fit inside the outer volume. Leave space for decoy files on the outer volume." = "必须能放入外层宗卷中。请在外层宗卷上为诱饵文件留出空间。";
+
+/* CreateVolumeSheet.swift */
+"The hidden volume must be smaller than the outer volume. Leave enough room for decoy files in the outer volume." = "隐藏宗卷必须小于外层宗卷。请在外层宗卷中为诱饵文件留出足够的空间。";
+
+/* CreateVolumeSheet.swift */
+"Container:" = "容器：";
+
+/* CreateVolumeSheet.swift */
+"File container" = "文件容器";
+
+/* CreateVolumeSheet.swift */
+"Entire device / partition" = "整个设备 / 分区";
+
+/* CreateVolumeSheet.swift */
+"Device path" = "设备路径";
+
+/* CreateVolumeSheet.swift */
+"Select Device..." = "选择设备...";
+
+/* CreateVolumeSheet.swift */
+"Device size: %@" = "设备大小：%@";
+
+/* CreateVolumeSheet.swift */
+"All data on this device will be irrecoverably destroyed!" = "此设备上的所有数据都将被彻底销毁，且无法恢复！";
+
+/* CreateVolumeSheet.swift */
+"Volume file path" = "宗卷文件路径";
+
+/* CreateVolumeSheet.swift */
+"Create Basalt Volume" = "创建 Basalt 宗卷";
+
+/* CreateVolumeSheet.swift */
+"Volume size:" = "宗卷大小：";
+
+/* CreateVolumeSheet.swift */
+"Choose the encryption and hash algorithms." = "选择加密算法和哈希算法。";
+
+/* CreateVolumeSheet.swift */
+"Encryption Algorithm:" = "加密算法：";
+
+/* CreateVolumeSheet.swift */
+"AES is fastest (hardware-accelerated). Cascades like AES-Twofish-Serpent encrypt with multiple algorithms for defense-in-depth." = "AES 速度最快（支持硬件加速）。AES-Twofish-Serpent 等级联算法会使用多种算法依次加密，实现纵深防御。";
+
+/* CreateVolumeSheet.swift */
+"Hash Algorithm:" = "哈希算法：";
+
+/* CreateVolumeSheet.swift */
+"Determines how your password is converted into an encryption key." = "决定如何将您的密码转换为加密密钥。";
+
+/* CreateVolumeSheet.swift */
+"Argon2id (512 MB, 4 threads) — strong protection against brute-force attacks." = "Argon2id（512 MB，4 个线程）——针对暴力破解攻击提供强大保护。";
+
+/* CreateVolumeSheet.swift */
+"Uses 512 MB of RAM per attempt. Strong GPU resistance." = "每次尝试占用 512 MB RAM。具有很强的抗 GPU 破解能力。";
+
+/* CreateVolumeSheet.swift */
+"Argon2id Maximum Security (1 GB, 8 threads) — strongest protection for high-value data." = "Argon2id 最高安全性（1 GB，8 个线程）——为高价值数据提供最强保护。";
+
+/* CreateVolumeSheet.swift */
+"Uses 1 GB of RAM per attempt. Maximum brute-force resistance — slower mount times." = "每次尝试占用 1 GB RAM。抗暴力破解能力最强——但装载速度较慢。";
+
+/* CreateVolumeSheet.swift */
+"TrueCrypt 7.1a compatible (legacy iterations)" = "兼容 TrueCrypt 7.1a（旧版迭代次数）";
+
+/* CreateVolumeSheet.swift */
+"Uses weaker key derivation (1,000 iterations instead of 500,000+). Only enable if you need to open this volume with TrueCrypt 7.1a." = "使用较弱的密钥派生（1,000 次迭代，而非 500,000 次以上）。仅当需要用 TrueCrypt 7.1a 打开此宗卷时才应启用。";
+
+/* CreateVolumeSheet.swift */
+"Uses original TrueCrypt 7.1a iteration counts (1000–2000). The volume can be opened with TrueCrypt 7.1a but has weaker key derivation." = "使用 TrueCrypt 7.1a 原始的迭代次数（1000–2000）。此宗卷可用 TrueCrypt 7.1a 打开，但密钥派生强度较弱。";
+
+/* CreateVolumeSheet.swift */
+"AES with SHA-512 is recommended for most users. Cascade ciphers provide additional security layers." = "建议大多数用户使用 AES 搭配 SHA-512。级联加密算法可提供额外的安全层。";
+
+/* CreateVolumeSheet.swift */
+"Choose a password for the hidden volume. This must be different from the outer volume's password." = "为隐藏宗卷设置密码。该密码必须与外层宗卷的密码不同。";
+
+/* CreateVolumeSheet.swift */
+"Choose a strong password for the volume." = "为宗卷设置一个强密码。";
+
+/* CreateVolumeSheet.swift */
+"Confirm password" = "确认密码";
+
+/* CreateVolumeSheet.swift */
+"Move your mouse randomly over the area below to add extra entropy to the random number generator." = "在下方区域内随机移动鼠标，为随机数生成器增加额外的熵。";
+
+/* CreateVolumeSheet.swift */
+"Move the mouse here..." = "在此处移动鼠标...";
+
+/* CreateVolumeSheet.swift */
+"%lld bytes collected" = "已收集 %lld 字节";
+
+/* CreateVolumeSheet.swift */
+"Extra entropy" = "额外熵";
+
+/* CreateVolumeSheet.swift */
+"Move your mouse randomly to add extra randomness to key generation." = "随机移动鼠标，为密钥生成增加额外的随机性。";
+
+/* CreateVolumeSheet.swift */
+"(optional)" = "（可选）";
+
+/* CreateVolumeSheet.swift */
+"Choose a filesystem for the hidden volume and start formatting." = "为隐藏宗卷选择文件系统并开始格式化。";
+
+/* CreateVolumeSheet.swift */
+"Choose a filesystem and start formatting." = "选择文件系统并开始格式化。";
+
+/* CreateVolumeSheet.swift */
+"Filesystem:" = "文件系统：";
+
+/* CreateVolumeSheet.swift */
+"Mac OS Extended (HFS+)" = "Mac OS 扩展（HFS+）";
+
+/* CreateVolumeSheet.swift */
+"FAT: cross-platform, 4 GB file size limit. HFS+: macOS native, no file size limit. None: raw encrypted storage." = "FAT：跨平台，单个文件不超过 4 GB。HFS+：macOS 原生格式，无文件大小限制。无：原始加密存储。";
+
+/* CreateVolumeSheet.swift */
+"FAT does not support files larger than 4 GB. Consider Mac OS Extended for larger files." = "FAT 不支持大于 4 GB 的文件。如需存储更大的文件，请考虑使用 Mac OS 扩展。";
+
+/* CreateVolumeSheet.swift */
+"Quick format" = "快速格式化";
+
+/* CreateVolumeSheet.swift */
+"Quick format initializes headers only (instant). Full format writes random data across the volume (slower but more secure)." = "快速格式化仅初始化宗卷头（瞬间完成）。完全格式化会向整个宗卷写入随机数据（较慢但更安全）。";
+
+/* CreateVolumeSheet.swift */
+"Full format writes encrypted random data to the entire volume. This is more secure but takes longer." = "完全格式化会向整个宗卷写入加密的随机数据。这样更安全，但耗时更长。";
+
+/* CreateVolumeSheet.swift */
+"ALL DATA on %@ will be permanently destroyed!" = "%@ 上的全部数据将被永久销毁！";
+
+/* CreateVolumeSheet.swift */
+"Type the device path to confirm:" = "输入设备路径以确认：";
+
+/* CreateVolumeSheet.swift */
+"Does not match. Please type exactly: %@" = "不匹配。请准确输入：%@";
+
+/* CreateVolumeSheet.swift */
+"Creating hidden volume..." = "正在创建隐藏宗卷...";
+
+/* CreateVolumeSheet.swift */
+"Hidden volume created successfully!" = "已成功创建隐藏宗卷！";
+
+/* CreateVolumeSheet.swift */
+"Volume created successfully!" = "已成功创建宗卷！";
+
+/* CreateVolumeSheet.swift */
+"To mount the hidden volume, use the hidden volume's password when mounting the outer container." = "若要装载隐藏宗卷，请在装载外层容器时使用隐藏宗卷的密码。";
+
+/* CreateVolumeSheet.swift */
+"Recommended: back up the volume header now and keep the backup on a separate drive. If the header gets damaged, the backup is the only way to recover your data." = "建议：立即备份宗卷头，并将备份保存在另一个驱动器上。如果宗卷头损坏，该备份是恢复数据的唯一途径。";
+
+/* CreateVolumeSheet.swift */
+"Back Up Headers…" = "备份宗卷头…";
+
+/* CreateVolumeSheet.swift */
+"Abort" = "中止";
+
+/* CreateVolumeSheet.swift */
+"Done" = "完成";
+
+/* CreateVolumeSheet.swift */
+"Back" = "返回";
+
+/* CreateVolumeSheet.swift */
+"Next" = "下一步";
+
+/* CreateVolumeSheet.swift */
+"Create" = "创建";
+
+/* MainWindow.swift, MountSheet.swift */
+"Mount" = "装载";
+
+/* MainWindow.swift */
+"Click Mount or drop a volume file here" = "点按“装载”或将宗卷文件拖放到此处";
+
+/* MainWindow.swift */
+"Show in Finder" = "在访达中显示";
+
+/* MainWindow.swift */
+"Backup Headers..." = "备份宗卷头...";
+
+/* MainWindow.swift */
+"Restore Headers..." = "恢复宗卷头...";
+
+/* MainWindow.swift */
+"Error" = "错误";
+
+/* MainWindow.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+"OK" = "好";
+
+/* MainWindow.swift */
+"Info" = "信息";
+
+/* MainWindow.swift */
+"Protection Triggered" = "保护已触发";
+
+/* MainWindow.swift */
+"Hidden" = "隐藏";
+
+/* MainWindow.swift */
+"Read-Only" = "只读";
+
+/* MountSheet.swift */
+"Mount Volume" = "装载宗卷";
+
+/* MountSheet.swift */
+"Volume path or device" = "宗卷路径或设备";
+
+/* MountSheet.swift */
+"Device..." = "设备...";
+
+/* MountSheet.swift */
+"Files used as part of your authentication. The volume requires both the password and the keyfiles to open." = "用于身份验证的文件。需要同时提供密码和密钥文件才能打开此宗卷。";
+
+/* MountSheet.swift */
+"Options" = "选项";
+
+/* MountSheet.swift */
+"Mount point (optional)" = "装载点（可选）";
+
+/* MountSheet.swift */
+"Where the volume appears in Finder. Leave empty for automatic placement." = "宗卷在访达中显示的位置。留空则自动选择位置。";
+
+/* MountSheet.swift */
+"Select Mount Point" = "选择装载点";
+
+/* MountSheet.swift */
+"Read-only" = "只读";
+
+/* MountSheet.swift */
+"Files can be read but not modified or deleted." = "文件可读取，但无法修改或删除。";
+
+/* MountSheet.swift */
+"Use backup headers" = "使用宗卷头备份";
+
+/* MountSheet.swift */
+"Use the backup copy of the volume header, stored at the end of the file. Try this if the volume won't open normally." = "使用存储在文件末尾的宗卷头备份副本。如果宗卷无法正常打开，可尝试此选项。";
+
+/* MountSheet.swift */
+"Protect hidden volume when mounting outer" = "装载外层宗卷时保护隐藏宗卷";
+
+/* MountSheet.swift */
+"Prevents the outer volume from accidentally overwriting hidden volume data. Requires the hidden volume password." = "防止外层宗卷意外覆盖隐藏宗卷中的数据。需要输入隐藏宗卷的密码。";
+
+/* MountSheet.swift */
+"Select Hidden Volume Keyfiles" = "选择隐藏宗卷密钥文件";
+
+/* MountSheet.swift */
+"Prevents the outer volume from overwriting the hidden volume's data area." = "防止外层宗卷覆盖隐藏宗卷的数据区域。";
+
+/* MountSheet.swift */
+"Key derivation:" = "密钥派生：";
+
+/* MountSheet.swift */
+"Auto-detect (slowest)" = "自动检测（最慢）";
+
+/* MountSheet.swift */
+"PBKDF2 (TrueCrypt / VeraCrypt)" = "PBKDF2（TrueCrypt / VeraCrypt）";
+
+/* MountSheet.swift */
+"Only the selected key derivation is tried, which makes opening much faster. Auto-detect tries all of them. Volumes from Basalt 1.1 and earlier are included in the Argon2id choices." = "仅尝试所选的密钥派生方式，因此打开速度会快得多。“自动检测”会逐一尝试所有方式。Basalt 1.1 及更早版本创建的宗卷包含在 Argon2id 选项中。";
+
+/* MountSheet.swift */
+"%lld s elapsed" = "已用时 %lld 秒";
+
+/* MountSheet.swift */
+"Key derivation is deliberately slow to resist brute-force attacks." = "密钥派生有意设计得较慢，以抵御暴力破解攻击。";
+
+/* MountSheet.swift */
+"Key derivation is deliberately slow. Choosing it under Options makes opening faster." = "密钥派生有意设计得较慢。在“选项”中指定密钥派生方式可加快打开速度。";
+
+/* MountSheet.swift */
+"Select Device" = "选择设备";
+
+/* MountSheet.swift */
+"No removable devices found." = "未找到可移除设备。";
+
+/* MountSheet.swift */
+"Internal disks are hidden for safety." = "为安全起见，内置磁盘已隐藏。";
+
+/* MountSheet.swift */
+"Device enumeration may require admin privileges." = "枚举设备可能需要管理员权限。";
+
+/* MountSheet.swift */
+"Show internal disks" = "显示内置磁盘";
+
+/* MountSheet.swift */
+"Reveals your Mac's internal disk in the device list. Use with caution." = "在设备列表中显示 Mac 的内置磁盘。请谨慎使用。";
+
+/* MountSheet.swift */
+"Selecting an internal disk can destroy your system!" = "选择内置磁盘可能会损毁您的系统！";
+
+/* PasswordStrengthView.swift */
+"about %lld bits" = "约 %lld 位";
+
+/* PasswordStrengthView.swift */
+"Easy to guess. Use a longer password or generate a passphrase." = "容易被猜中。请使用更长的密码，或生成密码短语。";
+
+/* PasswordStrengthView.swift */
+"Rough estimate of how many guesses an attacker needs (2^bits). Argon2id makes each guess expensive, but cannot make a weak password strong." = "粗略估计攻击者所需的猜测次数（2^位数）。Argon2id 会提高每次猜测的成本，但无法让弱密码变强。";
+
+/* PasswordStrengthView.swift */
+"Weak" = "弱";
+
+/* PasswordStrengthView.swift */
+"Fair" = "一般";
+
+/* PasswordStrengthView.swift */
+"Good" = "良好";
+
+/* PasswordStrengthView.swift */
+"Strong" = "强";
+
+/* PasswordStrengthView.swift */
+"Generate Passphrase…" = "生成密码短语…";
+
+/* PasswordStrengthView.swift */
+"Creates a random passphrase from the EFF Diceware list. Easy to remember, hard to guess." = "从 EFF Diceware 词表中随机生成密码短语。易于记忆，难以猜测。";
+
+/* PasswordStrengthView.swift */
+"Random Passphrase" = "随机密码短语";
+
+/* PasswordStrengthView.swift */
+"%lld words (about %lld bits)" = "%lld 个单词（约 %lld 位）";
+
+/* PasswordStrengthView.swift */
+"Write it down or memorize it before you continue. There is no way to recover a forgotten password." = "继续之前，请将其写下或牢记。忘记的密码将无法找回。";
+
+/* PasswordStrengthView.swift */
+"Regenerate" = "重新生成";
+
+/* PasswordStrengthView.swift */
+"Use Passphrase" = "使用密码短语";
+
+/* PasswordView.swift */
+"Hide password" = "隐藏密码";
+
+/* PreferencesView.swift */
+"Security" = "安全性";
+
+/* PreferencesView.swift */
+"Mount Defaults" = "装载默认设置";
+
+/* PreferencesView.swift */
+"Auto-Dismount" = "自动卸载";
+
+/* PreferencesView.swift */
+"Dismount all when screen saver starts or screen locks" = "屏幕保护程序启动或屏幕锁定时全部卸载";
+
+/* PreferencesView.swift */
+"Dismount all when system sleeps" = "系统睡眠时全部卸载";
+
+/* PreferencesView.swift */
+"Dismount all after" = "在闲置";
+
+/* PreferencesView.swift */
+"5 min" = "5 分钟";
+
+/* PreferencesView.swift */
+"10 min" = "10 分钟";
+
+/* PreferencesView.swift */
+"30 min" = "30 分钟";
+
+/* PreferencesView.swift */
+"1 hour" = "1 小时";
+
+/* PreferencesView.swift */
+"2 hours" = "2 小时";
+
+/* PreferencesView.swift */
+"of inactivity" = "后全部卸载";
+
+/* PreferencesView.swift */
+"Dismount all on logout/shutdown" = "退出登录或关机时全部卸载";
+
+/* PreferencesView.swift */
+"Force dismount (even if files are open)" = "强制卸载（即使有文件处于打开状态）";
+
+/* PreferencesView.swift */
+"Unmounts volumes even if applications still have open files. Disable to be warned about open files first." = "即使 App 仍有打开的文件，也会卸载宗卷。停用此选项可在卸载前先收到有关打开文件的警告。";
+
+/* PreferencesView.swift */
+"On Quit" = "退出时";
+
+/* PreferencesView.swift */
+"Dismount all volumes when Basalt quits" = "Basalt 退出时卸载所有宗卷";
+
+/* PreferencesView.swift */
+"Key Derivation" = "密钥派生";
+
+/* PreferencesView.swift */
+"Don't prompt to upgrade legacy volumes" = "不提示升级旧版宗卷";
+
+/* PreferencesView.swift */
+"Silences the prompt to upgrade old TrueCrypt volumes to stronger key derivation." = "不再提示将旧版 TrueCrypt 宗卷升级为更强的密钥派生。";
+
+/* PreferencesView.swift */
+"Default Mount Options" = "默认装载选项";
+
+/* PreferencesView.swift */
+"Preserve file timestamps" = "保留文件时间戳";
+
+/* PreferencesView.swift */
+"Keeps original file dates unchanged when accessing files on the volume." = "访问宗卷中的文件时，保持文件的原始日期不变。";
+
+/* PreferencesView.swift */
+"Mount as read-only" = "以只读方式装载";
+
+/* PreferencesView.swift */
+"After Mounting" = "装载后";
+
+/* PreferencesView.swift */
+"Open Finder at mount point" = "在访达中打开装载点";
+
+/* PreferencesView.swift */
+"On Dismount" = "卸载时";
+
+/* PreferencesView.swift */
+"Close Finder windows of dismounted volumes" = "关闭已卸载宗卷的访达窗口";
+
+/* RestoreHeaderSheet.swift */
+"Restore Volume Headers" = "恢复宗卷头";
+
+/* RestoreHeaderSheet.swift */
+"Restores a damaged volume header from a backup. This can help if the volume cannot be mounted due to header corruption." = "从备份恢复损坏的宗卷头。如果宗卷因宗卷头损坏而无法装载，此操作可能会有所帮助。";
+
+/* RestoreHeaderSheet.swift */
+"Restore from:" = "恢复来源：";
+
+/* RestoreHeaderSheet.swift */
+"Internal backup (embedded in volume)" = "内部备份（嵌入在宗卷中）";
+
+/* RestoreHeaderSheet.swift */
+"External backup file" = "外部备份文件";
+
+/* RestoreHeaderSheet.swift */
+"The volume header will be restored from the backup copy stored at the end of the volume file." = "将从存储在宗卷文件末尾的备份副本恢复宗卷头。";
+
+/* RestoreHeaderSheet.swift */
+"Select Header Backup File" = "选择宗卷头备份文件";
+
+/* RestoreHeaderSheet.swift */
+"Restoring headers..." = "正在恢复宗卷头...";
+
+/* RestoreHeaderSheet.swift */
+"Restore" = "恢复";
+
+/* RestoreHeaderSheet.swift */
+"Confirm Header Restore" = "确认恢复宗卷头";
+
+/* RestoreHeaderSheet.swift */
+"This will overwrite the current volume header. Make sure you have a backup of the current header before proceeding.\n\nAre you sure you want to restore the volume header?" = "此操作将覆盖当前的宗卷头。继续之前，请确保已备份当前的宗卷头。\n\n确定要恢复宗卷头吗？";
+
+/* VolumeManager.swift */
+"Mounting..." = "正在装载...";
+
+/* VolumeManager.swift */
+"Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it." = "隐藏宗卷保护已触发！\n\n有写入操作试图覆盖隐藏宗卷区域。该写入已被阻止，隐藏宗卷是安全的，但外层宗卷的文件系统可能已损坏。\n\n请立即卸载此宗卷，不要再向其写入任何数据。";
+
+/* VolumeManager.swift */
+"Mount failed" = "装载失败";
+
+/* VolumeManager.swift */
+"Password changed successfully" = "已成功更改密码";
+
+/* VolumeManager.swift */
+"Keyfile created: %@" = "已创建密钥文件：%@";
+
+/* VolumeManager.swift */
+"All self-tests passed" = "所有自检均已通过";
+
+/* VolumeManager.swift */
+"Volume created but filesystem formatting failed: %@" = "宗卷已创建，但文件系统格式化失败：%@";
+
+/* VolumeManager.swift */
+"Volume headers backed up successfully." = "已成功备份宗卷头。";
+
+/* VolumeManager.swift */
+"Volume headers restored successfully from internal backup." = "已成功从内部备份恢复宗卷头。";
+
+/* VolumeManager.swift */
+"Volume headers restored successfully from backup file." = "已成功从备份文件恢复宗卷头。";
+
+/* App */
+"Show password" = "显示密码";
+
+/* App */
+"Creating volume..." = "正在创建宗卷...";
+
+/* TCCocoaCallback.mm */
+"Enter password:" = "输入密码：";
+
+/* TCCocoaCallback.mm */
+"Select File" = "选择文件";
+
+/* TCCocoaCallback.mm */
+"Save File" = "存储文件";
+
+/* TCCocoaCallback.mm */
+"Yes" = "是";
+
+/* TCCocoaCallback.mm */
+"No" = "否";
+
+/* TCCocoaCallback.mm */
+"Select an option:" = "选择一个选项：";
+
+/* TCCoreBridge.mm */
+"Administrator privileges required" = "需要管理员权限";
+
+/* TCCoreBridge.mm */
+"Basalt needs administrator privileges to mount volumes. Enter your macOS password:" = "Basalt 需要管理员权限才能装载宗卷。请输入您的 macOS 密码：";
+
+/* TCCoreBridge.mm */
+"The volume is already mounted." = "该宗卷已装载。";
+
+/* TCCoreBridge.mm */
+"The mount point is already in use." = "该装载点已被使用。";
+
+/* TCCoreBridge.mm */
+"A mount point is required." = "需要指定装载点。";
+
+/* TCCoreBridge.mm */
+"A newer version of FUSE is required." = "需要更新版本的 FUSE。";
+
+/* TCCoreBridge.mm */
+"The volume slot is unavailable." = "宗卷槽位不可用。";
+
+/* TCCoreBridge.mm */
+"Failed to create a temporary directory." = "无法创建临时目录。";
+
+/* TCCoreBridge.mm */
+"Incorrect password or keyfile(s) for the hidden volume." = "隐藏宗卷的密码或密钥文件不正确。";
+
+/* TCCoreBridge.mm */
+"Incorrect password for the hidden volume." = "隐藏宗卷的密码不正确。";
+
+/* TCCoreBridge.mm */
+"Incorrect password or keyfile(s)." = "密码或密钥文件不正确。";
+
+/* TCCoreBridge.mm */
+"Incorrect password." = "密码不正确。";
+
+/* TCCoreBridge.mm */
+"The password is too long." = "密码过长。";
+
+/* TCCoreBridge.mm */
+"No password was provided." = "未提供密码。";
+
+/* TCCoreBridge.mm */
+"The new password contains characters that cannot be stored without losing information (characters beyond Latin-1, e.g. €, Cyrillic, Greek, CJK or emoji). They would be truncated and silently weaken the password. Please use letters, digits and symbols from the Latin-1 range." = "新密码包含无法无损存储的字符（Latin-1 以外的字符，例如 €、西里尔字母、希腊字母、中日韩文字或表情符号）。这些字符会被截断，从而在不知不觉中削弱密码强度。请使用 Latin-1 范围内的字母、数字和符号。";
+
+/* TCCoreBridge.mm */
+"The volume is in use. Close all files on it, or enable force dismount in Settings." = "该宗卷正在使用中。请关闭其中的所有文件，或在“设置”中启用强制卸载。";
+
+/* TCCoreBridge.mm */
+"The volume file is in use by another application." = "宗卷文件正被另一个 App 使用。";
+
+/* TCCoreBridge.mm */
+"The write was blocked to protect the hidden volume." = "为保护隐藏宗卷，写入已被阻止。";
+
+/* TCCoreBridge.mm */
+"The volume is read-only." = "该宗卷为只读。";
+
+/* TCCoreBridge.mm */
+"The volume file is incomplete or damaged." = "宗卷文件不完整或已损坏。";
+
+/* TCCoreBridge.mm */
+"The volume uses an unsupported sector size." = "该宗卷使用了不受支持的扇区大小。";
+
+/* TCCoreBridge.mm */
+"This volume was created by a newer version of Basalt." = "此宗卷由更新版本的 Basalt 创建。";
+
+/* TCCoreBridge.mm */
+"A keyfile is empty or too small." = "某个密钥文件为空或过小。";
+
+/* TCCoreBridge.mm */
+"The selected keyfile folder contains no usable files." = "所选密钥文件文件夹中没有可用的文件。";
+
+/* TCCoreBridge.mm */
+"Administrator authentication failed." = "管理员身份验证失败。";
+
+/* TCCoreBridge.mm */
+"A self-test failed. Do not use this build of Basalt." = "有一项自检未通过。请勿使用此版本的 Basalt。";
+
+/* TCCoreBridge.mm */
+"Operation cancelled." = "操作已取消。";
+
+/* TCCoreBridge.mm */
+"%@ failed:\n%@" = "%@ 失败：\n%@";
+
+/* TCCoreBridge.mm */
+"%@ failed (exit code %lld)." = "%@ 失败（退出代码 %lld）。";
+
+/* TCCoreBridge.mm */
+"System error: %@" = "系统错误：%@";
+
+/* TCCoreBridge.mm */
+"The operation could not be completed because of an invalid parameter (%@)." = "由于参数无效（%@），无法完成该操作。";
+
+/* TCCoreBridge.mm */
+"An unknown error occurred." = "发生未知错误。";
+
+/* TCCoreBridge.mm */
+"This volume header was created by Basalt 1.1 or earlier (%@). Those versions used an Argon2id implementation that deviates from the RFC 9106 standard.\n\nUpgrading re-encrypts the volume header with standard %@. Your data, password, and encryption remain unchanged." = "此宗卷头由 Basalt 1.1 或更早版本创建（%@）。这些版本使用的 Argon2id 实现与 RFC 9106 标准存在偏差。\n\n升级将使用标准 %@ 重新加密宗卷头。您的数据、密码和加密方式均保持不变。";
+
+/* TCCoreBridge.mm */
+"This volume uses legacy key derivation (%@, %@ iterations).\n\nModern volumes use %@ iterations — this makes brute-force attacks against your password significantly harder.\n\nUpgrading re-encrypts the volume header with stronger key derivation. Your data, password, and encryption remain unchanged.\n\n⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. If you are unsure, choose \"Not Now\"." = "此宗卷使用旧版密钥派生（%@，%@ 次迭代）。\n\n新式宗卷使用 %@ 次迭代——这会大幅提高针对您密码的暴力破解攻击难度。\n\n升级将使用更强的密钥派生重新加密宗卷头。您的数据、密码和加密方式均保持不变。\n\n⚠ 升级后，TrueCrypt 7.1a 将无法再打开此宗卷。如果不确定，请选择“以后”。";
+
+/* TCCoreBridge.mm */
+"Upgrade Volume Key Derivation?" = "要升级宗卷的密钥派生吗？";
+
+/* TCCoreBridge.mm */
+"Upgrade" = "升级";
+
+/* TCCoreBridge.mm */
+"Not Now" = "以后";
+
+/* TCCoreBridge.mm */
+"Never Ask Again" = "不再询问";
+
+/* TCCoreBridge.mm */
+"Upgrading volume header..." = "正在升级宗卷头...";
+
+/* TCCoreBridge.mm */
+"Remounting..." = "正在重新装载...";
+
+/* TCCoreBridge.mm */
+"Volume header upgraded successfully.\nNew key derivation: %@" = "已成功升级宗卷头。\n新的密钥派生：%@";
+
+/* TCCoreBridge.mm */
+"Volume header upgraded successfully.\nNew iterations: %@" = "已成功升级宗卷头。\n新的迭代次数：%@";
+
+/* TCCoreBridge.mm */
+"Header upgrade failed: %@" = "宗卷头升级失败：%@";
+
+/* TCCoreBridge.mm */
+"Volume not found" = "未找到宗卷";
+
+/* TCCoreBridge.mm */
+"Unknown hash algorithm: %@" = "未知的哈希算法：%@";
+
+/* TCCoreBridge.mm */
+"This volume format does not contain a backup header." = "此宗卷格式不包含宗卷头备份。";
+
+/* TCCoreBridge.mm */
+"The backup file size is incorrect. This may not be a valid volume header backup." = "备份文件大小不正确。它可能不是有效的宗卷头备份。";
+
+/* VolumeManager.swift */
+"Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "仅尝试了在“选项”中选择的密钥派生方式。如不确定，请选择“自动检测”。";
