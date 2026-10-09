@@ -396,7 +396,12 @@ static void ShowHelp (const char *argv0)
 		"  --help, -h               Display this help\n"
 		"\n"
 		"Options:\n"
-		"  -p, --password=PASS      Volume password\n"
+		"  -p, --password=PASS      Volume password (visible to other users via ps;\n"
+		"                           prefer --password-stdin or the interactive prompt)\n"
+		"  --password-stdin         Read the volume password from the first line of stdin\n"
+		"  --kdf=KDF                Key derivation to try when mounting: auto (default),\n"
+		"                           argon2id-max, argon2id, pbkdf2 (TrueCrypt/VeraCrypt).\n"
+		"                           Limiting it makes mounting much faster.\n"
 		"  -k, --keyfiles=K1[,K2]   Keyfile(s), comma-separated\n"
 		"  --size=SIZE              Volume size for --create (e.g. 10M, 1G, 500K)\n"
 		"  --encryption=ALG         Encryption algorithm (default: AES)\n"
@@ -420,7 +425,8 @@ static void ShowHelp (const char *argv0)
 #endif
 		"\n"
 		"Examples:\n"
-		"  " << argv0 << " -c volume.tc --size=100M --password=secret\n"
+		"  " << argv0 << " -c volume.tc --size=100M\n"
+		"  printf '%s\\n' \"$PASS\" | " << argv0 << " --password-stdin --kdf=argon2id-max volume.tc /mnt/tc\n"
 #ifdef TC_WINDOWS
 		"  " << argv0 << " volume.tc                Mount on next free drive letter\n"
 		"  " << argv0 << " volume.tc M:             Mount on M:\n"
@@ -670,7 +676,9 @@ int main (int argc, char *argv[])
 		{ "new-keyfiles",    required_argument, nullptr, 'N' },
 		{ "new-password",    required_argument, nullptr, 'P' },
 		{ "non-interactive", no_argument,       nullptr, 'I' },
+		{ "kdf",             required_argument, nullptr, 'X' },
 		{ "password",        required_argument, nullptr, 'p' },
+		{ "password-stdin",  no_argument,       nullptr, 'S' },
 		{ "quick",           no_argument,       nullptr, 'Q' },
 		{ "restore-headers", required_argument, nullptr, 'R' },
 		{ "size",            required_argument, nullptr, 'Z' },
@@ -683,6 +691,8 @@ int main (int argc, char *argv[])
 	CLICommand command = CmdNone;
 	MountOptions mountOptions;
 	string argPassword;
+	bool passwordFromStdin = false;
+	string argKdf;
 	string argKeyfiles;
 	string argNewPassword;
 	string argNewKeyfiles;
@@ -799,6 +809,14 @@ int main (int argc, char *argv[])
 			argPassword = optarg;
 			break;
 
+		case 'S':  // --password-stdin
+			passwordFromStdin = true;
+			break;
+
+		case 'X':  // --kdf
+			argKdf = optarg;
+			break;
+
 		case 'P':  // --new-password
 			argNewPassword = optarg;
 			break;
@@ -847,6 +865,51 @@ int main (int argc, char *argv[])
 
 	if (optind < argc && argMountPoint.empty ())
 		argMountPoint = argv[optind++];
+
+	// ---- Password sources ----
+
+	if (passwordFromStdin)
+	{
+		if (!argPassword.empty ())
+		{
+			std::cerr << ansiRed << "Error: " << ansiReset << "--password and --password-stdin are mutually exclusive." << std::endl;
+			return 1;
+		}
+
+		if (!std::getline (std::cin, argPassword))
+		{
+			std::cerr << ansiRed << "Error: " << ansiReset << "No password received on stdin." << std::endl;
+			return 1;
+		}
+
+		while (!argPassword.empty () && (argPassword.back () == '\n' || argPassword.back () == '\r'))
+			argPassword.pop_back ();
+	}
+
+	if ((!passwordFromStdin && !argPassword.empty ()) || !argNewPassword.empty ())
+	{
+		std::cerr << ansiYellow << "Warning: " << ansiReset
+			<< "passwords on the command line are visible to other local users (ps) and may end up in shell history." << std::endl
+			<< "  Prefer --password-stdin or the interactive prompt." << std::endl;
+	}
+
+	// ---- Key derivation hint (mount) ----
+
+	if (!argKdf.empty () && argKdf != "auto")
+	{
+		if (argKdf == "argon2id-max")
+			mountOptions.KdfHint = L"Argon2id-Max";
+		else if (argKdf == "argon2id")
+			mountOptions.KdfHint = L"Argon2id";
+		else if (argKdf == "pbkdf2")
+			mountOptions.KdfHint = L"PBKDF2";
+		else
+		{
+			std::cerr << ansiRed << "Error: " << ansiReset << "Unknown --kdf value: " << argKdf
+				<< " (expected auto, argon2id-max, argon2id or pbkdf2)" << std::endl;
+			return 1;
+		}
+	}
 
 	// ---- Quick commands that don't need Core ----
 
@@ -968,7 +1031,11 @@ int main (int argc, char *argv[])
 
 		// Apply parsed options to MountOptions
 		if (!argPassword.empty ())
-			mountOptions.Password = make_shared <VolumePassword> (StringConverter::ToWide (argPassword));
+		{
+			wstring widePassword = StringConverter::ToWide (argPassword);
+			mountOptions.Password = make_shared <VolumePassword> (widePassword);
+			StringConverter::Erase (widePassword);
+		}
 
 		if (!argKeyfiles.empty ())
 			mountOptions.Keyfiles = ParseKeyfiles (argKeyfiles);
@@ -1536,6 +1603,18 @@ int main (int argc, char *argv[])
 	}
 	catch (UserAbort &)
 	{
+#ifndef TC_WINDOWS
+		try { CoreService::Stop (); } catch (...) {}
+#endif
+		return 1;
+	}
+	catch (PasswordIncorrect &e)
+	{
+		std::cerr << ansiRed << "Error: " << ansiReset << W (StringConverter::ToExceptionString (e)) << std::endl;
+		bool protectionPassword = dynamic_cast <ProtectionPasswordIncorrect *> (&e)
+			|| dynamic_cast <ProtectionPasswordKeyfilesIncorrect *> (&e);
+		if (!protectionPassword && !argKdf.empty () && argKdf != "auto")
+			std::cerr << ansiDim << "  Only the key derivation selected with --kdf was tried. If unsure, omit --kdf." << ansiReset << std::endl;
 #ifndef TC_WINDOWS
 		try { CoreService::Stop (); } catch (...) {}
 #endif

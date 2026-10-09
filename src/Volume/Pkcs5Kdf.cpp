@@ -71,6 +71,30 @@ namespace Basalt
 		return shared_ptr <Pkcs5Kdf>();
 	}
 
+	Pkcs5KdfList Pkcs5Kdf::FilterByHint (const Pkcs5KdfList &kdfs, const wstring &hint)
+	{
+		if (hint.empty())
+			return kdfs;
+
+		Pkcs5KdfList l;
+		for (const auto &kdf : kdfs)
+		{
+			wstring name = kdf->GetName();
+			bool match;
+
+			if (hint == L"PBKDF2")
+				match = name.find (L"HMAC-") == 0;
+			else if (hint == L"Argon2id" || hint == L"Argon2id-Max")
+				match = name == hint || name == hint + L" (legacy)";
+			else
+				throw ParameterIncorrect (SRC_POS);
+
+			if (match)
+				l.push_back (kdf);
+		}
+		return l;
+	}
+
 	Pkcs5KdfList Pkcs5Kdf::GetAvailableAlgorithms ()
 	{
 		Pkcs5KdfList l;

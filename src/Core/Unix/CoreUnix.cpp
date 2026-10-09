@@ -488,7 +488,8 @@ namespace Basalt
 					options.SharedAccessAllowed,
 					VolumeType::Unknown,
 					options.UseBackupHeaders,
-					options.PartitionInSystemEncryptionScope
+					options.PartitionInSystemEncryptionScope,
+					options.KdfHint
 					);
 
 				options.Password.reset();
