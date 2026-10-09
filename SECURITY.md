@@ -44,11 +44,15 @@ with no cryptographic justification that reduces effective entropy.
 processing data with stale internal state.
 **Fix:** Added `PoolHash->Init()` before each `ProcessData()` call.
 
-### 6. RNG Self-Test After Seeding
+### 6. RNG Self-Test Order [CORRECTED in Wave 10]
 **File:** `Core/RandomNumberGenerator.cpp`
-**Problem:** The RNG self-test ran before the pool was seeded with system entropy,
-testing uninitialized state.
-**Fix:** Reordered `Start()`: set hash algorithm, seed pool, then run self-test.
+**Original change:** `Start()` was reordered to seed the pool first and run the
+self-test afterwards.
+**Correction (Wave 10, #39):** `Test()` zeroes the pool and fills it with
+deterministic data, so running it after seeding discarded the initial entropy. The
+original TrueCrypt order (self-test, then seed) has been restored. Output quality
+was not affected in practice because every `GetData()` call mixes in fresh kernel
+entropy (`getentropy()`) before and after extraction.
 
 ### 7. StringConverter Secure Erasure
 **File:** `Platform/StringConverter.cpp`
@@ -333,6 +337,9 @@ privileges.
 **Fix:** All `Process::Execute()` calls on macOS now use absolute paths:
 `/sbin/mount`, `/sbin/umount`, `/usr/bin/hdiutil`, `/usr/bin/open`. The FUSE exec functor
 is unaffected as it calls `fuse_main()` directly, not via PATH lookup.
+**Completed in Wave 10 (#40):** DarwinFUSE still ran `mount_nfs` and the privilege
+elevation still ran `sudo` through `$PATH`; both now use `/sbin/mount_nfs` and
+`/usr/bin/sudo`.
 
 ### 29. Screen Capture Protection
 **Files:** `Basalt/App/MainWindow.swift`, `Basalt/App/MountSheet.swift`,
@@ -401,6 +408,98 @@ Tab key navigation between password fields. In the Create Volume wizard, pressin
 the first password field focused the eye icon instead of the confirmation field.
 **Fix:** Added `.focusable(false)` to the toggle button, removing it from the Tab order.
 This applies to all password fields across the application (Mount, Change Password, Create).
+
+
+## Wave 10 — Independent Audit (October 2026)
+
+A source review of Basalt 1.1.1 and its embedded DarwinFUSE, with the portable
+core compiled and exercised on Linux (self-tests, cross-checks against reference
+implementations, regression tests). Details: [docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md).
+
+### 35. Argon2id Now Conforms to RFC 9106 (Existing Volumes Stay Openable)
+**Files:** `Crypto/Argon2/core.c`, `Crypto/Argon2/ref.c`, `Crypto/Argon2/argon2.c`,
+`Common/Argon2Kdf.c`, `Volume/Pkcs5Kdf.*`, `Volume/EncryptionTest.cpp`
+**Problem:** The compression function deviated from RFC 9106 in two places: the
+v1.3 XOR into the previous block contents (`with_xor`) was ignored, and the
+diagonal step of the row round fed the wrong words into G. The output matched no
+other Argon2 implementation, and the self-test vectors had been generated with the
+same code, so the deviation went unnoticed. The result is an unanalysed variant
+with reduced diffusion and without the v1.3 tradeoff-attack mitigation.
+**Fix:** `fill_block()` follows RFC 9106 and reproduces the official test vector
+(RFC 9106 §5.3) and libargon2 outputs for the production parameters. The previous
+function is frozen as `fill_block_basalt_legacy()` and only reachable through two
+open-only KDFs ("Argon2id (legacy)", "Argon2id-Max (legacy)") that are tried after
+their standard counterparts when opening a volume and are never used to write a
+header. After mounting such a volume the existing upgrade prompt offers to
+re-encrypt the header with standard Argon2id; changing the password also upgrades
+it. Volumes created from now on cannot be opened by Basalt ≤ 1.1.x.
+
+### 36. Local NFS Transport Instead of a Loopback TCP Port (DarwinFUSE)
+**Files:** `DarwinFUSE/src/nfs4_server.c`, `DarwinFUSE/src/darwinfuse.c`
+**Problem:** The NFS server that serves the decrypted volume image listened on
+`127.0.0.1:<ephemeral port>` without authentication. AUTH_SYS credentials are
+asserted by the client, so any local process — other user accounts, sandboxed apps
+with network access — could read and write the decrypted volume, bypassing file
+permissions, TCC and the FUSE access check (`CheckAccessRights()`).
+**Fix:** The server listens on a Unix domain socket inside a private `mkdtemp()`
+directory (0700) and additionally rejects peers whose UID is neither root nor the
+owner (`LOCAL_PEERCRED`). `mount_nfs` connects via `proto=ticotsord,port=<socket>`,
+supported by the macOS NFS client since 10.15. If the local mount fails, the
+previous TCP transport is used as a fallback (`DFUSE_TCP_FALLBACK`, to be disabled
+once verified on all supported macOS versions).
+
+### 37. Overflow-Safe Sector Bounds (Hidden Volume Header Overwrite)
+**Files:** `Volume/Volume.cpp`, `Fuse/FuseService.cpp`, `DarwinFUSE/src/nfs4_ops.c`
+**Problem:** `WriteSectors()` checked `byteOffset + length > VolumeDataSize`, which
+wraps for offsets near 2^64 (a negative `off_t` from an NFS request). Such a write
+landed in front of the data area — on the hidden volume header — bypassing hidden
+volume protection. `ReadSectors()` had no bounds check, and `fuse_service_read()`
+underflowed for offsets beyond the end.
+**Fix:** Overflow-free checks in both functions, negative offsets rejected in the
+FUSE service, and NFS READ/WRITE offsets that do not fit `off_t` refused with
+`NFS4ERR_INVAL`.
+
+### 38. No Log Files, No /tmp Symlink Targets
+**Files:** `DarwinFUSE/src/darwinfuse_internal.h`, `Fuse/FuseService.cpp`,
+`Core/Unix/CoreUnix.cpp`
+**Problem:** DarwinFUSE appended every operation (including mount points) to
+`/tmp/darwinfuse.log` in release builds — contradicting the zero-state design and,
+when elevated, a symlink target in a world-writable directory. The `.auxinfo` file
+next to the aux mount point was created with `O_CREAT|O_TRUNC` (followable symlink
+or hard link as root) and read without ownership check.
+**Fix:** Informational logging is compiled out by default and errors go to stderr
+only. `.auxinfo` is unlinked and recreated with `O_EXCL|O_NOFOLLOW`; it is only
+read if it is a regular file owned by the current user or root.
+
+### 39. RNG Start Order
+See the correction under #6.
+
+### 40. Absolute Paths for `mount_nfs` and `sudo`
+See the completion note under #28. `sudo` from `$PATH` would have allowed a fake
+binary in a user-writable directory to capture the administrator password.
+
+### 41. Refuse Passwords That Would Be Truncated
+**Files:** `Volume/VolumePassword.*`, `Core/VolumeCreator.cpp`, `Core/CoreBase.cpp`
+**Problem:** Passwords are stored one byte per character (TrueCrypt format). Characters
+above U+00FF (e.g. €, Cyrillic, Greek, CJK, emoji, decomposed accents) were silently
+reduced to their low byte, losing entropy and creating collisions (€ = ¬). TrueCrypt's
+GUI warned about this; the check was lost with the wxWidgets UI.
+**Fix:** Creating a volume or setting a new password with such characters is refused
+with an explanatory error. Existing volumes still open with the previous encoding.
+
+### 42. AES-NI on Intel Macs
+**Files:** `Crypto/Aes_hw_cpu_x86.c`, `Volume/Volume.make`, `Volume/Cipher.h`
+**Problem:** Universal builds use `NOASM=1`, which also dropped the AES-NI assembly on
+x86_64, so Intel Macs ran table-based software AES (slower, cache-timing exposure).
+**Fix:** AES-NI via compiler intrinsics with run-time CPU detection, analogous to the
+ARMv8 implementation (#14). Cross-checked against the software implementation;
+about 7× faster XTS throughput on the test machine.
+
+### 43. Build Script Symlink in Private Directory
+**Files:** `Basalt/build.sh`, `build-universal.sh`
+**Problem:** The build used the fixed path `/tmp/truecrypt-build`; another local user
+could pre-create it so that the script builds (and later signs) a foreign tree.
+**Fix:** The symlink lives in the per-user `$TMPDIR`.
 
 
 ## Attack Surface Reduction
@@ -538,6 +637,13 @@ These are known issues that may be addressed in future work:
    on ARM (no hardware support exists).
 5. **Code signing:** The app bundle is not currently signed or notarized. macOS
    Gatekeeper will require the user to manually allow execution.
+6. **Password copies outside locked memory:** SwiftUI keeps passwords in Swift `String`
+   state, and the bridge converts them via `NSData`/`std::wstring` temporaries that are
+   not wiped. A password cannot be fully confined to `mlock()`-ed memory from SwiftUI.
+7. **Local TCP fallback:** Until `DFUSE_TCP_FALLBACK` is disabled, a failure of the local
+   NFS transport silently falls back to the loopback TCP transport (see #36).
+8. **CLI `--password`:** Passwords given on the command line are visible to other local
+   users via the process list. Prefer the interactive prompt.
 
 
 ## Cipher Selection: Why Not Camellia or Kuznyechik?
@@ -690,3 +796,8 @@ The security audit was performed using LLM-assisted analysis of the complete Tru
 Additionally, all 2,687 commits of the VeraCrypt fork were analyzed to identify
 security-relevant changes, fixes, and potential concerns. This informed the selection
 and prioritization of hardening measures.
+
+Wave 10 additionally verified implementations against independent references
+(libargon2 / RFC 9106 test vectors for Argon2id, software AES vs. AES-NI) and
+exercised the volume and NFS layers with regression tests; see
+[docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md).
