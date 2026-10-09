@@ -44,7 +44,7 @@
 /* BackupHeaderSheet.swift */
 "Backing up headers..." = "Header werden gesichert...";
 
-/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+/* BackupHeaderSheet.swift, BasaltApp.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
 "Cancel" = "Abbrechen";
 
 /* BackupHeaderSheet.swift */
@@ -838,3 +838,15 @@
 
 /* VolumeManager.swift */
 "Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "Es wurde nur die unter „Optionen“ gewählte Schlüsselableitung versucht. Wählen Sie im Zweifel „Automatisch erkennen“.";
+
+/* BasaltApp.swift */
+"Volumes could not be dismounted" = "Volumes konnten nicht getrennt werden";
+
+/* BasaltApp.swift */
+"If you quit now, the volumes stay mounted and accessible." = "Wenn Sie Basalt jetzt beenden, bleiben die Volumes eingebunden und zugänglich.";
+
+/* BasaltApp.swift */
+"Quit Anyway" = "Trotzdem beenden";
+
+/* VolumeManager.swift */
+"Dismounting did not finish in time." = "Das Trennen wurde nicht rechtzeitig abgeschlossen.";

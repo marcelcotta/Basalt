@@ -44,7 +44,7 @@
 /* BackupHeaderSheet.swift */
 "Backing up headers..." = "Reservekopie van headers wordt gemaakt...";
 
-/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+/* BackupHeaderSheet.swift, BasaltApp.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
 "Cancel" = "Annuleer";
 
 /* BackupHeaderSheet.swift */
@@ -838,3 +838,15 @@
 
 /* VolumeManager.swift */
 "Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "Alleen de sleutelafleiding die onder Opties is gekozen, is geprobeerd. Kies bij twijfel “Automatisch detecteren”.";
+
+/* BasaltApp.swift */
+"Volumes could not be dismounted" = "Volumes konden niet worden ontkoppeld";
+
+/* BasaltApp.swift */
+"If you quit now, the volumes stay mounted and accessible." = "Als u nu stopt, blijven de volumes gekoppeld en toegankelijk.";
+
+/* BasaltApp.swift */
+"Quit Anyway" = "Stop toch";
+
+/* VolumeManager.swift */
+"Dismounting did not finish in time." = "Het ontkoppelen is niet op tijd voltooid.";

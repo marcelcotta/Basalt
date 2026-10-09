@@ -44,7 +44,7 @@
 /* BackupHeaderSheet.swift */
 "Backing up headers..." = "正在备份宗卷头...";
 
-/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+/* BackupHeaderSheet.swift, BasaltApp.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
 "Cancel" = "取消";
 
 /* BackupHeaderSheet.swift */
@@ -838,3 +838,15 @@
 
 /* VolumeManager.swift */
 "Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "仅尝试了在“选项”中选择的密钥派生方式。如不确定，请选择“自动检测”。";
+
+/* BasaltApp.swift */
+"Volumes could not be dismounted" = "无法卸载宗卷";
+
+/* BasaltApp.swift */
+"If you quit now, the volumes stay mounted and accessible." = "如果现在退出，宗卷将保持装载状态并可被访问。";
+
+/* BasaltApp.swift */
+"Quit Anyway" = "仍然退出";
+
+/* VolumeManager.swift */
+"Dismounting did not finish in time." = "卸载未能及时完成。";

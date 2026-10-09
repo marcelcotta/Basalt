@@ -44,7 +44,7 @@
 /* BackupHeaderSheet.swift */
 "Backing up headers..." = "Создание резервной копии заголовков...";
 
-/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+/* BackupHeaderSheet.swift, BasaltApp.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
 "Cancel" = "Отменить";
 
 /* BackupHeaderSheet.swift */
@@ -838,3 +838,15 @@
 
 /* VolumeManager.swift */
 "Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "Проверен только способ формирования ключа, выбранный в разделе «Параметры». Если не уверены, выберите «Автоопределение».";
+
+/* BasaltApp.swift */
+"Volumes could not be dismounted" = "Не удалось размонтировать тома";
+
+/* BasaltApp.swift */
+"If you quit now, the volumes stay mounted and accessible." = "Если завершить работу сейчас, тома останутся смонтированными и доступными.";
+
+/* BasaltApp.swift */
+"Quit Anyway" = "Все равно завершить";
+
+/* VolumeManager.swift */
+"Dismounting did not finish in time." = "Размонтирование не завершилось вовремя.";
