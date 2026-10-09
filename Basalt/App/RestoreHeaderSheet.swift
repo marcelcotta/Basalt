@@ -45,7 +45,7 @@ struct RestoreHeaderSheet: View {
                         panel.canChooseFiles = true
                         panel.canChooseDirectories = false
                         panel.allowsMultipleSelection = false
-                        panel.title = "Select Encrypted Volume"
+                        panel.title = String(localized: "Select Encrypted Volume")
                         if panel.runModal() == .OK, let url = panel.url {
                             volumePath = url.path
                         }
@@ -80,7 +80,7 @@ struct RestoreHeaderSheet: View {
                             panel.canChooseFiles = true
                             panel.canChooseDirectories = false
                             panel.allowsMultipleSelection = false
-                            panel.title = "Select Header Backup File"
+                            panel.title = String(localized: "Select Header Backup File")
                             if panel.runModal() == .OK, let url = panel.url {
                                 backupFilePath = url.path
                             }

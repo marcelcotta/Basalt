@@ -26,6 +26,9 @@ targets:
           - "-I${SRCROOT}/../src/Crypto"
       - path: Credits.rtf
         buildPhase: resources
+      - path: Resources
+        type: group
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.basalt.Basalt
@@ -39,6 +42,7 @@ targets:
           - "-lc++"
           - "-framework Security"
           - "-framework AppKit"
+          - "-framework IOKit"
         HEADER_SEARCH_PATHS:
           - "${SRCROOT}/../src"
           - "${SRCROOT}/../src/Crypto"

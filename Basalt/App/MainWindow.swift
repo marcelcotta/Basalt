@@ -142,8 +142,11 @@ struct MainWindow: View {
                 .environmentObject(vm)
                 .environmentObject(prefs)
         }
-        .sheet(isPresented: $vm.showBackupSheet, onDismiss: { contextVolumePath = nil }) {
-            BackupHeaderSheet(initialVolumePath: contextVolumePath)
+        .sheet(isPresented: $vm.showBackupSheet, onDismiss: {
+            contextVolumePath = nil
+            vm.pendingBackupPath = nil
+        }) {
+            BackupHeaderSheet(initialVolumePath: contextVolumePath ?? vm.pendingBackupPath)
                 .environmentObject(vm)
         }
         .sheet(isPresented: $vm.showRestoreSheet, onDismiss: { contextVolumePath = nil }) {

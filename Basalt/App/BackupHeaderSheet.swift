@@ -46,7 +46,7 @@ struct BackupHeaderSheet: View {
                         panel.canChooseFiles = true
                         panel.canChooseDirectories = false
                         panel.allowsMultipleSelection = false
-                        panel.title = "Select Encrypted Volume"
+                        panel.title = String(localized: "Select Encrypted Volume")
                         if panel.runModal() == .OK, let url = panel.url {
                             volumePath = url.path
                         }
@@ -85,7 +85,7 @@ struct BackupHeaderSheet: View {
 
                     Button("Browse...") {
                         let panel = NSSavePanel()
-                        panel.title = "Save Header Backup"
+                        panel.title = String(localized: "Save Header Backup")
                         panel.nameFieldStringValue = "volume-header-backup.dat"
                         if panel.runModal() == .OK, let url = panel.url {
                             backupFilePath = url.path
@@ -161,7 +161,7 @@ struct BackupHeaderSheet: View {
 
 /// Small inline keyfile picker used by backup/restore sheets.
 struct KeyfilePicker: View {
-    let label: String
+    let label: LocalizedStringKey
     @Binding var keyfiles: [String]
 
     var body: some View {
@@ -183,7 +183,7 @@ struct KeyfilePicker: View {
                 panel.canChooseFiles = true
                 panel.canChooseDirectories = true
                 panel.allowsMultipleSelection = true
-                panel.title = "Select Keyfiles"
+                panel.title = String(localized: "Select Keyfiles")
                 if panel.runModal() == .OK {
                     keyfiles.append(contentsOf: panel.urls.map(\.path))
                 }

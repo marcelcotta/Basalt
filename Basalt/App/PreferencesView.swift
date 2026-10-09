@@ -19,7 +19,8 @@ struct PreferencesView: View {
             mountDefaultsTab
                 .tabItem { Label("Mount Defaults", systemImage: "externaldrive") }
         }
-        .frame(width: 450, height: 360)
+        // Fixed width, height from content: translated labels are often longer than English.
+        .frame(width: 540)
     }
 
     // MARK: - Security Tab
@@ -75,6 +76,7 @@ struct PreferencesView: View {
                 Toggle("Preserve file timestamps", isOn: $prefs.defaultPreserveTimestamps)
                     .help("Keeps original file dates unchanged when accessing files on the volume.")
                 Toggle("Mount as read-only", isOn: $prefs.defaultReadOnly)
+                KdfHintPicker(selection: $prefs.defaultKdfHint)
             }
 
             Divider()

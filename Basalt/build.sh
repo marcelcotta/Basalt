@@ -131,6 +131,7 @@ clang++ ${LINK_FLAGS} \
     -framework Security \
     -framework SwiftUI \
     -framework Combine \
+    -framework IOKit \
     -L "${SWIFT_LIB_DIR}" \
     -Wl,-rpath,/usr/lib/swift \
     -o "${BUILD_OBJ}/../Basalt"
@@ -153,6 +154,9 @@ fi
 
 # Copy Credits (shown in About window — required by TrueCrypt License III.1.c)
 cp "${SYMLINK}/Basalt/Credits.rtf" "${APP_BUNDLE}/Contents/Resources/"
+
+# App resources: Diceware wordlist and localizations (*.lproj)
+cp -R "${SYMLINK}/Basalt/Resources/." "${APP_BUNDLE}/Contents/Resources/"
 
 # Step 5: Ad-hoc code sign
 echo "Code signing..."

@@ -21,7 +21,9 @@ class VolumeManager: ObservableObject {
     @Published var errorMessage: String?
     @Published var infoMessage: String?
     @Published var isLoading = false
-    @Published var loadingStatus = "Mounting..."
+    @Published var loadingStatus = String(localized: "Mounting...")
+    /// Set while a mount is in progress (drives the elapsed-time display)
+    @Published var mountStartedAt: Date?
 
     // Sheet presentation
     @Published var showMountSheet = false
@@ -34,6 +36,9 @@ class VolumeManager: ObservableObject {
 
     /// Pre-filled volume path for MountSheet (set by drag & drop or menu bar)
     @Published var mountPath: String?
+
+    /// Pre-filled volume path for BackupHeaderSheet (set after volume creation)
+    @Published var pendingBackupPath: String?
 
     var selectedVolume: TCVolumeInfo? {
         guard let slot = selectedSlot else { return nil }
@@ -116,11 +121,7 @@ class VolumeManager: ObservableObject {
             let slot = vol.slotNumber
             if vol.hiddenVolumeProtectionTriggered && !protectionAlertShown.contains(slot) {
                 protectionAlertShown.insert(slot)
-                errorMessage = "Hidden volume protection triggered!\n\n"
-                    + "A write operation attempted to overwrite the hidden volume area. "
-                    + "The write was blocked and the hidden volume is safe, but the outer "
-                    + "volume's filesystem may be corrupted.\n\n"
-                    + "Dismount this volume immediately. Do not write any more data to it."
+                errorMessage = String(localized: "Hidden volume protection triggered!\n\nA write operation attempted to overwrite the hidden volume area. The write was blocked and the hidden volume is safe, but the outer volume's filesystem may be corrupted.\n\nDismount this volume immediately. Do not write any more data to it.")
             }
         }
         // Clean up stale entries for dismounted volumes
@@ -181,9 +182,11 @@ class VolumeManager: ObservableObject {
                      useBackupHeaders: Bool = false,
                      protectHiddenVolume: Bool = false,
                      hiddenVolumePassword: String? = nil,
-                     hiddenVolumeKeyfiles: [String]? = nil) {
+                     hiddenVolumeKeyfiles: [String]? = nil,
+                     kdfHint: String? = nil) {
         isLoading = true
-        loadingStatus = "Mounting..."
+        loadingStatus = String(localized: "Mounting...")
+        mountStartedAt = Date()
         errorMessage = nil
 
         let options = TCMountOptions()
@@ -196,11 +199,13 @@ class VolumeManager: ObservableObject {
         options.protectHiddenVolume = protectHiddenVolume
         if let hvp = hiddenVolumePassword { options.protectionPassword = hvp }
         if let hvk = hiddenVolumeKeyfiles, !hvk.isEmpty { options.protectionKeyfilePaths = hvk }
+        if let hint = kdfHint, !hint.isEmpty { options.kdfHint = hint }
         preferences?.applyToMountOptions(options)
         // Explicit user choices override defaults
         if readOnly { options.readOnly = true }
 
         let shouldOpenFinder = preferences?.openFinderAfterMount ?? false
+        let kdfRestricted = !(kdfHint ?? "").isEmpty
 
         Task.detached { [bridge] in
             var vol: TCVolumeInfo?
@@ -210,6 +215,12 @@ class VolumeManager: ObservableObject {
                 vol = try bridge.mountVolume(options)
             } catch {
                 errMsg = error.localizedDescription
+                let nsError = error as NSError
+                if kdfRestricted && nsError.domain == TCErrorDomain
+                    && nsError.code == TCErrorCode.passwordIncorrect.rawValue {
+                    errMsg = error.localizedDescription + "\n\n"
+                        + String(localized: "Only the key derivation selected under Options was tried. If unsure, choose Auto-detect.")
+                }
             }
 
             let resultVol = vol
@@ -217,15 +228,20 @@ class VolumeManager: ObservableObject {
 
             await MainActor.run { [weak self] in
                 self?.isLoading = false
+                self?.mountStartedAt = nil
                 if let vol = resultVol {
                     self?.refreshVolumes()
                     self?.showMountSheet = false
 
-                    // Prevent Spotlight from indexing the mounted volume
-                    if !vol.mountPoint.isEmpty {
+                    // Prevent Spotlight from indexing the mounted volume. Only
+                    // create the marker once, and never write to read-only mounts
+                    // or to outer volumes mounted with hidden volume protection.
+                    if !vol.mountPoint.isEmpty && !vol.isReadOnly && !protectHiddenVolume {
                         let marker = URL(fileURLWithPath: vol.mountPoint)
                             .appendingPathComponent(".metadata_never_index")
-                        FileManager.default.createFile(atPath: marker.path, contents: nil)
+                        if !FileManager.default.fileExists(atPath: marker.path) {
+                            FileManager.default.createFile(atPath: marker.path, contents: nil)
+                        }
                     }
 
                     if shouldOpenFinder && !vol.mountPoint.isEmpty {
@@ -233,7 +249,7 @@ class VolumeManager: ObservableObject {
                             inFileViewerRootedAtPath: vol.mountPoint)
                     }
                 } else {
-                    self?.errorMessage = resultErr ?? "Mount failed"
+                    self?.errorMessage = resultErr ?? String(localized: "Mount failed")
                 }
             }
         }
@@ -273,7 +289,9 @@ class VolumeManager: ObservableObject {
         }
     }
 
-    func dismountAll(force: Bool = false) {
+    /// Dismounts all volumes; `completion` runs on the main actor when done
+    /// (used to delay sleep and logout until the volumes are closed).
+    func dismountAll(force: Bool = false, completion: (() -> Void)? = nil) {
         isLoading = true
         errorMessage = nil
 
@@ -303,6 +321,7 @@ class VolumeManager: ObservableObject {
                 } else {
                     self?.errorMessage = resultErr
                 }
+                completion?()
             }
         }
     }
@@ -353,7 +372,7 @@ class VolumeManager: ObservableObject {
                 self?.isLoading = false
                 if resultErr == nil {
                     self?.showChangePasswordSheet = false
-                    self?.infoMessage = "Password changed successfully"
+                    self?.infoMessage = String(localized: "Password changed successfully")
                 } else {
                     self?.errorMessage = resultErr
                 }
@@ -366,7 +385,7 @@ class VolumeManager: ObservableObject {
     func createKeyfile(path: String) {
         do {
             try bridge.createKeyfile(path)
-            infoMessage = "Keyfile created: \(path)"
+            infoMessage = String(localized: "Keyfile created: \(path)")
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -391,7 +410,7 @@ class VolumeManager: ObservableObject {
             await MainActor.run { [weak self] in
                 self?.isLoading = false
                 if resultErr == nil {
-                    self?.infoMessage = "All self-tests passed"
+                    self?.infoMessage = String(localized: "All self-tests passed")
                 } else {
                     self?.errorMessage = resultErr
                 }
@@ -444,7 +463,7 @@ class VolumeManager: ObservableObject {
                         keyfiles: keyfiles, filesystem: filesystem)
                 } catch {
                     await MainActor.run { [weak self] in
-                        self?.errorMessage = "Volume created but filesystem formatting failed: \(error.localizedDescription)"
+                        self?.errorMessage = String(localized: "Volume created but filesystem formatting failed: \(error.localizedDescription)")
                         completion(false)
                     }
                     return
@@ -507,7 +526,7 @@ class VolumeManager: ObservableObject {
                 self?.isLoading = false
                 if resultErr == nil {
                     self?.showBackupSheet = false
-                    self?.infoMessage = "Volume headers backed up successfully."
+                    self?.infoMessage = String(localized: "Volume headers backed up successfully.")
                 } else {
                     self?.errorMessage = resultErr
                 }
@@ -538,7 +557,7 @@ class VolumeManager: ObservableObject {
                 self?.isLoading = false
                 if resultErr == nil {
                     self?.showRestoreSheet = false
-                    self?.infoMessage = "Volume headers restored successfully from internal backup."
+                    self?.infoMessage = String(localized: "Volume headers restored successfully from internal backup.")
                 } else {
                     self?.errorMessage = resultErr
                 }
@@ -568,7 +587,7 @@ class VolumeManager: ObservableObject {
                 self?.isLoading = false
                 if resultErr == nil {
                     self?.showRestoreSheet = false
-                    self?.infoMessage = "Volume headers restored successfully from backup file."
+                    self?.infoMessage = String(localized: "Volume headers restored successfully from backup file.")
                 } else {
                     self?.errorMessage = resultErr
                 }

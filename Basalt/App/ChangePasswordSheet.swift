@@ -28,6 +28,11 @@ struct ChangePasswordSheet: View {
         !newPassword.isEmpty && !confirmPassword.isEmpty && newPassword != confirmPassword
     }
 
+    /// Characters beyond Latin-1 would be truncated; the core refuses them.
+    var newPasswordHasUnsupportedCharacters: Bool {
+        newPassword.unicodeScalars.contains { $0.value > 0xFF }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Change Volume Password")
@@ -42,7 +47,7 @@ struct ChangePasswordSheet: View {
                     let panel = NSOpenPanel()
                     panel.canChooseFiles = true
                     panel.canChooseDirectories = false
-                    panel.title = "Select Encrypted Volume"
+                    panel.title = String(localized: "Select Encrypted Volume")
                     if panel.runModal() == .OK, let url = panel.url {
                         volumePath = url.path
                     }
@@ -69,10 +74,25 @@ struct ChangePasswordSheet: View {
             PasswordView("New password", text: $newPassword)
             PasswordView("Confirm new password", text: $confirmPassword)
 
+            HStack(alignment: .top) {
+                PasswordStrengthMeter(password: newPassword)
+                Spacer()
+                PassphraseGeneratorButton { phrase in
+                    newPassword = phrase
+                    confirmPassword = phrase
+                }
+            }
+
             if passwordMismatch {
                 Text("Passwords do not match")
                     .foregroundColor(.red)
                     .font(.caption)
+            }
+
+            if newPasswordHasUnsupportedCharacters {
+                Label("Characters beyond Latin-1 (e.g. €, Cyrillic, Greek, CJK or emoji) cannot be stored in a volume password without losing information. Please remove them.", systemImage: "xmark.octagon")
+                    .font(.caption)
+                    .foregroundColor(.red)
             }
 
             KeyfilePicker(label: "New keyfiles:", keyfiles: $newKeyfiles)
@@ -122,7 +142,8 @@ struct ChangePasswordSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(volumePath.isEmpty || currentPassword.isEmpty
-                          || newPassword.isEmpty || passwordMismatch || vm.isLoading)
+                          || newPassword.isEmpty || passwordMismatch || newPasswordHasUnsupportedCharacters
+                          || vm.isLoading)
             }
         }
         .padding(20)

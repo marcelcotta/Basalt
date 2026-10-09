@@ -62,8 +62,10 @@ struct CreateVolumeSheet: View {
         !password.isEmpty && !confirmPassword.isEmpty && password != confirmPassword
     }
 
-    var passwordTooShort: Bool {
-        !password.isEmpty && password.count < 20
+    /// Volume passwords store one byte per character; characters beyond
+    /// Latin-1 would be truncated, so the core refuses them for new volumes.
+    var passwordHasUnsupportedCharacters: Bool {
+        password.unicodeScalars.contains { $0.value > 0xFF }
     }
 
     var sizeInBytes: UInt64 {
@@ -99,7 +101,7 @@ struct CreateVolumeSheet: View {
     }
 
     var canProceedStep3: Bool {
-        !password.isEmpty && !passwordMismatch
+        !password.isEmpty && !passwordMismatch && !passwordHasUnsupportedCharacters
     }
 
     var canCreate: Bool {
@@ -181,9 +183,11 @@ struct CreateVolumeSheet: View {
 
     // MARK: - Step Labels
 
+    private let stepTitles: [LocalizedStringKey] = ["Location", "Encryption", "Password", "Format"]
+
     private var stepLabels: some View {
         HStack {
-            ForEach(Array(["Location", "Encryption", "Password", "Format"].enumerated()), id: \.offset) { index, label in
+            ForEach(Array(stepTitles.enumerated()), id: \.offset) { index, label in
                 if index > 0 { Spacer() }
                 Text(label)
                     .font(.caption)
@@ -231,7 +235,7 @@ struct CreateVolumeSheet: View {
                         let panel = NSOpenPanel()
                         panel.canChooseFiles = true
                         panel.canChooseDirectories = false
-                        panel.title = "Select Outer Volume"
+                        panel.title = String(localized: "Select Outer Volume")
                         if panel.runModal() == .OK, let url = panel.url {
                             volumePath = url.path
                         }
@@ -322,7 +326,7 @@ struct CreateVolumeSheet: View {
 
                         Button("Browse...") {
                             let panel = NSSavePanel()
-                            panel.title = "Create Basalt Volume"
+                            panel.title = String(localized: "Create Basalt Volume")
                             panel.nameFieldStringValue = "volume.tc"
                             panel.canCreateDirectories = true
                             if panel.runModal() == .OK, let url = panel.url {
@@ -430,16 +434,25 @@ struct CreateVolumeSheet: View {
             PasswordView("Password", text: $password, focused: $passwordFocused)
             PasswordView("Confirm password", text: $confirmPassword)
 
+            HStack(alignment: .top) {
+                PasswordStrengthMeter(password: password)
+                Spacer()
+                PassphraseGeneratorButton { phrase in
+                    password = phrase
+                    confirmPassword = phrase
+                }
+            }
+
             if passwordMismatch {
                 Text("Passwords do not match")
                     .foregroundColor(.red)
                     .font(.caption)
             }
 
-            if passwordTooShort {
-                Label("Short passwords are significantly easier to crack. Consider using 20+ characters.", systemImage: "exclamationmark.triangle")
+            if passwordHasUnsupportedCharacters {
+                Label("Characters beyond Latin-1 (e.g. €, Cyrillic, Greek, CJK or emoji) cannot be stored in a volume password without losing information. Please remove them.", systemImage: "xmark.octagon")
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundColor(.red)
             }
 
             // Keyfiles
@@ -461,7 +474,7 @@ struct CreateVolumeSheet: View {
                     panel.canChooseFiles = true
                     panel.canChooseDirectories = true
                     panel.allowsMultipleSelection = true
-                    panel.title = "Select Keyfiles"
+                    panel.title = String(localized: "Select Keyfiles")
                     if panel.runModal() == .OK {
                         keyfiles.append(contentsOf: panel.urls.map(\.path))
                     }
@@ -600,7 +613,7 @@ struct CreateVolumeSheet: View {
                         .fontWeight(.medium)
 
                     ProgressView(value: creationProgress) {
-                        Text("\(Int(creationProgress * 100))%")
+                        Text(verbatim: creationProgress.formatted(.percent.precision(.fractionLength(0))))
                             .font(.caption)
                             .monospacedDigit()
                     }
@@ -627,6 +640,23 @@ struct CreateVolumeSheet: View {
                         Label("To mount the hidden volume, use the hidden volume's password when mounting the outer container.", systemImage: "info.circle")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                    }
+
+                    Divider()
+
+                    // A damaged header makes the whole volume unreadable; an
+                    // external header backup is the only way back.
+                    Label("Recommended: back up the volume header now and keep the backup on a separate drive. If the header gets damaged, the backup is the only way to recover your data.", systemImage: "externaldrive.badge.timemachine")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Button("Back Up Headers…") {
+                        vm.pendingBackupPath = volumePath
+                        vm.showCreateSheet = false
+                        // Present the backup sheet once this sheet is gone
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            vm.showBackupSheet = true
+                        }
                     }
                 }
             }
@@ -709,6 +739,9 @@ struct CreateVolumeSheet: View {
             progressTimer = nil
             if success {
                 creationDone = true
+                // The passwords are no longer needed in this sheet's state
+                password = ""
+                confirmPassword = ""
             }
         }
 
