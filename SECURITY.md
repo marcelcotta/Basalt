@@ -241,7 +241,8 @@ platform string conversions creating uncontrollable copies.
   exceptions propagate into Swift/ObjC runtime.
 - Password strings from `NSSecureTextField` are immediately converted to `VolumePassword`
   (which uses `mlock()`-pinned `SecureBuffer`) and the `NSString` intermediate is
-  short-lived and managed by ARC.
+  short-lived and managed by ARC. Since Wave 11 (#46) the conversion goes through a
+  wiped stack buffer only.
 - All UI callbacks dispatch to the main thread via `dispatch_sync(dispatch_get_main_queue())`
   — no cross-thread UI manipulation.
 - `arc4random_buf()` used for entropy in the CocoaCallback (system CSPRNG, no file I/O).
@@ -252,6 +253,7 @@ platform string conversions creating uncontrollable copies.
 Echo is restored in all code paths (including exceptions) via RAII-style cleanup.
 Passwords are read directly into `VolumePassword` objects backed by `mlock()`-pinned
 `SecureBuffer`. No intermediate `wxString` or heap-allocated string copies.
+For scripts, see `--password-stdin` (Wave 11, #45).
 
 
 ## Wave 7 — Runtime Protection & Auto-Dismount
@@ -273,8 +275,10 @@ are affected.
 **Problem:** Volumes remain mounted during security-sensitive system transitions
 (screen lock, sleep, application exit, logout) where the user is not actively present.
 **Fix:** Four automatic dismount triggers:
-- **Screen saver:** `DistributedNotificationCenter` observes `com.apple.screensaver.didstart`
-- **System sleep:** `NSWorkspace.willSleepNotification`
+- **Screen saver / screen lock:** `DistributedNotificationCenter` observes
+  `com.apple.screensaver.didstart` and (since Wave 10) `com.apple.screenIsLocked`
+- **System sleep:** IOKit system power notifications; sleep waits for the dismount
+  (since Wave 11, #48 — previously `NSWorkspace.willSleepNotification`, which does not wait)
 - **Logout/shutdown/restart:** `NSWorkspace.willPowerOffNotification` (default: on)
 - **Application quit:** `applicationShouldTerminate` with `.terminateLater` for async
   dismount before exit
@@ -502,6 +506,80 @@ could pre-create it so that the script builds (and later signs) a foreign tree.
 **Fix:** The symlink lives in the per-user `$TMPDIR`.
 
 
+## Wave 11 — Follow-ups to the Audit (October 2026)
+
+Improvements suggested in the audit report (open items O-1, O-2, O-3, O-6) and
+usability changes with a security angle.
+
+### 44. Choosing the Key Derivation When Mounting
+**Files:** `Volume/Pkcs5Kdf.*`, `Volume/Volume.*`, `Core/MountOptions.*`, `Core/CoreBase.*`,
+`Core/Unix/CoreUnix.cpp`, `CLI/main.cpp`, `Basalt/App/MountSheet.swift`, `Basalt/App/PreferencesView.swift`
+**Problem:** The KDF is not stored in the header (it cannot be, without revealing
+information), so opening a volume tries every supported KDF in turn. With two Argon2id
+profiles, their legacy variants and the PBKDF2 PRFs, a wrong password took over a
+minute to report, and a correct one could wait for several KDFs that do not apply.
+**Fix:** An optional KDF hint (`Argon2id-Max`, `Argon2id`, `PBKDF2`) restricts the attempts
+to that family; the legacy (pre-RFC 9106) Argon2id variants are included in the Argon2id
+choices. The GUI offers it under Options in the mount sheet and as a default in
+Settings; the CLI accepts `--kdf=auto|argon2id-max|argon2id|pbkdf2`. A wrong password
+is reported after one KDF family instead of all of them (11.5 s instead of 79 s in a
+test on Linux), and the error says that only the selected KDF was tried. The hint is never
+written to the volume; the default is stored like the other mount defaults. Protected
+hidden volume headers are always tried with all KDFs.
+
+### 45. Passwords via Standard Input (CLI)
+**Files:** `CLI/main.cpp`
+**Problem:** `--password=` is visible in the process list to all local users and ends up
+in shell history (audit O-1).
+**Fix:** `--password-stdin` reads the password from the first line of standard input
+(mutually exclusive with `--password`). Passwords given on the command line now print a
+warning, and the help text recommends the prompt or stdin.
+
+### 46. Fewer Password Copies in the Bridge
+**Files:** `Basalt/Bridge/TCCocoaCallback.*`, `Basalt/Bridge/TCCoreBridge.mm`, `Basalt/App/VolumeManager.swift`
+**Problem:** Every password passed through an `NSData` (UTF-32) and a `std::wstring`
+before reaching `VolumePassword`; neither was wiped (audit O-2).
+**Fix:** `PasswordFromNS()` copies the characters with `-getBytes:` into a fixed stack
+buffer that is `burn()`ed after the `VolumePassword` has been filled. All ten call sites
+use it. Mount options drop their password strings once converted. Swift `String`
+storage itself remains out of reach (see Known Remaining Weaknesses).
+
+### 47. Password Strength Meter and Diceware Generator
+**Files:** `Basalt/App/PasswordTools.swift`, `Basalt/App/PasswordStrengthView.swift`,
+`Basalt/Resources/eff_large_wordlist.txt`
+**Problem:** Argon2id makes each guess expensive, but cannot rescue a weak password;
+the app gave no feedback beyond a minimum length.
+**Fix:** New-password fields show a conservative entropy estimate (common passwords,
+dictionary words, leetspeak, repetitions and sequences are discounted). A generator
+creates 5–7 word passphrases from the EFF large wordlist (12.9 bits per word) using the
+system CSPRNG (`SystemRandomNumberGenerator`), limited to the 64-byte password maximum.
+Characters beyond Latin-1 (#41) are flagged in the dialog before the volume is created.
+
+### 48. Sleep Waits for Auto-Dismount
+**Files:** `Basalt/App/BasaltApp.swift`
+**Problem:** "Dismount when system sleeps" reacted to `NSWorkspace.willSleepNotification`
+and started an asynchronous dismount; the Mac could go to sleep with volumes still
+mounted and keys in RAM (audit O-3).
+**Fix:** The app registers for IOKit system power notifications and acknowledges
+`kIOMessageSystemWillSleep` with `IOAllowPowerChange` only after the dismount has
+finished (the system waits up to about 30 s). On logout, restart and shutdown,
+`applicationShouldTerminate` delays termination until the volumes are dismounted.
+
+### 49. Spotlight Marker Only Where Harmless
+**Files:** `Basalt/App/VolumeManager.swift`
+**Problem:** `.metadata_never_index` was written on every mount, modifying the outer
+volume even when mounted read-only or with hidden volume protection (audit O-6).
+**Fix:** The marker is created once, and never on read-only mounts or on outer volumes
+mounted with hidden volume protection.
+
+### 50. Header Backup Reminder
+**Files:** `Basalt/App/CreateVolumeSheet.swift`, `Basalt/App/MainWindow.swift`
+**Problem:** A damaged header makes a volume unrecoverable; the embedded backup header
+does not help if the whole container file is lost or overwritten.
+**Fix:** After a volume has been created, the wizard recommends an external header
+backup and opens the backup sheet with the new volume preselected.
+
+
 ## Attack Surface Reduction
 
 The original TrueCrypt 7.1a codebase included several subsystems designed for
@@ -638,12 +716,14 @@ These are known issues that may be addressed in future work:
 5. **Code signing:** The app bundle is not currently signed or notarized. macOS
    Gatekeeper will require the user to manually allow execution.
 6. **Password copies outside locked memory:** SwiftUI keeps passwords in Swift `String`
-   state, and the bridge converts them via `NSData`/`std::wstring` temporaries that are
-   not wiped. A password cannot be fully confined to `mlock()`-ed memory from SwiftUI.
+   state (and `NSString` when passed to the bridge), which cannot be wiped. The bridge
+   itself no longer creates unwiped copies (#46), but a password cannot be fully confined
+   to `mlock()`-ed memory from SwiftUI.
 7. **Local TCP fallback:** Until `DFUSE_TCP_FALLBACK` is disabled, a failure of the local
    NFS transport silently falls back to the loopback TCP transport (see #36).
 8. **CLI `--password`:** Passwords given on the command line are visible to other local
-   users via the process list. Prefer the interactive prompt.
+   users via the process list. The CLI warns about it; use `--password-stdin` or the
+   interactive prompt (#45).
 
 
 ## Cipher Selection: Why Not Camellia or Kuznyechik?
