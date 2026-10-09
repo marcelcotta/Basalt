@@ -16,6 +16,7 @@
 #include "fuse_context.h"
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -24,6 +25,28 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/wait.h>
+
+/* ---- Logging ---- */
+
+void dfuse_logf(int is_error, const char *fmt, ...)
+{
+    char msg[1024];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+
+    const char *prefix = is_error ? "[DarwinFUSE ERROR] " : "[DarwinFUSE] ";
+    fprintf(stderr, "%s%s\n", prefix, msg);
+
+#ifdef DFUSE_LOG_FILE
+    int fd = open(DFUSE_LOG_FILE, O_WRONLY | O_APPEND | O_CREAT | O_NOFOLLOW | O_CLOEXEC, 0600);
+    if (fd >= 0) {
+        dprintf(fd, "%s%s\n", prefix, msg);
+        close(fd);
+    }
+#endif
+}
 
 /* ---- Thread-local FUSE context ---- */
 
@@ -44,10 +67,12 @@ void darwinfuse_set_context(uid_t uid, gid_t gid)
 /* ---- Global server pointer for signal handling ---- */
 
 static darwinfuse_server_t *g_server = NULL;
+static volatile sig_atomic_t g_signalled = 0;
 
 static void signal_handler(int sig)
 {
     (void)sig;
+    g_signalled = 1;
     if (g_server)
         nfs4_server_stop(g_server);
 }
@@ -127,7 +152,23 @@ static const char *detect_volume_path(void)
 
 /* ---- Mount via mount_nfs ---- */
 
-static int do_mount_nfs(uint16_t port, const parsed_args_t *args)
+/*
+ * Transport selection. The NFS server preferably listens on a Unix domain
+ * socket in a private 0700 directory (supported by macOS' mount_nfs and NFS
+ * client since 10.15 via "proto=ticotsord,port=/path"). A loopback TCP port
+ * would be reachable by every local user and process, and the AUTH_SYS
+ * credentials an NFS client sends are not authenticated.
+ *
+ * DFUSE_TCP_FALLBACK=1 retries over loopback TCP if the local-socket mount
+ * fails. Set it to 0 to fail closed once the local transport has been
+ * verified on all supported macOS versions.
+ */
+#ifndef DFUSE_TCP_FALLBACK
+#define DFUSE_TCP_FALLBACK 1
+#endif
+
+static int do_mount_nfs(uint16_t port, const char *socket_path,
+                        const parsed_args_t *args)
 {
     /*
      * Build mount options string.
@@ -142,12 +183,25 @@ static int do_mount_nfs(uint16_t port, const parsed_args_t *args)
      * - retrycnt=0: fail fast on initial mount attempt
      */
     char opts[512];
-    int len = snprintf(opts, sizeof(opts),
-        "vers=4,tcp,noac,noacl,noresvport,"
-        "rsize=65536,wsize=65536,"
-        "soft,intr,retrycnt=0,"
-        "port=%u",
-        (unsigned)port);
+    char spec[200];
+    int len;
+
+    if (socket_path) {
+        len = snprintf(opts, sizeof(opts),
+            "vers=4,proto=ticotsord,port=%s,noac,noacl,noresvport,"
+            "rsize=65536,wsize=65536,"
+            "soft,intr,retrycnt=0",
+            socket_path);
+        snprintf(spec, sizeof(spec), "<%s>:/", socket_path);
+    } else {
+        len = snprintf(opts, sizeof(opts),
+            "vers=4,tcp,noac,noacl,noresvport,"
+            "rsize=65536,wsize=65536,"
+            "soft,intr,retrycnt=0,"
+            "port=%u",
+            (unsigned)port);
+        snprintf(spec, sizeof(spec), "127.0.0.1:/");
+    }
 
     if (args->nosuid)
         len += snprintf(opts + len, sizeof(opts) - (size_t)len, ",nosuid");
@@ -158,7 +212,12 @@ static int do_mount_nfs(uint16_t port, const parsed_args_t *args)
     if (args->nobrowse)
         len += snprintf(opts + len, sizeof(opts) - (size_t)len, ",nobrowse");
 
-    DFUSE_LOG("mount_nfs -o %s 127.0.0.1:/ %s", opts, args->mount_point);
+    if (len < 0 || (size_t)len >= sizeof(opts)) {
+        DFUSE_ERR("mount options too long");
+        return -1;
+    }
+
+    DFUSE_LOG("mount_nfs -o %s %s %s", opts, spec, args->mount_point);
 
     /* Create a pipe to capture mount_nfs stderr output */
     int err_pipe[2];
@@ -176,16 +235,17 @@ static int do_mount_nfs(uint16_t port, const parsed_args_t *args)
     }
 
     if (pid == 0) {
-        /* Child: redirect stderr to pipe, then exec mount_nfs */
+        /* Child: redirect stderr to pipe, then exec mount_nfs.
+         * Absolute path: never resolve system tools via $PATH. */
         close(err_pipe[0]);
         dup2(err_pipe[1], STDERR_FILENO);
         close(err_pipe[1]);
 
-        execlp("mount_nfs", "mount_nfs",
-               "-o", opts,
-               "127.0.0.1:/",
-               args->mount_point,
-               NULL);
+        execl("/sbin/mount_nfs", "mount_nfs",
+              "-o", opts,
+              spec,
+              args->mount_point,
+              (char *)NULL);
         _exit(127);
     }
 
@@ -195,14 +255,16 @@ static int do_mount_nfs(uint16_t port, const parsed_args_t *args)
     char errbuf[1024];
     ssize_t errlen = 0;
     ssize_t n;
-    while ((n = read(err_pipe[0], errbuf + errlen,
+    while (errlen < (ssize_t)sizeof(errbuf) - 1 &&
+           (n = read(err_pipe[0], errbuf + errlen,
                      sizeof(errbuf) - 1 - (size_t)errlen)) > 0)
         errlen += n;
     errbuf[errlen] = '\0';
     close(err_pipe[0]);
 
     int status;
-    if (waitpid(pid, &status, 0) < 0) {
+    while (waitpid(pid, &status, 0) < 0) {
+        if (errno == EINTR) continue;
         DFUSE_ERR("waitpid failed: %s", strerror(errno));
         return -1;
     }
@@ -215,6 +277,41 @@ static int do_mount_nfs(uint16_t port, const parsed_args_t *args)
     }
 
     DFUSE_LOG("mount_nfs succeeded");
+    return 0;
+}
+
+/*
+ * Start the server event loop in a background thread (so it can answer the
+ * kernel's requests during mount) and run mount_nfs. On failure the server
+ * is stopped and destroyed.
+ */
+static int serve_and_mount(darwinfuse_server_t *srv, uint16_t port,
+                           const char *socket_path, const parsed_args_t *args,
+                           pthread_t *srv_thread)
+{
+    g_server = srv;
+
+    if (pthread_create(srv_thread, NULL,
+                       (void *(*)(void *))nfs4_server_run, srv) != 0) {
+        DFUSE_ERR("Failed to create server thread");
+        nfs4_server_destroy(srv);
+        g_server = NULL;
+        return -1;
+    }
+
+    /*
+     * Call mount_nfs in THIS process (the parent), which still has the
+     * full sudo/root authorization context.  Calling mount_nfs after
+     * fork()+setsid() would lose the authorization chain on macOS Sonoma+.
+     */
+    if (do_mount_nfs(port, socket_path, args) < 0) {
+        nfs4_server_stop(srv);
+        pthread_join(*srv_thread, NULL);
+        nfs4_server_destroy(srv);
+        g_server = NULL;
+        return -1;
+    }
+
     return 0;
 }
 
@@ -260,45 +357,39 @@ int fuse_main(int argc, char *argv[],
     config.volume_path = detect_volume_path();
     config.control_path = "/control";
 
-    /* Create NFS server (binds listen socket, but does not accept yet) */
-    uint16_t port = 0;
-    darwinfuse_server_t *srv = nfs4_server_create(&config, &port);
-    if (!srv) {
-        DFUSE_ERR("Failed to create NFS server");
-        return -1;
-    }
-
-    /*
-     * Start the NFS event loop in a background thread so the server
-     * can answer mount_nfs's NFSv4 COMPOUND requests during mount.
-     */
-    g_server = srv;
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
     sa.sa_handler = signal_handler;
     sigaction(SIGTERM, &sa, NULL);
     sigaction(SIGINT, &sa, NULL);
 
-    pthread_t srv_thread;
-    if (pthread_create(&srv_thread, NULL,
-                       (void *(*)(void *))nfs4_server_run, srv) != 0) {
-        DFUSE_ERR("Failed to create server thread");
-        nfs4_server_destroy(srv);
-        g_server = NULL;
-        return -1;
-    }
-
     /*
-     * Call mount_nfs in THIS process (the parent), which still has the
-     * full sudo/root authorization context.  Calling mount_nfs after
-     * fork()+setsid() would lose the authorization chain on macOS Sonoma+.
+     * Create the NFS server (binds the listen socket) and mount it. The
+     * event loop runs in a background thread so the server can answer the
+     * kernel's NFSv4 COMPOUND requests during mount.
      */
-    if (do_mount_nfs(port, &args) < 0) {
+    pthread_t srv_thread;
+    darwinfuse_server_t *srv = NULL;
+    const char *socket_path = NULL;
+    int mounted = 0;
+
+    srv = nfs4_server_create_local(&config, &socket_path);
+    if (srv && serve_and_mount(srv, 0, socket_path, &args, &srv_thread) == 0)
+        mounted = 1;
+
+#if DFUSE_TCP_FALLBACK
+    if (!mounted && !g_signalled) {
+        DFUSE_ERR("Local-socket NFS mount failed; falling back to loopback TCP "
+                  "(reachable by other local users)");
+        uint16_t port = 0;
+        srv = nfs4_server_create(&config, &port);
+        if (srv && serve_and_mount(srv, port, NULL, &args, &srv_thread) == 0)
+            mounted = 1;
+    }
+#endif
+
+    if (!mounted) {
         DFUSE_ERR("Failed to mount NFS");
-        nfs4_server_stop(srv);
-        pthread_join(srv_thread, NULL);
-        nfs4_server_destroy(srv);
-        g_server = NULL;
         return -1;
     }
 

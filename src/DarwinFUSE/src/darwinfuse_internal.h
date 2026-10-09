@@ -62,19 +62,26 @@
 /* ---------- Logging ---------- */
 
 /*
- * Logging: write to /tmp/darwinfuse.log so logs survive the
- * Process::Execute stderr redirect in Basalt's FuseService.
+ * Logging never writes files by default: mount points, NFS operations and
+ * file names must not leave traces on disk, and a fixed path in /tmp would
+ * allow symlink attacks when running as root.
+ *
+ *   DFUSE_ERR  always goes to stderr (redirected to /dev/null once the
+ *              daemon detaches).
+ *   DFUSE_LOG  is compiled out unless DFUSE_DEBUG_LOG is defined.
+ *
+ * For debugging, build with -DDFUSE_DEBUG_LOG and optionally
+ * -DDFUSE_LOG_FILE='"/path/to/log"' (opened with O_NOFOLLOW, mode 0600).
  */
-#define DFUSE_LOG(fmt, ...) do { \
-    FILE *_f = fopen("/tmp/darwinfuse.log", "a"); \
-    if (_f) { fprintf(_f, "[DarwinFUSE] " fmt "\n", ##__VA_ARGS__); fclose(_f); } \
-    fprintf(stderr, "[DarwinFUSE] " fmt "\n", ##__VA_ARGS__); \
-} while (0)
+void dfuse_logf(int is_error, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
 
-#define DFUSE_ERR(fmt, ...) do { \
-    FILE *_f = fopen("/tmp/darwinfuse.log", "a"); \
-    if (_f) { fprintf(_f, "[DarwinFUSE ERROR] " fmt "\n", ##__VA_ARGS__); fclose(_f); } \
-    fprintf(stderr, "[DarwinFUSE ERROR] " fmt "\n", ##__VA_ARGS__); \
-} while (0)
+#ifdef DFUSE_DEBUG_LOG
+#define DFUSE_LOG(fmt, ...) dfuse_logf(0, fmt, ##__VA_ARGS__)
+#else
+#define DFUSE_LOG(fmt, ...) do { if (0) dfuse_logf(0, fmt, ##__VA_ARGS__); } while (0)
+#endif
+
+#define DFUSE_ERR(fmt, ...) dfuse_logf(1, fmt, ##__VA_ARGS__)
 
 #endif /* DARWINFUSE_INTERNAL_H */

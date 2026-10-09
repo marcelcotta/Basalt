@@ -16,6 +16,8 @@
 
 #include <fuse.h>
 
+#include <arpa/inet.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -773,6 +775,10 @@ static uint32_t handle_read(const darwinfuse_config_t *config,
     uint32_t count  = xdr_decode_uint32(req);
     if (req->error) return NFS4ERR_INVAL;
 
+    /* FUSE takes a signed off_t: reject offsets that would turn negative */
+    if (offset > (uint64_t)INT64_MAX - count)
+        return NFS4ERR_INVAL;
+
     const char *path = fh_to_path(config, conn->current_fh, conn->current_fh_len);
     if (!path) return NFS4ERR_BADHANDLE;
 
@@ -837,6 +843,10 @@ static uint32_t handle_write(const darwinfuse_config_t *config,
 
     data = req->data + req->pos;
     xdr_skip(req, padded);
+
+    /* FUSE takes a signed off_t: reject offsets that would turn negative */
+    if (offset > (uint64_t)INT64_MAX - data_len_raw)
+        return NFS4ERR_INVAL;
 
     const char *path = fh_to_path(config, conn->current_fh, conn->current_fh_len);
     if (!path) return NFS4ERR_BADHANDLE;
