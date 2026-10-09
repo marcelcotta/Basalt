@@ -243,6 +243,21 @@ namespace Basalt
 		return volumeHostSize;
 	}
 
+	Pkcs5KdfList VolumeLayoutV1Hidden::GetSupportedKeyDerivationFunctions () const
+	{
+		// Hidden volumes in this format come from TrueCrypt <= 5.x, which only had
+		// PBKDF2. Basalt never writes another KDF into such a header
+		// (CoreBase::ChangePassword), so the Argon2id KDFs, the most expensive ones
+		// when a password is wrong, are not tried at this header location.
+		Pkcs5KdfList l;
+		for (const auto &kdf : Pkcs5Kdf::GetAvailableAlgorithms())
+		{
+			if (kdf->IsPbkdf2())
+				l.push_back (kdf);
+		}
+		return l;
+	}
+
 	Pkcs5KdfList VolumeLayoutSystemEncryption::GetSupportedKeyDerivationFunctions () const
 	{
 		Pkcs5KdfList l;

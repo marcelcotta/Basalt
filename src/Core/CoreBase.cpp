@@ -38,6 +38,11 @@ namespace Basalt
 				newPkcs5Kdf = Pkcs5Kdf::GetAlgorithm (*newPkcs5Kdf->GetHash());
 		}
 
+		// Hidden volumes in the TrueCrypt <= 5.x format are only opened with PBKDF2
+		// (VolumeLayoutV1Hidden::GetSupportedKeyDerivationFunctions).
+		if (typeid (*openVolume->GetLayout()) == typeid (VolumeLayoutV1Hidden) && !newPkcs5Kdf->IsPbkdf2())
+			throw ParameterIncorrect (SRC_POS);
+
 		if ((openVolume->GetHeader()->GetFlags() & TC_HEADER_FLAG_ENCRYPTED_SYSTEM) != 0
 			&& openVolume->GetType() == VolumeType::Hidden
 			&& openVolume->GetPath().IsDevice())

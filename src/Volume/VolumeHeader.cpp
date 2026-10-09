@@ -13,9 +13,140 @@
 #include "VolumeHeader.h"
 #include "VolumeException.h"
 #include "Common/Crypto.h"
+#include <algorithm>
+#include <condition_variable>
+#include <exception>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 namespace Basalt
 {
+	namespace
+	{
+		// Derives the header keys of several PBKDF2 KDFs on all CPU cores. PBKDF2
+		// output blocks are independent, so every (KDF, block) pair is a job. Jobs
+		// are taken in KDF order, so the first KDF's key is complete first and can
+		// be tested while the others are still being derived.
+		class ParallelPbkdf2
+		{
+		public:
+			ParallelPbkdf2 (const vector <shared_ptr <Pkcs5Kdf> > &kdfs, const VolumePassword &password, const ConstBufferPtr &salt, size_t keySize)
+				: Kdfs (kdfs), Password (password), Salt (salt), KeySize (keySize)
+			{
+				for (size_t i = 0; i < Kdfs.size(); i++)
+				{
+					size_t blockSize = Kdfs[i]->GetPbkdf2BlockSize();
+					int blocks = (int) ((KeySize + blockSize - 1) / blockSize);
+
+					Keys.push_back (shared_ptr <SecureBuffer> (new SecureBuffer (KeySize)));
+					BlocksLeft.push_back (blocks);
+
+					for (int b = 1; b <= blocks; b++)
+						Jobs.push_back (make_pair (i, b));
+				}
+
+				size_t threadCount = std::min <size_t> (Jobs.size(), std::max (1u, std::thread::hardware_concurrency()));
+				for (size_t t = 0; t < threadCount; t++)
+				{
+					try
+					{
+						Threads.push_back (std::thread (&ParallelPbkdf2::Work, this));
+					}
+					catch (...)
+					{
+						break;
+					}
+				}
+
+				if (Threads.empty())
+					Work();
+			}
+
+			~ParallelPbkdf2 ()
+			{
+				{
+					std::lock_guard <std::mutex> lock (Mutex);
+					Cancel = true;
+				}
+
+				for (auto &t : Threads)
+					t.join();
+			}
+
+			// Waits until the key of Kdfs[i] is complete.
+			ConstBufferPtr GetKey (size_t i)
+			{
+				std::unique_lock <std::mutex> lock (Mutex);
+				Done.wait (lock, [&] { return BlocksLeft[i] == 0 || Error; });
+
+				if (Error)
+					std::rethrow_exception (Error);
+
+				return ConstBufferPtr (Keys[i]->Ptr(), Keys[i]->Size());
+			}
+
+		private:
+			ParallelPbkdf2 (const ParallelPbkdf2 &);
+			ParallelPbkdf2 &operator= (const ParallelPbkdf2 &);
+
+			void Work ()
+			{
+				SecureBuffer block (64);	// largest PBKDF2 block (SHA-512, Whirlpool)
+
+				while (true)
+				{
+					pair <size_t, int> job;
+					{
+						std::lock_guard <std::mutex> lock (Mutex);
+						if (Cancel || NextJob >= Jobs.size())
+							return;
+						job = Jobs[NextJob++];
+					}
+
+					size_t blockSize = Kdfs[job.first]->GetPbkdf2BlockSize();
+					try
+					{
+						Kdfs[job.first]->DerivePbkdf2Block (block.GetRange (0, blockSize), Password, Salt, job.second);
+					}
+					catch (...)
+					{
+						std::lock_guard <std::mutex> lock (Mutex);
+						if (!Error)
+							Error = std::current_exception();
+						Cancel = true;
+						Done.notify_all();
+						return;
+					}
+
+					size_t offset = (size_t) (job.second - 1) * blockSize;
+					size_t length = std::min (blockSize, KeySize - offset);
+
+					std::lock_guard <std::mutex> lock (Mutex);
+					Keys[job.first]->GetRange (offset, length).CopyFrom (block.GetRange (0, length));
+					if (--BlocksLeft[job.first] == 0)
+						Done.notify_all();
+				}
+			}
+
+			const vector <shared_ptr <Pkcs5Kdf> > &Kdfs;
+			const VolumePassword &Password;
+			const ConstBufferPtr Salt;
+			const size_t KeySize;
+
+			vector <shared_ptr <SecureBuffer> > Keys;
+			vector <int> BlocksLeft;
+			vector <pair <size_t, int> > Jobs;
+			size_t NextJob = 0;
+			bool Cancel = false;
+			std::exception_ptr Error;
+
+			std::mutex Mutex;
+			std::condition_variable Done;
+			vector <std::thread> Threads;
+		};
+	}
+
 	VolumeHeader::VolumeHeader (uint32 size)
 	{
 		Init();
@@ -87,14 +218,12 @@ namespace Basalt
 		SecureBuffer header (EncryptedHeaderDataSize);
 		SecureBuffer headerKey (GetLargestSerializedKeySize());
 
-		for (const auto &pkcs5 : keyDerivationFunctions)
+		auto tryHeaderKey = [&] (const ConstBufferPtr &key, const shared_ptr <Pkcs5Kdf> &pkcs5) -> bool
 		{
-			pkcs5->DeriveKey (headerKey, password, salt);
-
 			for (auto mode : encryptionModes)
 			{
 				if (typeid (*mode) != typeid (EncryptionModeXTS))
-					mode->SetKey (headerKey.GetRange (0, mode->GetKeySize()));
+					mode->SetKey (key.GetRange (0, mode->GetKeySize()));
 
 				for (auto ea : encryptionAlgorithms)
 				{
@@ -103,14 +232,14 @@ namespace Basalt
 
 					if (typeid (*mode) == typeid (EncryptionModeXTS))
 					{
-						ea->SetKey (headerKey.GetRange (0, ea->GetKeySize()));
+						ea->SetKey (key.GetRange (0, ea->GetKeySize()));
 
 						mode = mode->GetNew();
-						mode->SetKey (headerKey.GetRange (ea->GetKeySize(), ea->GetKeySize()));
+						mode->SetKey (key.GetRange (ea->GetKeySize(), ea->GetKeySize()));
 					}
 					else
 					{
-						ea->SetKey (headerKey.GetRange (LegacyEncryptionModeKeyAreaSize, ea->GetKeySize()));
+						ea->SetKey (key.GetRange (LegacyEncryptionModeKeyAreaSize, ea->GetKeySize()));
 					}
 
 					ea->SetMode (mode);
@@ -126,6 +255,38 @@ namespace Basalt
 					}
 				}
 			}
+			return false;
+		};
+
+		vector <shared_ptr <Pkcs5Kdf> > kdfs (keyDerivationFunctions.begin(), keyDerivationFunctions.end());
+
+		for (size_t i = 0; i < kdfs.size(); )
+		{
+			if (!kdfs[i]->IsPbkdf2())
+			{
+				// Argon2id: memory-hard and multi-threaded itself
+				kdfs[i]->DeriveKey (headerKey, password, salt);
+				if (tryHeaderKey (headerKey, kdfs[i]))
+					return true;
+				i++;
+				continue;
+			}
+
+			// A run of PBKDF2 KDFs: derive their keys in parallel, test them in order
+			size_t end = i;
+			while (end < kdfs.size() && kdfs[end]->IsPbkdf2())
+				end++;
+
+			vector <shared_ptr <Pkcs5Kdf> > run (kdfs.begin() + i, kdfs.begin() + end);
+			ParallelPbkdf2 derivation (run, password, salt, headerKey.Size());
+
+			for (size_t r = 0; r < run.size(); r++)
+			{
+				if (tryHeaderKey (derivation.GetKey (r), run[r]))
+					return true;
+			}
+
+			i = end;
 		}
 
 		return false;
