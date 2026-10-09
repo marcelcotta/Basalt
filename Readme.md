@@ -36,10 +36,13 @@ window dressing — just solid encryption with modern key derivation.
 - **Opens TrueCrypt & VeraCrypt volumes** — plus automatic KDF upgrade prompt for legacy iterations.
 - **Hidden volumes** — create and mount with plausible deniability, with write protection for the outer volume.
 - **Native SwiftUI app** — no wxWidgets, no Qt on macOS. Clean, dark-mode interface.
-- **CLI included** — `basalt-cli` for scripting and headless use.
+- **CLI included** — `basalt-cli` for scripting and headless use, with `--password-stdin` so passwords stay out of the process list.
+- **Faster mounting** — pick the key derivation (Argon2id-Max, Argon2id or PBKDF2) under Options or as a default, and only that one is tried. A wrong password is reported in seconds instead of a minute.
+- **Strong passwords made easy** — strength meter for new passwords and a Diceware passphrase generator (EFF wordlist, system CSPRNG).
 - **DarwinFUSE built-in** — no macFUSE, no kernel extension, no SIP changes.
 - **Zero-state design** — no password cache, no favorites, no history. Forensic analysis reveals nothing.
-- **Auto-dismount** — on inactivity, screen lock, sleep, quit, and logout.
+- **Auto-dismount** — on inactivity, screen lock, sleep, quit, and logout. The Mac only goes to sleep once the volumes are dismounted.
+- **11 languages** — English, German, French, Spanish, Italian, Portuguese (Brazil), Dutch, Russian, Japanese, Korean and Chinese (Simplified).
 - **Screen capture protection** — the entire app is invisible to screenshots, screen recording, and AirPlay.
 - **Codebase reduced by 75%** — from 195k to 47k lines. Boot loader, kernel driver, PKCS#11, wxWidgets, Win32 all deleted.
 
@@ -160,7 +163,8 @@ basalt-cli (C++)              Standalone terminal tool
 
 | Document | Contents |
 |----------|----------|
-| **[SECURITY.md](SECURITY.md)** | All 34 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
+| **[SECURITY.md](SECURITY.md)** | All 50 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
+| **[docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md)** | Source audit of Basalt 1.1.1 and DarwinFUSE (October 2026): findings, fixes, macOS verification checklist |
 | **[License.txt](License.txt)** | TrueCrypt License 3.0 |
 
 
@@ -173,3 +177,7 @@ Governed by the TrueCrypt License 3.0 — see [License.txt](License.txt) for
 the full text. TrueCrypt is a trademark of the TrueCrypt Foundation. VeraCrypt
 is a trademark of IDRIX. Basalt is an independent project, not affiliated with
 or endorsed by either.
+
+The passphrase generator uses the [EFF Large Wordlist](https://www.eff.org/dice)
+by the Electronic Frontier Foundation, licensed under
+[CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/).
