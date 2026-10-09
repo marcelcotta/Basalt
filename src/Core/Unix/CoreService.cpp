@@ -372,8 +372,10 @@ namespace Basalt
 					if (appPath.empty())
 						appPath = "truecrypt";
 
-					const char *args[] = { "sudo", "-S", "-p", "", appPath.c_str(), TC_CORE_SERVICE_CMDLINE_OPTION, nullptr };
-					execvp (args[0], ((char* const*) args));
+					// Absolute path: a writable directory earlier in $PATH must not be
+					// able to provide a fake "sudo" that captures the admin password.
+					const char *args[] = { "/usr/bin/sudo", "-S", "-p", "", appPath.c_str(), TC_CORE_SERVICE_CMDLINE_OPTION, nullptr };
+					execv (args[0], ((char* const*) args));
 					throw SystemException (SRC_POS, args[0]);
 				}
 				catch (Exception &)

@@ -212,8 +212,10 @@ namespace Basalt
 			PoolHash = Hash::GetAvailableAlgorithms().front();
 		}
 
-		AddSystemDataToPool (true);
+		// Test() zeroes the pool and fills it with deterministic data, so it
+		// must run before seeding — otherwise the initial entropy is discarded.
 		Test();
+		AddSystemDataToPool (true);
 	}
 
 	void RandomNumberGenerator::Stop ()

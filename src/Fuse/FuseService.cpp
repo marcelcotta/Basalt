@@ -501,7 +501,15 @@ namespace Basalt
 		// subsequent reads of the /control file. Instead, write a local file
 		// alongside the aux mount directory that GetMountedVolumes will read.
 		string localPath = string (fuseMountPoint) + ".auxinfo";
-		int fd = open (localPath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600);
+
+		// The aux mount directory may live in /tmp (e.g. when elevated via sudo,
+		// which drops $TMPDIR). Never follow or reuse a pre-existing path there:
+		// remove whatever is in the way and create the file exclusively, so a
+		// planted symlink or hard link cannot redirect this write as root.
+		if (unlink (localPath.c_str()) == -1 && errno != ENOENT)
+			throw SystemException (SRC_POS, localPath);
+
+		int fd = open (localPath.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
 		if (fd >= 0)
 		{
 			shared_ptr <Stream> stream (new MemoryStream);

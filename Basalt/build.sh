@@ -12,7 +12,11 @@ BUILD_DIR="${SCRIPT_DIR}/build"
 BUILD_CONFIG="${1:-debug}"
 
 # Use symlink to handle spaces in path
-SYMLINK="/tmp/truecrypt-build"
+# Lives in the per-user $TMPDIR (private on macOS): a fixed name in the
+# world-writable /tmp could be pre-created by another local user to make this
+# script build — and sign — a foreign source tree.
+SYMLINK_BASE="${TMPDIR:-/tmp}"
+SYMLINK="${SYMLINK_BASE%/}/basalt-build"
 ln -sfn "${ROOT_DIR}" "${SYMLINK}"
 
 # Paths (all via symlink — no spaces)
@@ -42,7 +46,7 @@ fi
 
 if [ ! -f "${CORE_LIB}" ]; then
     echo "Error: libBasaltCore.a not found"
-    echo "Build it first: make BASE_DIR=/tmp/truecrypt-build NOASM=1 libBasaltCore"
+    echo "Build it first: make BASE_DIR=${SYMLINK} NOASM=1 libBasaltCore"
     exit 1
 fi
 

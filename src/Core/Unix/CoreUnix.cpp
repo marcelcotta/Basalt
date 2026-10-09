@@ -287,6 +287,15 @@ namespace Basalt
 				string auxInfoPath = string (mf->MountPoint) + ".auxinfo";
 				try
 				{
+					// Only trust a regular file created by us or by root (the
+					// elevated service, see FuseService::SendAuxDeviceInfo); in
+					// /tmp anyone could plant one and redirect "hdiutil detach".
+					struct stat auxStat;
+					if (lstat (auxInfoPath.c_str(), &auxStat) != 0
+						|| !S_ISREG (auxStat.st_mode)
+						|| (auxStat.st_uid != geteuid() && auxStat.st_uid != 0))
+						throw ParameterIncorrect (SRC_POS);
+
 					shared_ptr <File> auxFile (new File);
 					auxFile->Open (auxInfoPath);
 					shared_ptr <Stream> auxStream (new FileStream (auxFile));

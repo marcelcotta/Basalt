@@ -12,7 +12,11 @@ BUILD_CONFIG="${1:-release}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
 
 # Symlink for spaces-in-path workaround
-SYMLINK="/tmp/truecrypt-build"
+# Lives in the per-user $TMPDIR (private on macOS): a fixed name in the
+# world-writable /tmp could be pre-created by another local user to make this
+# script build — and sign — a foreign source tree.
+SYMLINK_BASE="${TMPDIR:-/tmp}"
+SYMLINK="${SYMLINK_BASE%/}/basalt-build"
 ln -sfn "${SCRIPT_DIR}" "${SYMLINK}"
 
 BUILD_ROOT="${SYMLINK}/build-universal"
