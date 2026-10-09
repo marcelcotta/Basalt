@@ -35,6 +35,10 @@ else
 	ifneq (,$(filter arm64 aarch64,$(REAL_ARCH)))
 		OBJS += ../Crypto/Aes_hw_cpu_arm.o
 	endif
+	# x86-64 hardware AES via AES-NI intrinsics (works with NOASM=1)
+	ifneq (,$(filter x86_64 amd64,$(REAL_ARCH)))
+		OBJS += ../Crypto/Aes_hw_cpu_x86.o
+	endif
 endif
 
 OBJS += ../Crypto/Aeskey.o

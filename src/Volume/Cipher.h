@@ -120,7 +120,7 @@ namespace Basalt
 
 #undef TC_EXCEPTION
 
-#if ((defined (TC_ARCH_X86) || defined (TC_ARCH_X64)) && !defined (__ppc__)) || defined (__aarch64__)
+#if ((defined (TC_ARCH_X86) || defined (TC_ARCH_X64)) && !defined (__ppc__)) || defined (__aarch64__) || defined (__x86_64__)
 #	define TC_AES_HW_CPU
 #endif
 
