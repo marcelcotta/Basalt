@@ -108,6 +108,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// following terminate request then waits for the dismount.
     private var powerOffRequestedAt: Date?
 
+    /// Set once applicationShouldTerminate has tried to dismount.
+    private var quitDismountAttempted = false
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         // SECURITY: Prevent screen capture of ALL windows (including alerts/dialogs).
@@ -146,6 +149,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self,
             selector: #selector(systemWillPowerOff),
             name: NSWorkspace.willPowerOffNotification,
+            object: nil
+        )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillTerminate),
+            name: NSApplication.willTerminateNotification,
             object: nil
         )
     }
@@ -236,23 +246,50 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - App Lifecycle
 
+    /// Logout/shutdown asks running apps to quit right after willPowerOff.
+    private var isPoweringOff: Bool {
+        powerOffRequestedAt.map { Date().timeIntervalSince($0) < 120 } ?? false
+    }
+
+    private var shouldDismountOnQuit: Bool {
+        guard let prefs = preferences else { return false }
+        return prefs.dismountOnQuit || (isPoweringOff && prefs.dismountOnLogOff)
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard let prefs = preferences, let vm = volumeManager else { return .terminateNow }
-
-        // Logout/shutdown asks running apps to quit right after willPowerOff.
-        let poweringOff = powerOffRequestedAt.map { Date().timeIntervalSince($0) < 120 } ?? false
-
-        if (prefs.dismountOnQuit || (poweringOff && prefs.dismountOnLogOff)) && !vm.mountedVolumes.isEmpty {
-            // Quit only after the dismount has finished
-            Task { @MainActor in
-                vm.dismountAll(force: prefs.forceDismount) {
-                    NSApp.reply(toApplicationShouldTerminate: true)
-                }
-            }
-            return .terminateLater
+        guard let prefs = preferences, let vm = volumeManager, shouldDismountOnQuit else {
+            return .terminateNow
         }
 
-        return .terminateNow
+        // Dismount before answering instead of deferring the answer with
+        // .terminateLater, which left the volumes mounted after quitting.
+        quitDismountAttempted = true
+        guard let error = vm.dismountAllBeforeQuit(force: prefs.forceDismount) else {
+            return .terminateNow
+        }
+
+        // Never hold up logout, restart or shutdown.
+        if isPoweringOff { return .terminateNow }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = String(localized: "Volumes could not be dismounted")
+        alert.informativeText = error + "\n\n"
+            + String(localized: "If you quit now, the volumes stay mounted and accessible.")
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.addButton(withTitle: String(localized: "Quit Anyway"))
+        if alert.runModal() == .alertSecondButtonReturn {
+            return .terminateNow
+        }
+        quitDismountAttempted = false
+        return .terminateCancel
+    }
+
+    /// Fallback for terminations that bypass applicationShouldTerminate.
+    @objc private func appWillTerminate(_ notification: Notification) {
+        guard !quitDismountAttempted, let prefs = preferences, let vm = volumeManager,
+              shouldDismountOnQuit else { return }
+        _ = vm.dismountAllBeforeQuit(force: prefs.forceDismount, timeout: 30)
     }
 
     // MARK: - System Sleep

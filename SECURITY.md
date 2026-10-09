@@ -280,8 +280,9 @@ are affected.
 - **System sleep:** IOKit system power notifications; sleep waits for the dismount
   (since Wave 11, #48 — previously `NSWorkspace.willSleepNotification`, which does not wait)
 - **Logout/shutdown/restart:** `NSWorkspace.willPowerOffNotification` (default: on)
-- **Application quit:** `applicationShouldTerminate` with `.terminateLater` for async
-  dismount before exit
+- **Application quit:** `applicationShouldTerminate` dismounts before it answers (since
+  Wave 11, #48 — previously `.terminateLater`, which let the app quit before the
+  dismount had finished). On by default since Wave 11.
 Each trigger is independently configurable. Force dismount is enabled by default and
 applies to all dismount operations (manual and automatic), ensuring volumes can always
 be closed even when processes hold open file handles.
@@ -555,15 +556,24 @@ creates 5–7 word passphrases from the EFF large wordlist (12.9 bits per word) 
 system CSPRNG (`SystemRandomNumberGenerator`), limited to the 64-byte password maximum.
 Characters beyond Latin-1 (#41) are flagged in the dialog before the volume is created.
 
-### 48. Sleep Waits for Auto-Dismount
-**Files:** `Basalt/App/BasaltApp.swift`
+### 48. Sleep and Quit Wait for Auto-Dismount
+**Files:** `Basalt/App/BasaltApp.swift`, `Basalt/App/VolumeManager.swift`,
+`Basalt/App/PreferencesManager.swift`
 **Problem:** "Dismount when system sleeps" reacted to `NSWorkspace.willSleepNotification`
 and started an asynchronous dismount; the Mac could go to sleep with volumes still
-mounted and keys in RAM (audit O-3).
+mounted and keys in RAM (audit O-3). "Dismount when Basalt quits" started an
+asynchronous dismount and let the app quit right away, so the volumes stayed mounted
+— with no Basalt window or menu bar icon left to dismount them. The option was off
+by default.
 **Fix:** The app registers for IOKit system power notifications and acknowledges
 `kIOMessageSystemWillSleep` with `IOAllowPowerChange` only after the dismount has
-finished (the system waits up to about 30 s). On logout, restart and shutdown,
-`applicationShouldTerminate` delays termination until the volumes are dismounted.
+finished (the system waits up to about 30 s). On quit, logout, restart and shutdown,
+`applicationShouldTerminate` dismounts before it answers: the dismount runs on a
+background queue while the main run loop keeps servicing the main queue (so an
+administrator password prompt still works), with a 60 s limit. If a volume cannot
+be dismounted on quit, Basalt asks before quitting; logout and shutdown are never
+held up. A `willTerminate` observer covers terminations that bypass the delegate.
+Dismounting on quit is now on by default.
 
 ### 49. Spotlight Marker Only Where Harmless
 **Files:** `Basalt/App/VolumeManager.swift`

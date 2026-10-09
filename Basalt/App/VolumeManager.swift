@@ -10,6 +10,13 @@ import Foundation
 import AppKit
 import Combine
 
+/// Result of the dismount started by `dismountAllBeforeQuit`, written by the
+/// background queue before it signals `done`.
+private final class QuitDismountState: @unchecked Sendable {
+    let done = DispatchSemaphore(value: 0)
+    var error: String?
+}
+
 /// Observable model that wraps TCCoreBridge for SwiftUI binding.
 /// ObjC methods with (NSError **) parameters are imported as throwing in Swift.
 @MainActor
@@ -290,7 +297,7 @@ class VolumeManager: ObservableObject {
     }
 
     /// Dismounts all volumes; `completion` runs on the main actor when done
-    /// (used to delay sleep and logout until the volumes are closed).
+    /// (used to delay sleep until the volumes are closed).
     func dismountAll(force: Bool = false, completion: (() -> Void)? = nil) {
         isLoading = true
         errorMessage = nil
@@ -324,6 +331,42 @@ class VolumeManager: ObservableObject {
                 completion?()
             }
         }
+    }
+
+    /// Dismounts all volumes and waits for the result, for use while the app
+    /// is quitting. Returns nil on success, otherwise an error message.
+    ///
+    /// Unlike `dismountAll`, this does not rely on Swift tasks or a deferred
+    /// terminate reply being processed during termination. The dismount runs
+    /// on a background queue; the main run loop keeps servicing the main queue
+    /// meanwhile, so an administrator password prompt can still be shown.
+    func dismountAllBeforeQuit(force: Bool, timeout: TimeInterval = 60) -> String? {
+        guard !bridge.mountedVolumes().isEmpty else { return nil }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        let state = QuitDismountState()
+        let bridge = self.bridge
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try bridge.dismountAllVolumes(force)
+            } catch {
+                state.error = error.localizedDescription
+            }
+            state.done.signal()
+        }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while state.done.wait(timeout: .now() + .milliseconds(20)) == .timedOut {
+            if Date() > deadline {
+                return String(localized: "Dismounting did not finish in time.")
+            }
+            RunLoop.current.run(mode: .modalPanel, before: Date())
+        }
+
+        refreshVolumes()
+        return state.error
     }
 
     // MARK: - Finder Window Management

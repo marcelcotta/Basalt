@@ -44,7 +44,7 @@
 /* BackupHeaderSheet.swift */
 "Backing up headers..." = "ヘッダをバックアップ中...";
 
-/* BackupHeaderSheet.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
+/* BackupHeaderSheet.swift, BasaltApp.swift, ChangePasswordSheet.swift, CreateVolumeSheet.swift, MountSheet.swift, RestoreHeaderSheet.swift, TCCocoaCallback.mm, TCCoreBridge.mm */
 "Cancel" = "キャンセル";
 
 /* BackupHeaderSheet.swift */
@@ -838,3 +838,15 @@
 
 /* VolumeManager.swift */
 "Only the key derivation selected under Options was tried. If unsure, choose Auto-detect." = "「オプション」で選択した鍵導出方式のみを試しました。不明な場合は「自動検出」を選択してください。";
+
+/* BasaltApp.swift */
+"Volumes could not be dismounted" = "ボリュームをマウント解除できませんでした";
+
+/* BasaltApp.swift */
+"If you quit now, the volumes stay mounted and accessible." = "今すぐ終了すると、ボリュームはマウントされたままでアクセス可能な状態になります。";
+
+/* BasaltApp.swift */
+"Quit Anyway" = "このまま終了";
+
+/* VolumeManager.swift */
+"Dismounting did not finish in time." = "マウント解除が時間内に完了しませんでした。";

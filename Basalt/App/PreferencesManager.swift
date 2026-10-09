@@ -81,7 +81,7 @@ class PreferencesManager: ObservableObject {
             "dismountOnScreenSaver": false,
             "dismountOnSleep": false,
             "forceDismount": true,
-            "dismountOnQuit": false,
+            "dismountOnQuit": true,
             "dismountOnLogOff": true,
             "dismountOnInactivity": false,
             "maxIdleMinutes": 60,
