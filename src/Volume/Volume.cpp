@@ -314,7 +314,12 @@ namespace Basalt
 		uint64 length = buffer.Size();
 		uint64 hostOffset = VolumeDataOffset + byteOffset;
 
-		if (length % SectorSize != 0 || byteOffset % SectorSize != 0)
+		// Written so that it cannot overflow: byteOffset may come from an
+		// untrusted FUSE/NFS request (e.g. a negative off_t cast to uint64).
+		if (length % SectorSize != 0
+			|| byteOffset % SectorSize != 0
+			|| byteOffset > VolumeDataSize
+			|| length > VolumeDataSize - byteOffset)
 			throw ParameterIncorrect (SRC_POS);
 
 		if (VolumeFile->ReadAt (buffer, hostOffset) != length)
@@ -359,9 +364,13 @@ namespace Basalt
 		uint64 length = buffer.Size();
 		uint64 hostOffset = VolumeDataOffset + byteOffset;
 
+		// Written so that it cannot overflow: with "byteOffset + length > VolumeDataSize"
+		// a byteOffset near 2^64 wrapped around and let writes land in the header
+		// area in front of the data area, bypassing hidden volume protection.
 		if (length % SectorSize != 0
 			|| byteOffset % SectorSize != 0
-			|| byteOffset + length > VolumeDataSize)
+			|| byteOffset > VolumeDataSize
+			|| length > VolumeDataSize - byteOffset)
 			throw ParameterIncorrect (SRC_POS);
 
 		if (Protection == VolumeProtection::ReadOnly)

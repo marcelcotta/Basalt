@@ -198,8 +198,12 @@ namespace Basalt
 				try
 				{
 					// Test for read beyond the end of the volume
-					if ((uint64) offset + size > FuseService::GetVolumeSize())
-						size = FuseService::GetVolumeSize() - offset;
+					uint64 volumeSize = FuseService::GetVolumeSize();
+					if (offset < 0 || (uint64) offset >= volumeSize)
+						return 0;
+
+					if (size > volumeSize - (uint64) offset)
+						size = volumeSize - (uint64) offset;
 
 					size_t sectorSize = FuseService::GetVolumeSectorSize();
 					if (size % sectorSize != 0 || offset % sectorSize != 0)
@@ -236,7 +240,7 @@ namespace Basalt
 				shared_ptr <Buffer> infoBuf = FuseService::GetVolumeInfo();
 				BufferPtr outBuf ((byte *)buf, size);
 
-				if (offset >= (off_t) infoBuf->Size())
+				if (offset < 0 || offset >= (off_t) infoBuf->Size())
 					return 0;
 
 				if (offset + size > infoBuf->Size())
@@ -286,6 +290,9 @@ namespace Basalt
 
 			if (strcmp (path, FuseService::GetVolumeImagePath()) == 0)
 			{
+				if (offset < 0)
+					return -EINVAL;
+
 				FuseService::WriteVolumeSectors (BufferPtr ((byte *) buf, size), offset);
 				return size;
 			}
