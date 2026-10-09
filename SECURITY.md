@@ -449,7 +449,9 @@ permissions, TCC and the FUSE access check (`CheckAccessRights()`).
 **Fix:** The server listens on a Unix domain socket inside a private `mkdtemp()`
 directory (0700) and additionally rejects peers whose UID is neither root nor the
 owner (`LOCAL_PEERCRED`). `mount_nfs` connects via `proto=ticotsord,port=<socket>`,
-supported by the macOS NFS client since 10.15. If the local mount fails, the
+supported by the macOS NFS client since 10.15, with `nocallback` (the NFSv4 client's
+SETCLIENTID rejects a callback channel over a local socket with EINVAL; without
+callbacks the kernel also opens no NFSv4 callback listener). If the local mount fails, the
 previous TCP transport is used as a fallback (`DFUSE_TCP_FALLBACK`, to be disabled
 once verified on all supported macOS versions).
 
