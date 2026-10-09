@@ -20,17 +20,23 @@
  * Function generates new block by applying BlaMka over ref and prev blocks.
  * On first pass: next = compress(prev, ref)
  * On subsequent passes: next = next XOR compress(prev, ref)
+ * Instances flagged basalt_legacy use the frozen pre-RFC compression.
  */
-static void fill_block_ref(const block *prev_block, const block *ref_block,
+static void fill_block_ref(const argon2_instance_t *instance,
+                           const block *prev_block, const block *ref_block,
                            block *next_block, int with_xor) {
-    fill_block(prev_block, ref_block, next_block, with_xor);
+    if (instance->basalt_legacy)
+        fill_block_basalt_legacy(prev_block, ref_block, next_block, with_xor);
+    else
+        fill_block(prev_block, ref_block, next_block, with_xor);
 }
 
-static void next_addresses(block *address_block, block *input_block,
+static void next_addresses(const argon2_instance_t *instance,
+                           block *address_block, block *input_block,
                            const block *zero_block) {
     input_block->v[6]++;
-    fill_block(zero_block, input_block, address_block, 0);
-    fill_block(zero_block, address_block, address_block, 0);
+    fill_block_ref(instance, zero_block, input_block, address_block, 0);
+    fill_block_ref(instance, zero_block, address_block, address_block, 0);
 }
 
 void fill_segment(const argon2_instance_t *instance,
@@ -70,7 +76,7 @@ void fill_segment(const argon2_instance_t *instance,
         starting_index = 2; /* we have already generated the first two blocks */
         /* Don't forget to generate the first block of addresses if necessary */
         if (data_independent_addressing) {
-            next_addresses(&address_block, &input_block, &zero_block);
+            next_addresses(instance, &address_block, &input_block, &zero_block);
         }
     }
 
@@ -97,7 +103,7 @@ void fill_segment(const argon2_instance_t *instance,
         /* 1.2.1 Taking pseudo-random value from the previous block */
         if (data_independent_addressing) {
             if (i % ARGON2_QWORDS_IN_BLOCK == 0) {
-                next_addresses(&address_block, &input_block, &zero_block);
+                next_addresses(instance, &address_block, &input_block, &zero_block);
             }
             pseudo_rand = address_block.v[i % ARGON2_QWORDS_IN_BLOCK];
         } else {
@@ -124,10 +130,10 @@ void fill_segment(const argon2_instance_t *instance,
         curr_block = instance->memory + curr_offset;
 
         if (0 == position.pass) {
-            fill_block_ref(instance->memory + prev_offset, ref_block,
+            fill_block_ref(instance, instance->memory + prev_offset, ref_block,
                            curr_block, 0);
         } else {
-            fill_block_ref(instance->memory + prev_offset, ref_block,
+            fill_block_ref(instance, instance->memory + prev_offset, ref_block,
                            curr_block, 1);
         }
     }

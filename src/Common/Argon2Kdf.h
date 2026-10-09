@@ -32,6 +32,19 @@ int derive_key_argon2id_max (char *pwd, int pwd_len,
                               char *dk, int dklen);
 
 /*
+ * Open-only variants reproducing the non-standard Argon2id compression of
+ * Basalt <= 1.1.x (same parameters as above). Used solely to open and
+ * upgrade volumes created by those versions.
+ */
+int derive_key_argon2id_legacy (char *pwd, int pwd_len,
+                                char *salt, int salt_len,
+                                char *dk, int dklen);
+
+int derive_key_argon2id_max_legacy (char *pwd, int pwd_len,
+                                    char *salt, int salt_len,
+                                    char *dk, int dklen);
+
+/*
  * Test-only variant with caller-specified parameters.
  * Used by self-tests with reduced memory to keep test time short.
  */
@@ -39,6 +52,11 @@ int derive_key_argon2id_test (char *pwd, int pwd_len,
                               char *salt, int salt_len,
                               uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
                               char *dk, int dklen);
+
+int derive_key_argon2id_test_legacy (char *pwd, int pwd_len,
+                                     char *salt, int salt_len,
+                                     uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
+                                     char *dk, int dklen);
 
 #if defined(__cplusplus)
 }

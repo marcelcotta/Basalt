@@ -9,6 +9,7 @@
 #include "Cipher.h"
 #include "Common/Crc.h"
 #include "Common/Argon2Kdf.h"
+#include "Crypto/Argon2/argon2.h"
 #include "Crc32.h"
 #include "EncryptionAlgorithm.h"
 #include "EncryptionMode.h"
@@ -24,6 +25,10 @@ namespace Basalt
 	{
 		TestAll (false);
 		TestAll (true);
+
+		// Argon2id does not depend on CPU AES support; run its (memory-heavy)
+		// known-answer tests once.
+		TestArgon2id();
 	}
 
 	void EncryptionTest::TestAll (bool enableCpuEncryptionSupport)
@@ -38,7 +43,6 @@ namespace Basalt
 		TestXts();
 		TestLegacyModes();
 		TestPkcs5();
-		TestArgon2id();
 	}
 
 	void EncryptionTest::TestLegacyModes ()
@@ -895,36 +899,76 @@ namespace Basalt
 
 	void EncryptionTest::TestArgon2id ()
 	{
-		// 1. Basic Argon2id test with reduced parameters (m=32 KiB, t=3, p=4).
-		//    Verifies the reference implementation produces correct output.
-		static const byte expectedReduced[] = {
-			0x37, 0x4f, 0xa1, 0x1c, 0x1d, 0xef, 0x2e, 0x88,
-			0xb6, 0x28, 0xcb, 0xa2, 0xeb, 0x79, 0xbf, 0x27,
-			0xf1, 0x0e, 0x88, 0xcc, 0xbb, 0x9e, 0x16, 0x0b,
-			0x88, 0x4d, 0x3e, 0x7a, 0x71, 0xf0, 0x04, 0x64
+		byte hash[32];
+		int rc;
+
+		// 1. Official RFC 9106 test vector (Section 5.3, Argon2id v0x13,
+		//    with secret and associated data). Independent known answer.
+		static const byte expectedRfc9106[] = {
+			0x0d, 0x64, 0x0d, 0xf5, 0x8d, 0x78, 0x76, 0x6c,
+			0x08, 0xc0, 0x37, 0xa3, 0x4a, 0x8b, 0x53, 0xc9,
+			0xd0, 0x1e, 0xf0, 0x45, 0x2d, 0x75, 0xb6, 0x5e,
+			0xb5, 0x25, 0x20, 0xe9, 0x6b, 0x01, 0xe6, 0x59
 		};
 
-		byte hash[32];
-		int rc = derive_key_argon2id_test (
+		{
+			byte pwd[32], salt[16], secret[8], ad[12];
+			memset (pwd, 0x01, sizeof (pwd));
+			memset (salt, 0x02, sizeof (salt));
+			memset (secret, 0x03, sizeof (secret));
+			memset (ad, 0x04, sizeof (ad));
+
+			argon2_context ctx;
+			memset (&ctx, 0, sizeof (ctx));
+			ctx.out = hash;
+			ctx.outlen = sizeof (hash);
+			ctx.pwd = pwd;
+			ctx.pwdlen = sizeof (pwd);
+			ctx.salt = salt;
+			ctx.saltlen = sizeof (salt);
+			ctx.secret = secret;
+			ctx.secretlen = sizeof (secret);
+			ctx.ad = ad;
+			ctx.adlen = sizeof (ad);
+			ctx.t_cost = 3;
+			ctx.m_cost = 32;
+			ctx.lanes = 4;
+			ctx.threads = 4;
+			ctx.version = ARGON2_VERSION_13;
+
+			if (argon2_ctx (&ctx, Argon2_id) != ARGON2_OK)
+				throw TestFailed (SRC_POS);
+
+			if (memcmp (hash, expectedRfc9106, 32) != 0)
+				throw TestFailed (SRC_POS);
+		}
+
+		// 2. Reduced parameters (m=32 KiB, t=3, p=4) through the C wrapper.
+		//    Expected values computed with the reference implementation
+		//    (phc-winner-argon2 / libargon2).
+		static const byte expectedReduced[] = {
+			0xa7, 0xb5, 0x24, 0x84, 0x0a, 0x2a, 0x8c, 0x5d,
+			0x7d, 0xc5, 0x8d, 0xdd, 0x68, 0x4c, 0xee, 0x49,
+			0xb5, 0xc3, 0xb7, 0x4e, 0xd3, 0x2b, 0x20, 0xff,
+			0x50, 0xa0, 0xe8, 0x1f, 0xe6, 0x97, 0x26, 0xb0
+		};
+
+		rc = derive_key_argon2id_test (
 			(char *) "password", 8,
 			(char *) "somesalt01234567", 16,
 			3, 32, 4,  /* t_cost=3, m_cost=32 KiB, p=4 */
 			(char *) hash, 32);
 
-		if (rc != 0)
+		if (rc != 0 || memcmp (hash, expectedReduced, 32) != 0)
 			throw TestFailed (SRC_POS);
 
-		if (memcmp (hash, expectedReduced, 32) != 0)
-			throw TestFailed (SRC_POS);
-
-		// 2. Full Standard KDF (m=512 MB, t=4, p=4).
-		//    Tests the production C wrapper with hardcoded parameters.
+		// 3. Full Standard KDF (m=512 MB, t=4, p=4).
 		//    Catches accidental changes to ARGON2ID_STD_M/T/P defines.
 		static const byte expectedStandard[] = {
-			0xdb, 0x09, 0xd5, 0xc6, 0x71, 0x40, 0xd8, 0x6f,
-			0xf6, 0x99, 0x19, 0x39, 0xab, 0x67, 0x0b, 0x1c,
-			0xd2, 0x3f, 0x0f, 0xf8, 0x34, 0x21, 0x64, 0x07,
-			0xce, 0xe4, 0x00, 0xda, 0x2a, 0x04, 0x0e, 0x80
+			0xf6, 0x89, 0x97, 0x21, 0x31, 0x46, 0x6b, 0xcd,
+			0x13, 0xc9, 0x2e, 0xa8, 0x4f, 0xbd, 0xa7, 0xda,
+			0xff, 0x4c, 0x42, 0x65, 0x53, 0x03, 0x86, 0xc2,
+			0x56, 0xcc, 0x07, 0xf1, 0x55, 0x16, 0x35, 0x80
 		};
 
 		rc = derive_key_argon2id (
@@ -932,20 +976,16 @@ namespace Basalt
 			(char *) "somesalt01234567", 16,
 			(char *) hash, 32);
 
-		if (rc != 0)
+		if (rc != 0 || memcmp (hash, expectedStandard, 32) != 0)
 			throw TestFailed (SRC_POS);
 
-		if (memcmp (hash, expectedStandard, 32) != 0)
-			throw TestFailed (SRC_POS);
-
-		// 3. Full Maximum Security KDF (m=1 GB, t=4, p=8).
-		//    Tests the production C wrapper with hardcoded parameters.
+		// 4. Full Maximum Security KDF (m=1 GB, t=4, p=8).
 		//    Catches accidental changes to ARGON2ID_MAX_M/T/P defines.
 		static const byte expectedMaximum[] = {
-			0x83, 0xcb, 0x29, 0xa9, 0x2c, 0xa2, 0x8d, 0x8d,
-			0x9c, 0x88, 0x8e, 0xe6, 0x9d, 0xa0, 0x61, 0x6d,
-			0xdc, 0x48, 0xcc, 0xbf, 0x52, 0x0b, 0xa0, 0xe2,
-			0xa3, 0x5d, 0x15, 0x69, 0xde, 0x6c, 0x04, 0x6a
+			0xe1, 0xfc, 0x26, 0x52, 0x86, 0xfb, 0xa2, 0xd5,
+			0xb1, 0xa6, 0x50, 0x82, 0xcd, 0xd9, 0xa0, 0xad,
+			0xf0, 0xe9, 0xa8, 0x19, 0xdf, 0x35, 0xa8, 0x39,
+			0x74, 0x80, 0x51, 0x29, 0x9d, 0x16, 0x71, 0xf9
 		};
 
 		rc = derive_key_argon2id_max (
@@ -953,10 +993,56 @@ namespace Basalt
 			(char *) "somesalt01234567", 16,
 			(char *) hash, 32);
 
-		if (rc != 0)
+		if (rc != 0 || memcmp (hash, expectedMaximum, 32) != 0)
 			throw TestFailed (SRC_POS);
 
-		if (memcmp (hash, expectedMaximum, 32) != 0)
+		// 5-7. Open-only Basalt <= 1.1.x variant (non-standard compression).
+		//      These are the values the old implementation produced; they
+		//      guarantee that volumes created by those versions still open.
+		static const byte expectedLegacyReduced[] = {
+			0x37, 0x4f, 0xa1, 0x1c, 0x1d, 0xef, 0x2e, 0x88,
+			0xb6, 0x28, 0xcb, 0xa2, 0xeb, 0x79, 0xbf, 0x27,
+			0xf1, 0x0e, 0x88, 0xcc, 0xbb, 0x9e, 0x16, 0x0b,
+			0x88, 0x4d, 0x3e, 0x7a, 0x71, 0xf0, 0x04, 0x64
+		};
+
+		rc = derive_key_argon2id_test_legacy (
+			(char *) "password", 8,
+			(char *) "somesalt01234567", 16,
+			3, 32, 4,
+			(char *) hash, 32);
+
+		if (rc != 0 || memcmp (hash, expectedLegacyReduced, 32) != 0)
+			throw TestFailed (SRC_POS);
+
+		static const byte expectedLegacyStandard[] = {
+			0xdb, 0x09, 0xd5, 0xc6, 0x71, 0x40, 0xd8, 0x6f,
+			0xf6, 0x99, 0x19, 0x39, 0xab, 0x67, 0x0b, 0x1c,
+			0xd2, 0x3f, 0x0f, 0xf8, 0x34, 0x21, 0x64, 0x07,
+			0xce, 0xe4, 0x00, 0xda, 0x2a, 0x04, 0x0e, 0x80
+		};
+
+		rc = derive_key_argon2id_legacy (
+			(char *) "password", 8,
+			(char *) "somesalt01234567", 16,
+			(char *) hash, 32);
+
+		if (rc != 0 || memcmp (hash, expectedLegacyStandard, 32) != 0)
+			throw TestFailed (SRC_POS);
+
+		static const byte expectedLegacyMaximum[] = {
+			0x83, 0xcb, 0x29, 0xa9, 0x2c, 0xa2, 0x8d, 0x8d,
+			0x9c, 0x88, 0x8e, 0xe6, 0x9d, 0xa0, 0x61, 0x6d,
+			0xdc, 0x48, 0xcc, 0xbf, 0x52, 0x0b, 0xa0, 0xe2,
+			0xa3, 0x5d, 0x15, 0x69, 0xde, 0x6c, 0x04, 0x6a
+		};
+
+		rc = derive_key_argon2id_max_legacy (
+			(char *) "password", 8,
+			(char *) "somesalt01234567", 16,
+			(char *) hash, 32);
+
+		if (rc != 0 || memcmp (hash, expectedLegacyMaximum, 32) != 0)
 			throw TestFailed (SRC_POS);
 	}
 }

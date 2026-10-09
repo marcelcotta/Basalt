@@ -28,11 +28,15 @@ namespace Basalt
 		static shared_ptr <Pkcs5Kdf> GetAlgorithm (const wstring &name, bool allowLegacy = false);
 		static shared_ptr <Pkcs5Kdf> GetAlgorithm (const Hash &hash, bool allowLegacy = false);
 		static Pkcs5KdfList GetAvailableAlgorithms ();
+		static shared_ptr <Pkcs5Kdf> GetUpgradeTarget (const wstring &name, int iterationCount);
 		virtual shared_ptr <Hash> GetHash () const = 0;
 		virtual int GetIterationCount () const = 0;
 		virtual wstring GetName () const = 0;
 		virtual bool IsDeprecated () const { return GetHash()->IsDeprecated(); }
 		virtual bool IsLegacy () const { return false; }
+		// Open-only KDFs are tried when opening volumes but are never selected
+		// for creating headers (GetAlgorithm skips them).
+		virtual bool IsOpenOnly () const { return false; }
 
 	protected:
 		Pkcs5Kdf ();
@@ -145,6 +149,49 @@ namespace Basalt
 	private:
 		KdfArgon2idMax (const KdfArgon2idMax &);
 		KdfArgon2idMax &operator= (const KdfArgon2idMax &);
+	};
+
+	// --- Open-only Argon2id variants of Basalt <= 1.1.x ---
+	// Those versions used a compression function that deviates from RFC 9106.
+	// These classes reproduce it so that existing volumes can be opened and
+	// upgraded to the standard KDF; they are never used for new headers.
+
+	class KdfArgon2idLegacy : public Pkcs5Kdf
+	{
+	public:
+		KdfArgon2idLegacy () { }
+		virtual ~KdfArgon2idLegacy () { }
+
+		virtual void DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const;
+		virtual shared_ptr <Hash> GetHash () const { return shared_ptr <Hash> (new Argon2idHash); }
+		virtual int GetIterationCount () const { return 4; }
+		virtual wstring GetName () const { return L"Argon2id (legacy)"; }
+		virtual bool IsDeprecated () const { return true; }
+		virtual bool IsLegacy () const { return true; }
+		virtual bool IsOpenOnly () const { return true; }
+
+	private:
+		KdfArgon2idLegacy (const KdfArgon2idLegacy &);
+		KdfArgon2idLegacy &operator= (const KdfArgon2idLegacy &);
+	};
+
+	class KdfArgon2idMaxLegacy : public Pkcs5Kdf
+	{
+	public:
+		KdfArgon2idMaxLegacy () { }
+		virtual ~KdfArgon2idMaxLegacy () { }
+
+		virtual void DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const;
+		virtual shared_ptr <Hash> GetHash () const { return shared_ptr <Hash> (new Argon2idMaxHash); }
+		virtual int GetIterationCount () const { return 4; }
+		virtual wstring GetName () const { return L"Argon2id-Max (legacy)"; }
+		virtual bool IsDeprecated () const { return true; }
+		virtual bool IsLegacy () const { return true; }
+		virtual bool IsOpenOnly () const { return true; }
+
+	private:
+		KdfArgon2idMaxLegacy (const KdfArgon2idMaxLegacy &);
+		KdfArgon2idMaxLegacy &operator= (const KdfArgon2idMaxLegacy &);
 	};
 
 	// --- Legacy KDFs (original TrueCrypt iteration counts for opening old volumes) ---

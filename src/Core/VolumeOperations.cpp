@@ -425,26 +425,28 @@ namespace Basalt
 		if (!mountedVolume || suppressPrompt)
 			return false;
 
-		if (mountedVolume->Pkcs5IterationCount <= 0 || mountedVolume->Pkcs5IterationCount >= 10000)
-			return false;
-
-		// Argon2id variants use low t_cost (4) which is correct — not legacy
-		if (mountedVolume->Pkcs5PrfName == L"Argon2id" || mountedVolume->Pkcs5PrfName == L"Argon2id-Max")
+		// Legacy KDFs: TrueCrypt iteration counts and the non-standard Argon2id of
+		// Basalt <= 1.1.x. Everything else needs no upgrade.
+		shared_ptr <Pkcs5Kdf> newKdf = Pkcs5Kdf::GetUpgradeTarget (mountedVolume->Pkcs5PrfName, (int) mountedVolume->Pkcs5IterationCount);
+		if (!newKdf)
 			return false;
 
 		if (!options.Password || options.Password->IsEmpty())
 			return false;
 
+		bool argon2Migration = mountedVolume->Pkcs5PrfName.find (L"Argon2id") == 0;
+
 		try
 		{
-			shared_ptr <Pkcs5Kdf> newKdf = Pkcs5Kdf::GetAlgorithm (mountedVolume->Pkcs5PrfName);
-
-			wstring message =
-				L"This volume uses legacy key derivation (" + mountedVolume->Pkcs5PrfName +
-				L", " + StringConverter::ToWide (StringConverter::ToSingle ((uint64) mountedVolume->Pkcs5IterationCount)) +
-				L" iterations).\n\nModern iterations: " +
-				StringConverter::ToWide (StringConverter::ToSingle ((uint64) newKdf->GetIterationCount ())) +
-				L"\n\nUpgrade volume header to modern iterations?";
+			wstring message = argon2Migration
+				? L"This volume header was created by Basalt 1.1 or earlier (" + mountedVolume->Pkcs5PrfName +
+				  L"), whose Argon2id implementation deviates from the RFC 9106 standard.\n\n"
+				  L"Upgrade volume header to standard " + newKdf->GetName() + L"?"
+				: L"This volume uses legacy key derivation (" + mountedVolume->Pkcs5PrfName +
+				  L", " + StringConverter::ToWide (StringConverter::ToSingle ((uint64) mountedVolume->Pkcs5IterationCount)) +
+				  L" iterations).\n\nModern iterations: " +
+				  StringConverter::ToWide (StringConverter::ToSingle ((uint64) newKdf->GetIterationCount ())) +
+				  L"\n\nUpgrade volume header to modern iterations?";
 
 			if (!cb.AskYesNo (message, false))
 				return false;
@@ -473,9 +475,10 @@ namespace Basalt
 
 			cb.EndBusy ();
 
-			cb.ShowInfo (
-				L"Volume header upgraded successfully.\nNew iterations: " +
-				StringConverter::ToWide (StringConverter::ToSingle ((uint64) newKdf->GetIterationCount ())));
+			cb.ShowInfo (argon2Migration
+				? L"Volume header upgraded successfully.\nNew key derivation: " + newKdf->GetName()
+				: L"Volume header upgraded successfully.\nNew iterations: " +
+				  StringConverter::ToWide (StringConverter::ToSingle ((uint64) newKdf->GetIterationCount ())));
 
 			return true;
 		}

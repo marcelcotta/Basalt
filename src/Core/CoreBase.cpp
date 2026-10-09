@@ -29,7 +29,14 @@ namespace Basalt
 			throw PasswordEmpty (SRC_POS);
 
 		if (!newPkcs5Kdf)
+		{
 			newPkcs5Kdf = openVolume->GetPkcs5Kdf();
+
+			// Never write new headers with an open-only KDF (pre-RFC Argon2id);
+			// switch to its standard counterpart instead.
+			if (newPkcs5Kdf->IsOpenOnly())
+				newPkcs5Kdf = Pkcs5Kdf::GetAlgorithm (*newPkcs5Kdf->GetHash());
+		}
 
 		if ((openVolume->GetHeader()->GetFlags() & TC_HEADER_FLAG_ENCRYPTED_SYSTEM) != 0
 			&& openVolume->GetType() == VolumeType::Hidden

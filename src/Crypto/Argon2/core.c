@@ -4,6 +4,8 @@
  * License: CC0 1.0 Universal / Apache License 2.0
  *
  * Modification: clear_internal_memory uses memset_s (Basalt security standard).
+ * fill_block() follows RFC 9106; fill_block_basalt_legacy() preserves the
+ * non-standard compression of Basalt <= 1.1.x for opening old volumes.
  */
 
 #include <string.h>
@@ -204,6 +206,38 @@ int validate_inputs(const argon2_context *context) {
     return ARGON2_OK;
 }
 
+/* BlaMka G function (RFC 9106, Section 3.6) */
+#define BLAMKA_G(a, b, c, d)                                            \
+do {                                                                    \
+    a = a + b + 2 * ((uint64_t)(uint32_t)a) * ((uint64_t)(uint32_t)b);  \
+    d = rotr64(d ^ a, 32);                                              \
+    c = c + d + 2 * ((uint64_t)(uint32_t)c) * ((uint64_t)(uint32_t)d);  \
+    b = rotr64(b ^ c, 24);                                              \
+    a = a + b + 2 * ((uint64_t)(uint32_t)a) * ((uint64_t)(uint32_t)b);  \
+    d = rotr64(d ^ a, 16);                                              \
+    c = c + d + 2 * ((uint64_t)(uint32_t)c) * ((uint64_t)(uint32_t)d);  \
+    b = rotr64(b ^ c, 63);                                              \
+} while ((void)0, 0)
+
+/* Permutation P applied to 16 words (RFC 9106, Section 3.6) */
+#define BLAMKA_ROUND(v0, v1, v2, v3, v4, v5, v6, v7,                    \
+                     v8, v9, v10, v11, v12, v13, v14, v15)              \
+do {                                                                    \
+    BLAMKA_G(v0, v4, v8,  v12);                                         \
+    BLAMKA_G(v1, v5, v9,  v13);                                         \
+    BLAMKA_G(v2, v6, v10, v14);                                         \
+    BLAMKA_G(v3, v7, v11, v15);                                         \
+    BLAMKA_G(v0, v5, v10, v15);                                         \
+    BLAMKA_G(v1, v6, v11, v12);                                         \
+    BLAMKA_G(v2, v7, v8,  v13);                                         \
+    BLAMKA_G(v3, v4, v9,  v14);                                         \
+} while ((void)0, 0)
+
+/*
+ * Compression function G (RFC 9106, Section 3.5):
+ *   R = ref ^ prev; Q = P(R) applied to rows and columns; out = Q ^ R
+ * For Argon2 v1.3, passes after the first XOR the result into next_block.
+ */
 void fill_block(const block *prev_block, const block *ref_block,
                 block *next_block, int with_xor) {
     block blockR, tmp;
@@ -212,25 +246,60 @@ void fill_block(const block *prev_block, const block *ref_block,
     copy_block(&blockR, ref_block);
     xor_block(&blockR, prev_block);
     copy_block(&tmp, &blockR);
-    /* Now blockR = ref_block XOR prev_block */
+    /* Now blockR = tmp = ref_block XOR prev_block */
+    if (with_xor) {
+        /* tmp = ref_block XOR prev_block XOR next_block */
+        xor_block(&tmp, next_block);
+    }
 
-    /* Apply Blake2 on columns of 64-bit words: (0,1,...,15), then
+    /* Apply P on columns of 64-bit words: (0,1,...,15), then
        (16,17,..31)... finally (112,...127) */
     for (i = 0; i < 8; ++i) {
-        /* Operate on 16 uint64's = 128 bytes at a time */
         uint64_t *v = &blockR.v[16 * i];
-        /* Blake2b round function */
-        #define BLAMKA_G(a, b, c, d)                                            \
-        do {                                                                    \
-            a = a + b + 2 * ((uint64_t)(uint32_t)a) * ((uint64_t)(uint32_t)b);  \
-            d = rotr64(d ^ a, 32);                                              \
-            c = c + d + 2 * ((uint64_t)(uint32_t)c) * ((uint64_t)(uint32_t)d);  \
-            b = rotr64(b ^ c, 24);                                              \
-            a = a + b + 2 * ((uint64_t)(uint32_t)a) * ((uint64_t)(uint32_t)b);  \
-            d = rotr64(d ^ a, 16);                                              \
-            c = c + d + 2 * ((uint64_t)(uint32_t)c) * ((uint64_t)(uint32_t)d);  \
-            b = rotr64(b ^ c, 63);                                              \
-        } while ((void)0, 0)
+        BLAMKA_ROUND(v[0], v[1], v[2],  v[3],  v[4],  v[5],  v[6],  v[7],
+                     v[8], v[9], v[10], v[11], v[12], v[13], v[14], v[15]);
+    }
+
+    /* Apply P on rows of 64-bit words: (0,1,16,17,...112,113),
+       then (2,3,18,19,...,114,115).. finally (14,15,30,31,...,126,127) */
+    for (i = 0; i < 8; ++i) {
+        uint64_t *v = blockR.v;
+        BLAMKA_ROUND(v[2 * i],      v[2 * i + 1],   v[2 * i + 16],  v[2 * i + 17],
+                     v[2 * i + 32], v[2 * i + 33],  v[2 * i + 48],  v[2 * i + 49],
+                     v[2 * i + 64], v[2 * i + 65],  v[2 * i + 80],  v[2 * i + 81],
+                     v[2 * i + 96], v[2 * i + 97],  v[2 * i + 112], v[2 * i + 113]);
+    }
+
+    copy_block(next_block, &tmp);
+    xor_block(next_block, &blockR);
+}
+
+/*
+ * FROZEN — do not modify. Compression function shipped in Basalt <= 1.1.x.
+ *
+ * It differs from RFC 9106 in two ways:
+ *   1. with_xor is ignored (passes > 0 overwrite instead of XOR, as in
+ *      Argon2 v1.0, although the version number 0x13 is hashed into H0).
+ *   2. In the row round the diagonal step feeds the wrong words into the
+ *      'd' input of G (v13/v14/v15/v12 instead of v15/v12/v13/v14).
+ *
+ * Volumes created by Basalt <= 1.1.x derive their header key with this
+ * function, so it is kept bit-for-bit to keep them openable. It is only
+ * reachable through the open-only "(legacy)" KDFs.
+ */
+void fill_block_basalt_legacy(const block *prev_block, const block *ref_block,
+                              block *next_block, int with_xor) {
+    block blockR, tmp;
+    unsigned i;
+
+    (void)with_xor;
+
+    copy_block(&blockR, ref_block);
+    xor_block(&blockR, prev_block);
+    copy_block(&tmp, &blockR);
+
+    for (i = 0; i < 8; ++i) {
+        uint64_t *v = &blockR.v[16 * i];
 
         BLAMKA_G(v[0], v[4], v[8],  v[12]);
         BLAMKA_G(v[1], v[5], v[9],  v[13]);
@@ -242,10 +311,7 @@ void fill_block(const block *prev_block, const block *ref_block,
         BLAMKA_G(v[3], v[4], v[9],  v[14]);
     }
 
-    /* Apply Blake2 on rows of 64-bit words: (0,1,16,17,...112,113),
-       then (2,3,18,19,...,114,115).. finally (14,15,30,31,...,126,127) */
     for (i = 0; i < 8; ++i) {
-        /* Rearranged to operate on rows */
         uint64_t *v0 = &blockR.v[2 * i];
         uint64_t *v1 = &blockR.v[2 * i + 16];
         uint64_t *v2 = &blockR.v[2 * i + 32];
@@ -263,13 +329,14 @@ void fill_block(const block *prev_block, const block *ref_block,
         BLAMKA_G(*(v0+1), *v3, *(v5+1), *v7);
         BLAMKA_G(*v1, *(v3+1), *v4, *(v7+1));
         BLAMKA_G(*(v1+1), *v2, *(v4+1), *v6);
-
-        #undef BLAMKA_G
     }
 
     copy_block(next_block, &tmp);
     xor_block(next_block, &blockR);
 }
+
+#undef BLAMKA_ROUND
+#undef BLAMKA_G
 
 void initial_hash(uint8_t *blockhash, argon2_context *context,
                   argon2_type type) {

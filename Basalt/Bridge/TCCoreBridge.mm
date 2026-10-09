@@ -438,7 +438,7 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 
         shared_ptr <VolumeInfo> vol = Core->MountVolume (cppOpts);
 
-        // Offer KDF upgrade for legacy volumes (iteration count < 10000)
+        // Offer KDF upgrade for legacy volumes (TrueCrypt iterations, pre-RFC Argon2id)
         [self offerKdfUpgrade:vol options:cppOpts];
 
         return [[TCVolumeInfo alloc] initWithCppInfo:vol];
@@ -459,11 +459,16 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
 // on the main thread via performSelectorOnMainThread (no dispatch_sync needed during work).
 - (void)offerKdfUpgrade:(shared_ptr <VolumeInfo> &)vol options:(MountOptions &)opts
 {
-    if (!vol || vol->Pkcs5IterationCount <= 0 || vol->Pkcs5IterationCount >= 10000)
+    if (!vol)
         return;
 
-    // Argon2id variants use low t_cost (4) which is correct — not legacy
-    if (vol->Pkcs5PrfName == L"Argon2id" || vol->Pkcs5PrfName == L"Argon2id-Max")
+    // Legacy KDFs: TrueCrypt iteration counts and the non-standard Argon2id of
+    // Basalt <= 1.1.x. Everything else needs no upgrade.
+    shared_ptr <Pkcs5Kdf> newKdf;
+    try { newKdf = Pkcs5Kdf::GetUpgradeTarget (vol->Pkcs5PrfName, (int) vol->Pkcs5IterationCount); }
+    catch (...) { return; }
+
+    if (!newKdf)
         return;
 
     if (!opts.Password || opts.Password->IsEmpty ())
@@ -473,24 +478,36 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
     if ([[NSUserDefaults standardUserDefaults] boolForKey:@"suppressKdfUpgradePrompt"])
         return;
 
-    // Determine modern iteration count for display
-    shared_ptr <Pkcs5Kdf> newKdf;
-    try { newKdf = Pkcs5Kdf::GetAlgorithm (vol->Pkcs5PrfName); }
-    catch (...) { return; }
+    bool argon2Migration = vol->Pkcs5PrfName.find (L"Argon2id") == 0;
 
     NSString *currentIter = [NSString stringWithFormat:@"%u", (unsigned) vol->Pkcs5IterationCount];
     NSString *modernIter = [NSString stringWithFormat:@"%u", (unsigned) newKdf->GetIterationCount ()];
     NSString *hashName = ToNS (vol->Pkcs5PrfName);
+    NSString *newKdfName = ToNS (newKdf->GetName ());
 
-    NSString *message = [NSString stringWithFormat:
-        @"This volume uses legacy key derivation (%@, %@ iterations).\n\n"
-        @"Modern volumes use %@ iterations — this makes brute-force attacks against "
-        @"your password significantly harder.\n\n"
-        @"Upgrading re-encrypts the volume header with stronger key derivation. "
-        @"Your data, password, and encryption remain unchanged.\n\n"
-        @"⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. "
-        @"If you are unsure, choose \"Not Now\".",
-        hashName, currentIter, modernIter];
+    NSString *message;
+    if (argon2Migration)
+    {
+        message = [NSString stringWithFormat:
+            @"This volume header was created by Basalt 1.1 or earlier (%@). "
+            @"Those versions used an Argon2id implementation that deviates from the "
+            @"RFC 9106 standard.\n\n"
+            @"Upgrading re-encrypts the volume header with standard %@. "
+            @"Your data, password, and encryption remain unchanged.",
+            hashName, newKdfName];
+    }
+    else
+    {
+        message = [NSString stringWithFormat:
+            @"This volume uses legacy key derivation (%@, %@ iterations).\n\n"
+            @"Modern volumes use %@ iterations — this makes brute-force attacks against "
+            @"your password significantly harder.\n\n"
+            @"Upgrading re-encrypts the volume header with stronger key derivation. "
+            @"Your data, password, and encryption remain unchanged.\n\n"
+            @"⚠ After upgrading, the volume can no longer be opened by TrueCrypt 7.1a. "
+            @"If you are unsure, choose \"Not Now\".",
+            hashName, currentIter, modernIter];
+    }
 
     // Show 3-button dialog on main thread
     __block NSInteger choice = 1; // default: Not Now
@@ -557,8 +574,11 @@ static shared_ptr <KeyfileList> ToKeyfileList (NSArray<NSString *> *paths)
         vol = Core->MountVolume (opts);
 
         // Show success
-        NSString *successMsg = [NSString stringWithFormat:
-            @"Volume header upgraded successfully.\nNew iterations: %@", modernIter];
+        NSString *successMsg = argon2Migration
+            ? [NSString stringWithFormat:
+                @"Volume header upgraded successfully.\nNew key derivation: %@", newKdfName]
+            : [NSString stringWithFormat:
+                @"Volume header upgraded successfully.\nNew iterations: %@", modernIter];
 
         dispatch_block_t infoBlock = ^{
             NSAlert *alert = [[NSAlert alloc] init];

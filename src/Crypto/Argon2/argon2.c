@@ -12,6 +12,10 @@
 #include "core.h"
 
 int argon2_ctx(argon2_context *context, argon2_type type) {
+    return argon2_ctx_ex(context, type, 0);
+}
+
+int argon2_ctx_ex(argon2_context *context, argon2_type type, int basalt_legacy) {
     /* 1. Validate all inputs */
     int result = validate_inputs(context);
     uint32_t memory_blocks, segment_length;
@@ -47,6 +51,7 @@ int argon2_ctx(argon2_context *context, argon2_type type) {
     instance.threads = context->threads;
     instance.type = type;
     instance.print_internals = 0;
+    instance.basalt_legacy = basalt_legacy ? 1 : 0;
 
     if (instance.threads > instance.lanes) {
         instance.threads = instance.lanes;
@@ -72,11 +77,11 @@ int argon2_ctx(argon2_context *context, argon2_type type) {
     return ARGON2_OK;
 }
 
-int argon2id_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
-                      const uint32_t parallelism, const void *pwd,
-                      const size_t pwdlen, const void *salt,
-                      const size_t saltlen, void *hash,
-                      const size_t hashlen) {
+static int argon2id_hash_raw_impl(const uint32_t t_cost, const uint32_t m_cost,
+                                  const uint32_t parallelism, const void *pwd,
+                                  const size_t pwdlen, const void *salt,
+                                  const size_t saltlen, void *hash,
+                                  const size_t hashlen, int basalt_legacy) {
     argon2_context context;
     int result;
 
@@ -101,13 +106,31 @@ int argon2id_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
     context.flags = ARGON2_DEFAULT_FLAGS;
     context.version = ARGON2_VERSION_NUMBER;
 
-    result = argon2_ctx(&context, Argon2_id);
+    result = argon2_ctx_ex(&context, Argon2_id, basalt_legacy);
 
     if (result != ARGON2_OK) {
         clear_internal_memory(hash, hashlen);
     }
 
     return result;
+}
+
+int argon2id_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
+                      const uint32_t parallelism, const void *pwd,
+                      const size_t pwdlen, const void *salt,
+                      const size_t saltlen, void *hash,
+                      const size_t hashlen) {
+    return argon2id_hash_raw_impl(t_cost, m_cost, parallelism, pwd, pwdlen,
+                                  salt, saltlen, hash, hashlen, 0);
+}
+
+int argon2id_hash_raw_basalt_legacy(const uint32_t t_cost, const uint32_t m_cost,
+                                    const uint32_t parallelism, const void *pwd,
+                                    const size_t pwdlen, const void *salt,
+                                    const size_t saltlen, void *hash,
+                                    const size_t hashlen) {
+    return argon2id_hash_raw_impl(t_cost, m_cost, parallelism, pwd, pwdlen,
+                                  salt, saltlen, hash, hashlen, 1);
 }
 
 const char *argon2_error_message(int error_code) {

@@ -30,6 +30,9 @@ namespace Basalt
 	{
 		for (const auto &kdf : GetAvailableAlgorithms())
 		{
+			if (kdf->IsOpenOnly())
+				continue;
+
 			if (kdf->GetName() == name && (allowLegacy ? kdf->IsLegacy() : !kdf->IsLegacy()))
 				return kdf;
 		}
@@ -40,11 +43,32 @@ namespace Basalt
 	{
 		for (const auto &kdf : GetAvailableAlgorithms())
 		{
+			if (kdf->IsOpenOnly())
+				continue;
+
 			if (typeid (*kdf->GetHash()) == typeid (hash) && (allowLegacy ? kdf->IsLegacy() : !kdf->IsLegacy()))
 				return kdf;
 		}
 
 		throw ParameterIncorrect (SRC_POS);
+	}
+
+	shared_ptr <Pkcs5Kdf> Pkcs5Kdf::GetUpgradeTarget (const wstring &name, int iterationCount)
+	{
+		// A mounted volume reports its KDF by name and iteration count; together
+		// they identify the KDF (legacy and modern PBKDF2 share names).
+		for (const auto &kdf : GetAvailableAlgorithms())
+		{
+			if (kdf->GetName() != name || kdf->GetIterationCount() != iterationCount)
+				continue;
+
+			if (!kdf->IsLegacy())
+				return shared_ptr <Pkcs5Kdf>();
+
+			return GetAlgorithm (*kdf->GetHash());
+		}
+
+		return shared_ptr <Pkcs5Kdf>();
 	}
 
 	Pkcs5KdfList Pkcs5Kdf::GetAvailableAlgorithms ()
@@ -57,9 +81,12 @@ namespace Basalt
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacWhirlpool_Legacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha1_Legacy ()));
 
-		// Argon2id: Basalt default (Max first — new volumes use this)
+		// Argon2id: Basalt default (Max first — new volumes use this).
+		// Each RFC 9106 KDF is followed by its open-only Basalt <= 1.1.x variant.
 		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idMax ()));
+		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idMaxLegacy ()));
 		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2id ()));
+		l.push_back (shared_ptr <Pkcs5Kdf> (new KdfArgon2idLegacy ()));
 
 		// Modern PBKDF2: SHA-512 first (TC/VC default), then remaining
 		l.push_back (shared_ptr <Pkcs5Kdf> (new Pkcs5HmacSha512 ()));
@@ -95,6 +122,30 @@ namespace Basalt
 	{
 		ValidateParameters (key, password, salt, iterationCount);
 		int rc = derive_key_argon2id_max (
+			(char *) password.DataPtr(), (int) password.Size(),
+			(char *) salt.Get(), (int) salt.Size(),
+			(char *) key.Get(), (int) key.Size());
+		if (rc != 0)
+			throw ParameterIncorrect (SRC_POS);
+	}
+
+	// --- Open-only Argon2id variants of Basalt <= 1.1.x ---
+
+	void KdfArgon2idLegacy::DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const
+	{
+		ValidateParameters (key, password, salt, iterationCount);
+		int rc = derive_key_argon2id_legacy (
+			(char *) password.DataPtr(), (int) password.Size(),
+			(char *) salt.Get(), (int) salt.Size(),
+			(char *) key.Get(), (int) key.Size());
+		if (rc != 0)
+			throw ParameterIncorrect (SRC_POS);
+	}
+
+	void KdfArgon2idMaxLegacy::DeriveKey (const BufferPtr &key, const VolumePassword &password, const ConstBufferPtr &salt, int iterationCount) const
+	{
+		ValidateParameters (key, password, salt, iterationCount);
+		int rc = derive_key_argon2id_max_legacy (
 			(char *) password.DataPtr(), (int) password.Size(),
 			(char *) salt.Get(), (int) salt.Size(),
 			(char *) key.Get(), (int) key.Size());

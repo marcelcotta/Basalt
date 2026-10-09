@@ -191,12 +191,14 @@ struct VolumeRow: View {
                     Text(volume.encryptionAlgorithmName)
 
                     if volume.pkcs5PrfName.hasPrefix("Argon2id") {
+                        // "(legacy)" = pre-RFC 9106 Argon2id of Basalt <= 1.1.x (upgrade offered on mount)
+                        let badgeColor: Color = volume.pkcs5PrfName.hasSuffix("(legacy)") ? .orange : .green
                         Label(volume.pkcs5PrfName, systemImage: "shield.checkered")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.green)
+                            .foregroundColor(badgeColor)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 1)
-                            .background(Color.green.opacity(0.15))
+                            .background(badgeColor.opacity(0.15))
                             .cornerRadius(4)
                     } else {
                         Text(volume.pkcs5PrfName)

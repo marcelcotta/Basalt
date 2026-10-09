@@ -30,6 +30,7 @@ typedef struct Argon2_instance_t {
     uint32_t threads;        /* Number of threads */
     argon2_type type;
     int print_internals;     /* Whether to print internals */
+    int basalt_legacy;       /* 1 = Basalt <= 1.1.x compression (non-RFC, open-only) */
     argon2_context *context_ptr; /* Points to original context */
 } argon2_instance_t;
 
@@ -46,9 +47,21 @@ typedef struct Argon2_position_t {
 /* Context validation */
 int validate_inputs(const argon2_context *context);
 
-/* Fills a memory block */
+/* Fills a memory block (RFC 9106 compression function G) */
 void fill_block(const block *prev_block, const block *ref_block,
                 block *next_block, int with_xor);
+
+/*
+ * Basalt <= 1.1.x compression function. It deviates from RFC 9106 (ignores
+ * with_xor and permutes the row-round diagonal inputs) and is kept frozen
+ * only so that volumes created by those versions can still be opened.
+ * Never use it for new key derivations.
+ */
+void fill_block_basalt_legacy(const block *prev_block, const block *ref_block,
+                              block *next_block, int with_xor);
+
+/* Run the main Argon2 function, optionally with the Basalt legacy compression */
+int argon2_ctx_ex(argon2_context *context, argon2_type type, int basalt_legacy);
 
 /* Initialize Argon2 */
 int initialize(argon2_instance_t *instance, argon2_context *context);

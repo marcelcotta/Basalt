@@ -51,12 +51,58 @@ int derive_key_argon2id_max (char *pwd, int pwd_len,
     );
 }
 
+/*
+ * Basalt <= 1.1.x shipped a non-standard Argon2id compression function.
+ * These variants reproduce it bit-for-bit so that volumes created by those
+ * versions can still be opened (and upgraded). Never use them for new keys.
+ */
+int derive_key_argon2id_legacy (char *pwd, int pwd_len,
+                                char *salt, int salt_len,
+                                char *dk, int dklen)
+{
+    return argon2id_hash_raw_basalt_legacy (
+        ARGON2ID_STD_T_COST,
+        ARGON2ID_STD_M_COST,
+        ARGON2ID_STD_P,
+        pwd, (size_t) pwd_len,
+        salt, (size_t) salt_len,
+        dk, (size_t) dklen
+    );
+}
+
+int derive_key_argon2id_max_legacy (char *pwd, int pwd_len,
+                                    char *salt, int salt_len,
+                                    char *dk, int dklen)
+{
+    return argon2id_hash_raw_basalt_legacy (
+        ARGON2ID_MAX_T_COST,
+        ARGON2ID_MAX_M_COST,
+        ARGON2ID_MAX_P,
+        pwd, (size_t) pwd_len,
+        salt, (size_t) salt_len,
+        dk, (size_t) dklen
+    );
+}
+
 int derive_key_argon2id_test (char *pwd, int pwd_len,
                               char *salt, int salt_len,
                               uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
                               char *dk, int dklen)
 {
     return argon2id_hash_raw (
+        t_cost, m_cost, parallelism,
+        pwd, (size_t) pwd_len,
+        salt, (size_t) salt_len,
+        dk, (size_t) dklen
+    );
+}
+
+int derive_key_argon2id_test_legacy (char *pwd, int pwd_len,
+                                     char *salt, int salt_len,
+                                     uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
+                                     char *dk, int dklen)
+{
+    return argon2id_hash_raw_basalt_legacy (
         t_cost, m_cost, parallelism,
         pwd, (size_t) pwd_len,
         salt, (size_t) salt_len,

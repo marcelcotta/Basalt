@@ -179,6 +179,16 @@ int argon2id_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
                       const size_t hashlen);
 
 /**
+ * Same as argon2id_hash_raw(), but uses the non-standard compression function
+ * of Basalt <= 1.1.x. Only for opening volumes created by those versions.
+ */
+int argon2id_hash_raw_basalt_legacy(const uint32_t t_cost, const uint32_t m_cost,
+                                    const uint32_t parallelism, const void *pwd,
+                                    const size_t pwdlen, const void *salt,
+                                    const size_t saltlen, void *hash,
+                                    const size_t hashlen);
+
+/**
  * Main Argon2 function — called by the type-specific entry points.
  */
 int argon2_ctx(argon2_context *context, argon2_type type);
