@@ -29,9 +29,9 @@ Rosetta), on the oldest and newest supported macOS, with the build that
 9. Switch the system language (e.g. German, Japanese): menus, sheets, errors and
    the upgrade prompt are translated, no text is clipped (Settings window, wizard).
 10. After dismounting all volumes and quitting, `ps -ax | grep -i [b]asalt` lists
-    no process (SECURITY.md #51).
+    no process (the server ends after the dismount).
 11. Mount a volume, `kill -9` the app's main process: within a few seconds the
-    volume is dismounted and no Basalt process is left (SECURITY.md #52). With
+    volume is dismounted and no Basalt process is left (the service dismounts after a crash). With
     "dismount on quit" off, a regular quit keeps the volume mounted.
 12. Upgrade the header of a device-hosted volume and change the password of one:
     both work as a non-administrator (the device is handed over temporarily and

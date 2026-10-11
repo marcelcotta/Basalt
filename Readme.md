@@ -91,13 +91,13 @@ switch to Argon2id-Max. Only the header is re-encrypted, but afterwards only
 Basalt can open the volume — choose "Not Now" if you still need it elsewhere.
 
 *VeraCrypt volumes using Camellia or Kuznyechik are not supported — see
-[SECURITY.md](SECURITY.md#cipher-selection-why-not-camellia-or-kuznyechik) for
+[SECURITY.md](SECURITY.md#cipher-selection) for
 the rationale. VeraCrypt volumes using the SHA-256, BLAKE2s-256 or Streebog PRF,
 or a non-default PIM, cannot be opened either.
 
 Volumes created with Basalt 1.1.x and Argon2id still open; on mount Basalt offers
 to upgrade their header to standard (RFC 9106) Argon2id — see
-[SECURITY.md](SECURITY.md#35-argon2id-now-conforms-to-rfc-9106-existing-volumes-stay-openable).
+[SECURITY.md](SECURITY.md#key-derivation).
 
 
 ## Download
@@ -124,10 +124,9 @@ The signature must show `Developer ID Application: Marcel Cotta (98YJA8W8B3)`.
 
 ### Upgrade from 1.0, 1.1 and 1.1.1
 
-The releases 1.0, 1.1 and 1.1.1 have been withdrawn. Basalt 1.2.0 includes the
-hardening measures listed in [SECURITY.md](SECURITY.md) (Phases 10 and 11), in
-particular for the local mount transport and for what stays running after a
-dismount. Please update and delete the old copies.
+The releases 1.0, 1.1 and 1.1.1 have been withdrawn. Basalt 1.2.0 hardens the local
+mount transport and what stays running after a dismount (see
+[SECURITY.md](SECURITY.md)). Please update and delete the old copies.
 
 Your volumes keep working: 1.2.0 opens everything the older versions created.
 Basalt offers to upgrade the header of such volumes to standard Argon2id when you
@@ -180,7 +179,7 @@ basalt-cli (C++)              Standalone terminal tool
 
 | Document | Contents |
 |----------|----------|
-| **[SECURITY.md](SECURITY.md)** | All 52 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
+| **[SECURITY.md](SECURITY.md)** | Key derivation, memory handling, mounting, app behaviour, cipher selection, known limitations |
 | **[docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md)** | Manual tests for a release (mounting, dismount behaviour, devices, signing) |
 | **[License.txt](License.txt)** | TrueCrypt License 3.0 |
 
