@@ -8,12 +8,55 @@
 
 #include <set>
 
+#ifdef TC_UNIX
+#include <unistd.h>
+#endif
+
 #include "CoreBase.h"
 #include "RandomNumberGenerator.h"
+#include "Platform/FilesystemPath.h"
 #include "Volume/Volume.h"
 
 namespace Basalt
 {
+#ifdef TC_UNIX
+	namespace
+	{
+		// A device node is owned by root. Without administrator privileges the
+		// elevated core service hands it to the current user while its header is
+		// rewritten and takes it back afterwards (as header backup and restore do).
+		class DeviceOwnerLease
+		{
+		public:
+			DeviceOwnerLease (const CoreBase &core, const VolumePath &volumePath)
+				: CoreRef (core), Device (wstring (volumePath)), OrigOwner ((uid_t) -1)
+			{
+				if (!core.HasAdminPrivileges () && volumePath.IsDevice ())
+				{
+					OrigOwner = Device.GetOwner ();
+					core.SetFileOwner (Device, UserId (getuid ()));
+				}
+			}
+
+			~DeviceOwnerLease ()
+			{
+				if (OrigOwner.SystemId != (uid_t) -1)
+				{
+					try { CoreRef.SetFileOwner (Device, OrigOwner); } catch (...) { }
+				}
+			}
+
+		private:
+			DeviceOwnerLease (const DeviceOwnerLease &);
+			DeviceOwnerLease &operator= (const DeviceOwnerLease &);
+
+			const CoreBase &CoreRef;
+			FilesystemPath Device;
+			UserId OrigOwner;
+		};
+	}
+#endif
+
 	CoreBase::CoreBase ()
 		: DeviceChangeInProgress (false)
 	{
@@ -91,6 +134,12 @@ namespace Basalt
 		// truncated (a KDF upgrade re-uses the existing password and is allowed).
 		if (newPassword && (!password || *newPassword != *password))
 			newPassword->CheckNoTruncatedChars();
+
+#ifdef TC_UNIX
+		// Declared before the volume, so the device is handed back only after the
+		// volume has been closed.
+		DeviceOwnerLease deviceLease (*this, *volumePath);
+#endif
 
 		shared_ptr <Volume> volume = OpenVolume (volumePath, preserveTimestamps, password, keyfiles);
 		ChangePassword (volume, newPassword, newKeyfiles, newPkcs5Kdf, wipePassCount);
