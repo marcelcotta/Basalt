@@ -124,12 +124,12 @@ The signature must show `Developer ID Application: Marcel Cotta (98YJA8W8B3)`.
 
 ### Upgrade from 1.0, 1.1 and 1.1.1
 
-The releases 1.0, 1.1 and 1.1.1 have been withdrawn. They contain security flaws
-that were found in the [October 2026 audit](docs/AUDIT-2026-10.md), among them a
-local NFS port that exposed the decrypted volume to other processes, and a daemon
-that kept running after dismount. Please update to 1.2.0 and delete the old copies.
+The releases 1.0, 1.1 and 1.1.1 have been withdrawn. Basalt 1.2.0 includes the
+hardening measures listed in [SECURITY.md](SECURITY.md) (Waves 10 and 11), in
+particular for the local mount transport and for what stays running after a
+dismount. Please update and delete the old copies.
 
-Your volumes are not affected: 1.2.0 opens everything the older versions created.
+Your volumes keep working: 1.2.0 opens everything the older versions created.
 Basalt offers to upgrade the header of such volumes to standard Argon2id when you
 mount them. Once upgraded, Basalt 1.1.x can no longer open the volume.
 
@@ -154,6 +154,16 @@ make cli
 bash build-universal.sh release
 ```
 
+**Self-built binaries and Gatekeeper.** A binary built from source is signed ad-hoc,
+not notarized. It runs on the Mac that built it. If you move it to another Mac as a
+download, AirDrop or mail attachment, macOS Gatekeeper blocks it on first launch;
+allow it with right-click → **Open**, or remove the quarantine flag:
+```sh
+xattr -dr com.apple.quarantine /path/to/Basalt.app
+```
+With your own Developer ID certificate you can sign during the build:
+`SIGN_IDENTITY="Developer ID Application: …" bash build-universal.sh release`.
+
 
 ## Architecture
 
@@ -171,7 +181,7 @@ basalt-cli (C++)              Standalone terminal tool
 | Document | Contents |
 |----------|----------|
 | **[SECURITY.md](SECURITY.md)** | All 52 security hardening measures, attack surface reduction, cipher selection rationale, comparison with VeraCrypt, steganographic keyfiles guide |
-| **[docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md)** | Source audit of Basalt 1.1.1 and DarwinFUSE (October 2026): findings, fixes, macOS verification checklist |
+| **[docs/RELEASE-CHECKLIST.md](docs/RELEASE-CHECKLIST.md)** | Manual tests for a release (mounting, dismount behaviour, devices, signing) |
 | **[License.txt](License.txt)** | TrueCrypt License 3.0 |
 
 

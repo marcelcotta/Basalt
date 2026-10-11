@@ -426,7 +426,7 @@ This applies to all password fields across the application (Mount, Change Passwo
 
 A source review of Basalt 1.1.1 and its embedded DarwinFUSE, with the portable
 core compiled and exercised on Linux (self-tests, cross-checks against reference
-implementations, regression tests). Details: [docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md).
+implementations, regression tests).
 
 ### 35. Argon2id Now Conforms to RFC 9106 (Existing Volumes Stay Openable)
 **Files:** `Crypto/Argon2/core.c`, `Crypto/Argon2/ref.c`, `Crypto/Argon2/argon2.c`,
@@ -518,8 +518,8 @@ could pre-create it so that the script builds (and later signs) a foreign tree.
 
 ## Wave 11 — Follow-ups to the Audit (October 2026)
 
-Improvements suggested in the audit report (open items O-1, O-2, O-3, O-6) and
-usability changes with a security angle.
+Improvements that followed the Wave 10 review and usability changes with a security
+angle.
 
 ### 44. Faster Key Derivation Search When Mounting
 **Files:** `Volume/Pkcs5Kdf.*`, `Volume/VolumeHeader.cpp`, `Volume/VolumeLayout.*`, `Volume/Volume.*`,
@@ -786,8 +786,12 @@ These are known issues that may be addressed in future work:
    but are not recommended for new volumes. SHA-512 is the recommended default.
 4. **Serpent/Twofish remain software-only:** No hardware acceleration for these ciphers
    on ARM (no hardware support exists).
-5. **Code signing:** The app bundle is not currently signed or notarized. macOS
-   Gatekeeper will require the user to manually allow execution.
+5. **Code signing of self-built binaries:** The released Basalt.app and `basalt-cli`
+   are signed with a Developer ID, use the hardened runtime and are notarized by
+   Apple. A binary built from source is only ad-hoc signed. That is enough to run it
+   on the Mac that built it; if it reaches another Mac as a download, AirDrop or mail
+   attachment, Gatekeeper asks for manual approval (right-click → Open, or
+   `xattr -dr com.apple.quarantine`).
 6. **Password copies outside locked memory:** SwiftUI keeps passwords in Swift `String`
    state (and `NSString` when passed to the bridge), which cannot be wiped. The bridge
    itself no longer creates unwiped copies (#46), but a password cannot be fully confined
@@ -795,6 +799,15 @@ These are known issues that may be addressed in future work:
 7. **CLI `--password`:** Passwords given on the command line are visible to other local
    users via the process list. The CLI warns about it; use `--password-stdin` or the
    interactive prompt (#45).
+8. **Administrator password dialog:** Volumes on devices need root. Basalt asks for the
+   macOS password in its own dialog and feeds it to `sudo -S` (absolute path, #28),
+   which trains users to type that password into application windows. A privileged
+   helper registered with `SMAppService` and reached over XPC, with a code-signing
+   requirement on the client, would use the system authorization prompt instead.
+9. **Password encoding:** Passwords are stored one byte per character (TrueCrypt
+   format). New passwords with characters beyond Latin-1 are refused (#41) instead of
+   being encoded as UTF-8, which would need a fallback to the legacy encoding when
+   mounting.
 
 
 ## Cipher Selection: Why Not Camellia or Kuznyechik?
@@ -950,5 +963,4 @@ and prioritization of hardening measures.
 
 Wave 10 additionally verified implementations against independent references
 (libargon2 / RFC 9106 test vectors for Argon2id, software AES vs. AES-NI) and
-exercised the volume and NFS layers with regression tests; see
-[docs/AUDIT-2026-10.md](docs/AUDIT-2026-10.md).
+exercised the volume and NFS layers with regression tests.
