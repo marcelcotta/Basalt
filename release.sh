@@ -67,6 +67,11 @@ notarize() {
     echo "  Notarizing $(basename "${file}") (this can take a few minutes)..."
     out="$(xcrun notarytool submit "${file}" --keychain-profile "${NOTARY_PROFILE}" \
         --wait --output-format json)" || true
+    if [ -z "${out}" ]; then
+        echo "error: notarytool returned nothing for $(basename "${file}") (network problem?)" >&2
+        echo "       the submission may still be running: xcrun notarytool history --keychain-profile ${NOTARY_PROFILE}" >&2
+        exit 1
+    fi
     status="$(printf '%s' "${out}" | plutil -extract status raw -o - - 2>/dev/null || true)"
     id="$(printf '%s' "${out}" | plutil -extract id raw -o - - 2>/dev/null || true)"
     if [ "${status}" != "Accepted" ]; then
