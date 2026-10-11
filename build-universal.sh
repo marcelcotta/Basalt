@@ -55,10 +55,12 @@ build_core_lib() {
     find "${SYMLINK}/src/Common" -name '*.o' -delete 2>/dev/null || true
     rm -f "${SYMLINK}/libBasaltCore.a"
 
-    # Rebuild DarwinFUSE for this architecture
+    # Rebuild DarwinFUSE for this architecture. The deployment target matches
+    # the core library and the CLI (Makefile); without it the objects would
+    # require the macOS version of the build machine.
     make -C "${SYMLINK}/src/DarwinFUSE" clean
     make -C "${SYMLINK}/src/DarwinFUSE" TC_BUILD_CONFIG=Release \
-        CFLAGS="-arch ${ARCH} -Wall -Wextra -Wno-unused-parameter -std=c11 -I${SYMLINK}/src/DarwinFUSE/include -I${SYMLINK}/src/DarwinFUSE/src -D_FILE_OFFSET_BITS=64 -O2"
+        CFLAGS="-arch ${ARCH} -mmacosx-version-min=11.0 -Wall -Wextra -Wno-unused-parameter -std=c11 -I${SYMLINK}/src/DarwinFUSE/include -I${SYMLINK}/src/DarwinFUSE/src -D_FILE_OFFSET_BITS=64 -O2"
 
     # Build with architecture override
     make -C "${SYMLINK}" BASE_DIR="${SYMLINK}" NOASM=1 \
