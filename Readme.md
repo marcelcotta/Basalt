@@ -108,24 +108,30 @@ Pre-built universal binaries (arm64 + x86_64) are available on the
 - **Basalt.app** — the GUI, packaged as a DMG
 - **basalt-cli** — the command-line tool, packaged as a ZIP
 
-### Opening the app (unsigned)
+### Signed and notarized
 
-Basalt is not notarized by Apple. macOS Gatekeeper will block it on first launch.
+Since 1.2.0, Basalt.app and basalt-cli are signed with an Apple Developer ID and
+notarized by Apple, so macOS opens them without extra steps. The very first launch
+of `basalt-cli` needs an internet connection: a bare command-line tool cannot carry
+the notarization ticket, so Gatekeeper looks it up online.
 
-**Option A — Right-click:**
-1. Right-click (or Control-click) `Basalt.app`
-2. Select **Open** from the context menu
-3. Click **Open** in the dialog
-
-**Option B — Terminal:**
+To check a download before opening it:
 ```sh
-xattr -d com.apple.quarantine /path/to/Basalt.app
+spctl --assess --type open --context context:primary-signature -v Basalt.dmg
+codesign -dv --verbose=2 /Applications/Basalt.app
 ```
+The signature must show `Developer ID Application: Marcel Cotta (98YJA8W8B3)`.
 
-The same applies to `basalt-cli`:
-```sh
-xattr -d com.apple.quarantine /path/to/basalt-cli
-```
+### Upgrade from 1.0, 1.1 and 1.1.1
+
+The releases 1.0, 1.1 and 1.1.1 have been withdrawn. They contain security flaws
+that were found in the [October 2026 audit](docs/AUDIT-2026-10.md), among them a
+local NFS port that exposed the decrypted volume to other processes, and a daemon
+that kept running after dismount. Please update to 1.2.0 and delete the old copies.
+
+Your volumes are not affected: 1.2.0 opens everything the older versions created.
+Basalt offers to upgrade the header of such volumes to standard Argon2id when you
+mount them. Once upgraded, Basalt 1.1.x can no longer open the volume.
 
 
 ## Building from source

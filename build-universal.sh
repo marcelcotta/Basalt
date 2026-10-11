@@ -273,14 +273,29 @@ cp "${SYMLINK}/Basalt/Credits.rtf" "${APP_BUNDLE}/Contents/Resources/"
 cp -R "${SYMLINK}/Basalt/Resources/." "${APP_BUNDLE}/Contents/Resources/"
 
 # ============================================================
-# Step 5: Ad-hoc code sign
+# Step 5: Code sign
 # ============================================================
+# SIGN_IDENTITY unset (or "-"): ad-hoc signature, enough to run locally.
+# SIGN_IDENTITY="Developer ID Application: …": signature for distribution
+# with hardened runtime and secure timestamp, as required for notarization
+# (see release.sh).
 echo ""
 echo "=== Code Signing ==="
 echo ""
 
-codesign --force --deep --sign - "${APP_BUNDLE}"
-codesign --force --sign - "${OUTPUT_DIR}/basalt-cli"
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+if [ "${SIGN_IDENTITY}" = "-" ]; then
+    SIGN_OPTS=()
+    echo "  Ad-hoc signature (set SIGN_IDENTITY for a distribution build)"
+else
+    SIGN_OPTS=(--options runtime --timestamp)
+    echo "  Identity: ${SIGN_IDENTITY}"
+fi
+
+codesign --force "${SIGN_OPTS[@]}" --sign "${SIGN_IDENTITY}" "${OUTPUT_DIR}/basalt-cli"
+codesign --force "${SIGN_OPTS[@]}" --sign "${SIGN_IDENTITY}" "${APP_BUNDLE}"
+codesign --verify --strict --verbose=2 "${APP_BUNDLE}"
+codesign --verify --strict --verbose=2 "${OUTPUT_DIR}/basalt-cli"
 echo "  Signed Basalt.app and basalt-cli"
 
 # ============================================================
