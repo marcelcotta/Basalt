@@ -11,7 +11,7 @@ comprehensive audit (RNG, PBKDF2, encryption, volume headers, memory handling,
 and suspicious pattern analysis).
 
 
-## Wave 1 — Critical Fixes
+## Phase 1 — Critical Fixes
 
 ### 1. Secure Memory Erasure (`burn()`)
 **File:** `Common/Tcdefs.h`
@@ -44,11 +44,11 @@ with no cryptographic justification that reduces effective entropy.
 processing data with stale internal state.
 **Fix:** Added `PoolHash->Init()` before each `ProcessData()` call.
 
-### 6. RNG Self-Test Order [CORRECTED in Wave 10]
+### 6. RNG Self-Test Order [CORRECTED in Phase 10]
 **File:** `Core/RandomNumberGenerator.cpp`
 **Original change:** `Start()` was reordered to seed the pool first and run the
 self-test afterwards.
-**Correction (Wave 10, #39):** `Test()` zeroes the pool and fills it with
+**Correction (Phase 10, #39):** `Test()` zeroes the pool and fills it with
 deterministic data, so running it after seeding discarded the initial entropy. The
 original TrueCrypt order (self-test, then seed) has been restored. Output quality
 was not affected in practice because every `GetData()` call mixes in fresh kernel
@@ -75,7 +75,7 @@ than one hash output block, this would produce incorrect key material.
 **Fix:** Proper 4-byte big-endian encoding of the block counter.
 
 
-## Wave 2 — Structural Improvements
+## Phase 2 — Structural Improvements
 
 ### 10. Memory Locking (`mlock`)
 **File:** `Platform/Buffer.cpp`
@@ -142,7 +142,7 @@ volumes open without delay. New volumes are always created with high iterations.
   bytes), but the iteration counts are equivalent.
 
 
-## Wave 3 — Performance & Entropy Hardening
+## Phase 3 — Performance & Entropy Hardening
 
 ### 14. ARMv8 Hardware AES Acceleration
 **File:** `Crypto/Aes_hw_cpu_arm.c`
@@ -168,7 +168,7 @@ Falls back to `/dev/urandom` if `getentropy()` fails (should never happen on mac
 The redundant `/dev/random` non-blocking read is removed on macOS.
 
 
-## Wave 4 — Header Migration Tool
+## Phase 4 — Header Migration Tool
 
 ### 16. Automatic Legacy KDF Upgrade Prompt
 **Files:** Originally `Main/GraphicUserInterface.cpp`, `Main/TextUserInterface.cpp` (now
@@ -186,7 +186,7 @@ The upgrade preserves the user's password, keyfiles, and hash algorithm choice. 
 iteration count changes. The file hash will change (header bytes are different), but the
 on-disk encryption format and data content are unchanged.
 
-**Update (Wave 11, #44):** The app now offers Argon2id-Max instead of a higher PBKDF2
+**Update (Phase 11, #44):** The app now offers Argon2id-Max instead of a higher PBKDF2
 iteration count, for TrueCrypt volumes and for VeraCrypt volumes (PBKDF2 with 500,000
 iterations) alike. The prompt warns that TrueCrypt and VeraCrypt can no longer open the
 volume afterwards; "Not Now" and "Never Ask Again" leave it untouched. The CLI (#24)
@@ -206,11 +206,11 @@ material to securely erase. The normal "Change Password" dialog continues to use
 256 wipe passes.
 
 
-## Wave 5 — Password Memory Hardening (Historical)
+## Phase 5 — Password Memory Hardening (Historical)
 
 ### 18. Secure Password Input Buffer (`SecurePasswordInput`) [SUPERSEDED]
 **Status:** This mitigation was part of the wxWidgets-based GUI and has been superseded
-by the complete removal of wxWidgets in Wave 6. The SwiftUI-based UI uses
+by the complete removal of wxWidgets in Phase 6. The SwiftUI-based UI uses
 `NSSecureTextField` (via SwiftUI `SecureField`) which is managed by the system's Cocoa
 layer, and the ObjC++ bridge handles password data through `mlock()`-pinned buffers in
 the `TCCocoaCallback` class.
@@ -220,12 +220,12 @@ the `TCCocoaCallback` class.
 platform string conversions creating uncontrollable copies.
 
 
-## Wave 6 — wxWidgets Removal & Native UI
+## Phase 6 — wxWidgets Removal & Native UI
 
 ### 19. Complete wxWidgets Removal
 **Files removed:** Entire `Main/` directory (86 files), all wx build infrastructure
 **Problem:** wxWidgets was a significant attack surface and source of security concerns:
-- Password handling through `wxString` with uncontrollable heap copies (Wave 5 mitigation)
+- Password handling through `wxString` with uncontrollable heap copies (Phase 5 mitigation)
 - Destruction-order bugs causing memory corruption (`DestroyChildren()` before C++ dtors)
 - Signal handler deadlocks (`wxMessageBox` from signal context → `NSAlert runModal()` hang)
 - Large, complex dependency (~2 MB of third-party code) with its own vulnerability history
@@ -248,7 +248,7 @@ platform string conversions creating uncontrollable copies.
   exceptions propagate into Swift/ObjC runtime.
 - Password strings from `NSSecureTextField` are immediately converted to `VolumePassword`
   (which uses `mlock()`-pinned `SecureBuffer`) and the `NSString` intermediate is
-  short-lived and managed by ARC. Since Wave 11 (#46) the conversion goes through a
+  short-lived and managed by ARC. Since Phase 11 (#46) the conversion goes through a
   wiped stack buffer only.
 - All UI callbacks dispatch to the main thread via `dispatch_sync(dispatch_get_main_queue())`
   — no cross-thread UI manipulation.
@@ -260,10 +260,10 @@ platform string conversions creating uncontrollable copies.
 Echo is restored in all code paths (including exceptions) via RAII-style cleanup.
 Passwords are read directly into `VolumePassword` objects backed by `mlock()`-pinned
 `SecureBuffer`. No intermediate `wxString` or heap-allocated string copies.
-For scripts, see `--password-stdin` (Wave 11, #45).
+For scripts, see `--password-stdin` (Phase 11, #45).
 
 
-## Wave 7 — Runtime Protection & Auto-Dismount
+## Phase 7 — Runtime Protection & Auto-Dismount
 
 ### 22. Inactivity-Based Auto-Dismount
 **Files:** `Basalt/App/VolumeManager.swift`, `Basalt/App/PreferencesManager.swift`
@@ -283,13 +283,13 @@ are affected.
 (screen lock, sleep, application exit, logout) where the user is not actively present.
 **Fix:** Four automatic dismount triggers:
 - **Screen saver / screen lock:** `DistributedNotificationCenter` observes
-  `com.apple.screensaver.didstart` and (since Wave 10) `com.apple.screenIsLocked`
+  `com.apple.screensaver.didstart` and (since Phase 10) `com.apple.screenIsLocked`
 - **System sleep:** IOKit system power notifications; sleep waits for the dismount
-  (since Wave 11, #48 — previously `NSWorkspace.willSleepNotification`, which does not wait)
+  (since Phase 11, #48 — previously `NSWorkspace.willSleepNotification`, which does not wait)
 - **Logout/shutdown/restart:** `NSWorkspace.willPowerOffNotification` (default: on)
 - **Application quit:** `applicationShouldTerminate` dismounts before it answers (since
-  Wave 11, #48 — previously `.terminateLater`, which let the app quit before the
-  dismount had finished). On by default since Wave 11.
+  Phase 11, #48 — previously `.terminateLater`, which let the app quit before the
+  dismount had finished). On by default since Phase 11.
 Each trigger is independently configurable. Force dismount is enabled by default and
 applies to all dismount operations (manual and automatic), ensuring volumes can always
 be closed even when processes hold open file handles.
@@ -308,7 +308,7 @@ has been removed in favor of the unified preference.
 
 ### 24. CLI KDF Upgrade Prompt
 **Files:** `CLI/main.cpp`
-**Problem:** The KDF upgrade dialog (Wave 4, #16) was only available in the SwiftUI GUI.
+**Problem:** The KDF upgrade dialog (Phase 4, #16) was only available in the SwiftUI GUI.
 CLI users mounting legacy volumes had no way to upgrade their volume headers to modern
 iteration counts.
 **Fix:** After a successful mount in interactive mode, `VolumeOperations::UpgradeKdf()`
@@ -318,7 +318,7 @@ prompts the user to upgrade. Skipped in `--non-interactive` mode to allow script
 
 ---
 
-## Wave 8: Hardening (CVE Mitigations + Anti-Screen-Capture)
+## Phase 8: Hardening (CVE Mitigations + Anti-Screen-Capture)
 
 ### 26. FAST_ERASE64 Replaced with memset_s()
 **Files:** `Common/Tcdefs.h`
@@ -349,7 +349,7 @@ privileges.
 **Fix:** All `Process::Execute()` calls on macOS now use absolute paths:
 `/sbin/mount`, `/sbin/umount`, `/usr/bin/hdiutil`, `/usr/bin/open`. The FUSE exec functor
 is unaffected as it calls `fuse_main()` directly, not via PATH lookup.
-**Completed in Wave 10 (#40):** DarwinFUSE still ran `mount_nfs` and the privilege
+**Completed in Phase 10 (#40):** DarwinFUSE still ran `mount_nfs` and the privilege
 elevation still ran `sudo` through `$PATH`; both now use `/sbin/mount_nfs` and
 `/usr/bin/sudo`.
 
@@ -380,7 +380,7 @@ special files. These are standard mount hardening flags used by default in most 
 distributions for removable media.
 
 
-## Wave 9: Volume Creation & UX Hardening
+## Phase 9: Volume Creation & UX Hardening
 
 ### 31. Volume Creation: FilesystemClusterSize Initialization
 **Files:** `Basalt/Bridge/TCCoreBridge.mm`
@@ -422,7 +422,7 @@ the first password field focused the eye icon instead of the confirmation field.
 This applies to all password fields across the application (Mount, Change Password, Create).
 
 
-## Wave 10 — Independent Audit (October 2026)
+## Phase 10 — Source Review (October 2026)
 
 A source review of Basalt 1.1.1 and its embedded DarwinFUSE, with the portable
 core compiled and exercised on Linux (self-tests, cross-checks against reference
@@ -516,9 +516,9 @@ could pre-create it so that the script builds (and later signs) a foreign tree.
 **Fix:** The symlink lives in the per-user `$TMPDIR`.
 
 
-## Wave 11 — Follow-ups to the Audit (October 2026)
+## Phase 11 — Further Hardening (October 2026)
 
-Improvements that followed the Wave 10 review and usability changes with a security
+Improvements that followed the Phase 10 review and usability changes with a security
 angle.
 
 ### 44. Faster Key Derivation Search When Mounting
@@ -561,7 +561,7 @@ to the volume, and protected hidden volume headers are always tried with all KDF
 ### 45. Passwords via Standard Input (CLI)
 **Files:** `CLI/main.cpp`
 **Problem:** `--password=` is visible in the process list to all local users and ends up
-in shell history (audit O-1).
+in shell history.
 **Fix:** `--password-stdin` reads the password from the first line of standard input
 (mutually exclusive with `--password`). Passwords given on the command line now print a
 warning, and the help text recommends the prompt or stdin.
@@ -569,7 +569,7 @@ warning, and the help text recommends the prompt or stdin.
 ### 46. Fewer Password Copies in the Bridge
 **Files:** `Basalt/Bridge/TCCocoaCallback.*`, `Basalt/Bridge/TCCoreBridge.mm`, `Basalt/App/VolumeManager.swift`
 **Problem:** Every password passed through an `NSData` (UTF-32) and a `std::wstring`
-before reaching `VolumePassword`; neither was wiped (audit O-2).
+before reaching `VolumePassword`; neither was wiped.
 **Fix:** `PasswordFromNS()` copies the characters with `-getBytes:` into a fixed stack
 buffer that is `burn()`ed after the `VolumePassword` has been filled. All ten call sites
 use it. Mount options drop their password strings once converted. Swift `String`
@@ -591,7 +591,7 @@ Characters beyond Latin-1 (#41) are flagged in the dialog before the volume is c
 `Basalt/App/PreferencesManager.swift`
 **Problem:** "Dismount when system sleeps" reacted to `NSWorkspace.willSleepNotification`
 and started an asynchronous dismount; the Mac could go to sleep with volumes still
-mounted and keys in RAM (audit O-3). "Dismount when Basalt quits" started an
+mounted and keys in RAM. "Dismount when Basalt quits" started an
 asynchronous dismount and let the app quit right away, so the volumes stayed mounted
 — with no Basalt window or menu bar icon left to dismount them. The option was off
 by default.
@@ -608,7 +608,7 @@ Dismounting on quit is now on by default.
 ### 49. Spotlight Marker Only Where Harmless
 **Files:** `Basalt/App/VolumeManager.swift`
 **Problem:** `.metadata_never_index` was written on every mount, modifying the outer
-volume even when mounted read-only or with hidden volume protection (audit O-6).
+volume even when mounted read-only or with hidden volume protection.
 **Fix:** The marker is created once, and never on read-only mounts or on outer volumes
 mounted with hidden volume protection.
 
@@ -693,7 +693,7 @@ measures. Basalt uses keyfiles (regular files) as the second factor instead.
 ### wxWidgets GUI (86 files removed, ~2 MB dependency)
 **Deleted:** Entire `Main/`, `Mount/`, `Format/` directories.
 
-See Wave 6, §19 for details. The wxWidgets removal eliminated password handling
+See Phase 6, §19 for details. The wxWidgets removal eliminated password handling
 through `wxString` with uncontrollable heap copies, signal handler deadlocks,
 destruction-order memory corruption, and a large third-party dependency.
 
@@ -712,7 +712,7 @@ This application remembers nothing. No favorites, no cached passwords, no defaul
 keyfiles, no mount history, no recently-used lists. Every operation starts clean.
 
 - **No password cache:** The original TrueCrypt cached volume passwords in memory
-  (`VolumePasswordCache`). This port removed the feature entirely (Wave 7).
+  (`VolumePasswordCache`). This port removed the feature entirely (Phase 7).
 - **No favorites or history:** Volume paths are never persisted to disk. There is no
   record of which containers exist, when they were last mounted, or how often they are
   used. Forensic analysis of the application reveals nothing about your volumes.
@@ -961,6 +961,6 @@ Additionally, all 2,687 commits of the VeraCrypt fork were analyzed to identify
 security-relevant changes, fixes, and potential concerns. This informed the selection
 and prioritization of hardening measures.
 
-Wave 10 additionally verified implementations against independent references
+Phase 10 additionally verified implementations against independent references
 (libargon2 / RFC 9106 test vectors for Argon2id, software AES vs. AES-NI) and
 exercised the volume and NFS layers with regression tests.

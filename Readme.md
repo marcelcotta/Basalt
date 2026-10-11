@@ -125,7 +125,7 @@ The signature must show `Developer ID Application: Marcel Cotta (98YJA8W8B3)`.
 ### Upgrade from 1.0, 1.1 and 1.1.1
 
 The releases 1.0, 1.1 and 1.1.1 have been withdrawn. Basalt 1.2.0 includes the
-hardening measures listed in [SECURITY.md](SECURITY.md) (Waves 10 and 11), in
+hardening measures listed in [SECURITY.md](SECURITY.md) (Phases 10 and 11), in
 particular for the local mount transport and for what stays running after a
 dismount. Please update and delete the old copies.
 
